@@ -15,7 +15,7 @@ public
        public List<Customer> SearchByCompanyName(string company) {
     var query = from c in
                     db.customers
-                where c.Country.Contains(company)
+                where c.CompanyName.Contains(company)
   orderby c.CustomerID ascending select c;
 
     return query.ToList();
@@ -25,18 +25,22 @@ public
  public List<Customer> SearchByContact(string contact) {
     var query = from c in
                     db.customers
-                where c.Country.Contains(contact)
+                where c.Contact.Contains(contact)
   orderby c.CustomerID ascending select c;
 
     return query.ToList();
   }
 
-  public string ExportToCSV(List<Customer> data) {
+}
+
+public class CustomerCsvExporter
+{
+  public string Export(List<Customer> customer) {
     StringBuilder sb = new StringBuilder();
 
-    foreach (var item in data) {
-      sb.AppendFormat("{0},{1}, {2}, {3}", item.CustomerID, item.CompanyName,
-                      item.ContactName, item.Country);
+    foreach (var customer in customers) {
+      sb.AppendFormat("{0},{1}, {2}, {3}", customer.CustomerID, customer.CompanyName,
+                      customer.ContactName, customer.Country);
       sb.AppendLine();
     }
 
