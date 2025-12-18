@@ -8,7 +8,6 @@ def is_valid_number(number):
         return False
 
 
-
 def main():
     number_to_guess = random.randint(1, 100)
     is_guess_correct = False
