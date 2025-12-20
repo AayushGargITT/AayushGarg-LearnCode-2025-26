@@ -19,25 +19,27 @@ class EmployeeCsvReport : IEmployeeReport
     }
 }
 
-class EmployeeRepository{
-    void save(Employee employee)
+public interface IEmployeeRepository
+{
+    void Save(Employee employee);
+}
+
+class EmployeeRepository:IEmployeeRepository{
+    void Save(Employee employee)
     {
         //save
     }
 }
-
 
 class Employee
 {
     public int Id { get; }
     public string Name { get; }
     public string Department { get; }
-    public bool IsWorking { get; }
+    private bool IsWorking { get; }
 
-
-// void saveEmployeeTODatabase();
-// void printEmployeeDetailReportXML();
-// void printEmployeeDetailReportCSV();
-void terminateEmployee();
-bool isWorking();
+void TerminateEmployee()
+    {
+        IsWorking=false;
+    }
 };
