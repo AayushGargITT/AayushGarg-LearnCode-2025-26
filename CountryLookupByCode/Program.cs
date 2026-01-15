@@ -1,4 +1,5 @@
 ﻿
+using CountryLookupByCode.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 namespace CountryLookupByCode
@@ -7,7 +8,7 @@ namespace CountryLookupByCode
     {
         static async Task Main()
         {
-            using IHost host = host.CreateDefaultBuilder()
+            using IHost host = Host.CreateDefaultBuilder()
                 .ConfigureServices(services =>
                 {
                     services.AddHttpClient();

@@ -41,7 +41,7 @@ namespace CountryLookupByCode
             if (countryCode == null) return;
 
             var country =await _countryService.GetCountryAsync(countryCode);
-            if (country == null)
+            if (country.Name == null)
             {
                 Console.WriteLine(Messages.CountryNotFound);
                 return;
