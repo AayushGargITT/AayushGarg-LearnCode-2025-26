@@ -1,0 +1,39 @@
+1)Attributions
+Added by John on 12/15/2023 - needed for the new feature
+
+2)Redundant
+Check if order is null 
+Validate the order
+Check inventory 
+If no inventory, return failure 
+Reserve inventory 
+Process payment 
+Check if payment succeeded 
+Update inventory 
+Send confirmation email
+Return success 
+Payment failed, release inventory 
+Return failure
+Log the error 
+Throw it
+Get the order
+Refund the payment 
+Give back the items
+Update status 
+Saves the order 
+
+3)Noisy
+This method processes an order 
+Something went wrong 
+This is important!!!
+Implementation here 
+
+4)Misleading comment
+John says we need to refund here 
+
+Reflection
+The key insight is that comments compete for attention with code itself, so they need to earn their place by providing information that can't be expressed through better code structure.
+Key Learning: Good code is self-documenting. Comments should explain why something is done, not what is being done. The "what" should be obvious from well-named variables, methods, and clear code structure.
+Let method/variable names speak for themselves
+Use version control for history, not comments
+Make TODOs specific and actionable
