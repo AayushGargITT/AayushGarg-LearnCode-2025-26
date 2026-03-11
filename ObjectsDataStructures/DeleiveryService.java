@@ -1,6 +1,10 @@
 public class Paperboy {
     public void collectPayment(Customer customer, double paymentAmount) {
-        customer.requestPayment(paymentAmount);
+        boolean success = customer.requestPayment(paymentAmount);
+
+        if (!success) {
+            System.out.println("Customer has Insufficient Balance");
+        }
     }
 }
 
@@ -17,12 +21,8 @@ public class Customer {
         return lastName; 
     }
     
-    public void requestPayment(double amount) {
-        if (myWallet.hasEnoughMoney(amount)) {
-            myWallet.subtractMoney(amount);
-        } else {
-           //Come Back Later
-        }
+    public boolean requestPayment(double amount) {
+        return myWallet.withdraw(amount);
     }
 }
 
@@ -41,5 +41,13 @@ public class Wallet {
     
     public void subtractMoney(float debit) {
         value -= debit;
+    }
+
+    public void withdraw(double amount){
+        if (myWallet.hasEnoughMoney(amount)) {
+            myWallet.subtractMoney(amount);
+            return true;
+        }
+        return false;
     }
 }
