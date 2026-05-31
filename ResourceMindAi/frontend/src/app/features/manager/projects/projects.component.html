@@ -1,0 +1,36 @@
+<app-layout role="manager" title="My Projects">
+      <app-page-header title="My Projects" subtitle="Track health and milestones of your assigned projects"></app-page-header>
+      
+      <div class="grid lg:grid-cols-2 gap-6">
+        <div *ngFor="let p of projects" class="rounded-lg border border-border bg-card overflow-hidden">
+          <div class="p-5 border-b border-border">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-semibold text-lg">{{ p.name }}</h3>
+              <app-status-badge [status]="p.status"></app-status-badge>
+            </div>
+            <p class="text-sm text-muted-foreground">{{ p.desc }}</p>
+            <div class="mt-4 flex items-center gap-4 text-sm">
+              <app-health-dot [health]="p.health"></app-health-dot>
+              <div class="flex items-center text-muted-foreground">
+                <span class="material-symbols-outlined h-3.5 w-3.5 mr-1.5" style="font-size: 16px; vertical-align: middle;">group</span> {{ p.teamSize }} Team Members
+              </div>
+            </div>
+          </div>
+          <div class="p-5 bg-muted/20">
+            <div class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Upcoming Milestones</div>
+            <div class="space-y-3">
+              <div *ngFor="let m of p.milestones" class="flex items-center justify-between text-sm">
+                <div class="flex items-center gap-2">
+                  <div class="h-1.5 w-1.5 rounded-full" [ngClass]="m.done ? 'bg-emerald-500' : 'bg-border'"></div>
+                  <span [ngClass]="{'line-through text-muted-foreground': m.done}">{{ m.title }}</span>
+                </div>
+                <span class="text-xs font-mono text-muted-foreground">{{ m.date }}</span>
+              </div>
+            </div>
+            <button class="mt-4 w-full inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+              View AI Risk Summary
+            </button>
+          </div>
+        </div>
+      </div>
+    </app-layout>

@@ -1,0 +1,36 @@
+<app-layout role="employee" title="Submit Timesheet">
+      <app-page-header title="Log Hours" subtitle="Submit your timesheet for the current week"></app-page-header>
+      
+      <div class="max-w-2xl rounded-lg border border-border bg-card p-6">
+        <form [formGroup]="tsForm" (ngSubmit)="onSubmit()" class="space-y-6">
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Week Starting</label>
+              <input type="date" formControlName="weekStart" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Project</label>
+              <select formControlName="project" class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring">
+                <option value="p1" class="bg-popover text-popover-foreground">Atlas Payments</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium">Hours Logged</label>
+            <input type="number" formControlName="hours" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="40" />
+            <p class="text-[11px] text-muted-foreground">Standard week is 40 hours.</p>
+          </div>
+          
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium">Activity Tags (comma separated)</label>
+            <input formControlName="tags" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="Backend API, Bug Fixes" />
+          </div>
+          
+          <button type="submit" [disabled]="tsForm.invalid" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white h-9 px-4 py-2 w-full disabled:opacity-50">
+            Submit Timesheet
+          </button>
+        </form>
+      </div>
+    </app-layout>

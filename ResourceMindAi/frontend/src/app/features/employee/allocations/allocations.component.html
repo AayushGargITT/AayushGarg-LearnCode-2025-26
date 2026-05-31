@@ -1,0 +1,32 @@
+<app-layout role="employee" title="My Allocations">
+      <app-page-header title="My Allocations" subtitle="Projects you are currently assigned to"></app-page-header>
+      
+      <div class="grid lg:grid-cols-2 gap-6">
+        <div *ngFor="let a of allocations" class="rounded-lg border border-border bg-card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-lg text-indigo-400">{{ a.project }}</h3>
+              <div class="text-sm text-muted-foreground mt-1">Manager: {{ a.manager }}</div>
+            </div>
+            <app-status-badge status="Active"></app-status-badge>
+          </div>
+          
+          <div class="space-y-4">
+            <div>
+              <div class="flex items-center justify-between text-sm mb-1.5">
+                <span class="text-muted-foreground">Utilisation</span>
+                <span class="font-mono">{{ a.util }}%</span>
+              </div>
+              <div class="h-1.5 w-full bg-muted overflow-hidden rounded-full">
+                <div class="h-full bg-indigo-500 transition-all" [style.width.%]="a.util"></div>
+              </div>
+            </div>
+            
+            <div class="flex items-center justify-between text-sm pt-4 border-t border-border/50">
+              <span class="text-muted-foreground">Timeline</span>
+              <span class="font-mono">{{ a.timeline }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </app-layout>

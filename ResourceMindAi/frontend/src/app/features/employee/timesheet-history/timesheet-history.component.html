@@ -1,0 +1,14 @@
+<app-layout role="employee" title="Timesheet History">
+      <app-page-header title="Timesheet History" subtitle="Your past submissions"></app-page-header>
+      
+      <div class="surface kendo-grid-shell">
+        <kendo-grid [data]="rows" [height]="330" [resizable]="true">
+          <kendo-grid-column field="week" title="Week Starting" class="font-mono text-xs"></kendo-grid-column>
+          <kendo-grid-column field="project" title="Project" class="font-medium text-indigo-400"></kendo-grid-column>
+          <kendo-grid-column field="hours" title="Hours" [width]="110" class="font-mono"></kendo-grid-column>
+          <kendo-grid-column field="status" title="Status" [width]="140">
+            <ng-template kendoGridCellTemplate let-dataItem><app-status-badge [status]="dataItem.status"></app-status-badge></ng-template>
+          </kendo-grid-column>
+        </kendo-grid>
+      </div>
+    </app-layout>

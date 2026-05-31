@@ -1,0 +1,28 @@
+<app-layout role="admin" title="All Allocations">
+      <app-page-header title="System Allocations" subtitle="View all resource allocations across the organization"></app-page-header>
+      
+      <div class="surface kendo-grid-shell">
+        <kendo-grid [data]="rows" [height]="380" [resizable]="true">
+          <kendo-grid-column title="Employee">
+            <ng-template kendoGridCellTemplate let-dataItem>
+              <div class="font-medium">{{ dataItem.empName }}</div>
+              <div class="text-xs text-muted-foreground">{{ dataItem.empId }}</div>
+            </ng-template>
+          </kendo-grid-column>
+          <kendo-grid-column title="Project">
+            <ng-template kendoGridCellTemplate let-dataItem>
+              <div class="font-medium text-indigo-400">{{ dataItem.projName }}</div>
+              <div class="text-xs text-muted-foreground">{{ dataItem.projId }}</div>
+            </ng-template>
+          </kendo-grid-column>
+          <kendo-grid-column field="manager" title="Manager" class="text-muted-foreground"></kendo-grid-column>
+          <kendo-grid-column field="timeline" title="Timeline" class="font-mono text-xs text-muted-foreground"></kendo-grid-column>
+          <kendo-grid-column title="Util %" [width]="110">
+            <ng-template kendoGridCellTemplate let-dataItem><span class="font-mono">{{ dataItem.util }}%</span></ng-template>
+          </kendo-grid-column>
+          <kendo-grid-column field="status" title="Status" [width]="120">
+            <ng-template kendoGridCellTemplate let-dataItem><app-status-badge [status]="dataItem.status"></app-status-badge></ng-template>
+          </kendo-grid-column>
+        </kendo-grid>
+      </div>
+    </app-layout>

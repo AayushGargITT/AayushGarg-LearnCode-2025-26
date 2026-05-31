@@ -1,0 +1,41 @@
+<app-layout role="admin" title="System Config">
+      <app-page-header title="Configuration" subtitle="Manage system-wide settings and AI integrations"></app-page-header>
+      
+      <div class="max-w-2xl space-y-6">
+        <!-- AI Settings -->
+        <div class="rounded-lg border border-border bg-card overflow-hidden">
+          <div class="px-4 py-3 bg-muted/30 border-b border-border font-medium">AI Integration</div>
+          <div class="p-4 space-y-4">
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">LLM Provider</label>
+              <select class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background">
+                <option value="gemini" selected class="bg-popover text-popover-foreground">Google Gemini</option>
+                <option value="groq" class="bg-popover text-popover-foreground">Groq</option>
+              </select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">API Key</label>
+              <input type="password" value="**************" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" />
+            </div>
+            <button class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-4 py-2">Save AI Config</button>
+          </div>
+        </div>
+
+        <!-- Business Logic Settings -->
+        <div class="rounded-lg border border-border bg-card overflow-hidden">
+          <div class="px-4 py-3 bg-muted/30 border-b border-border font-medium">Business Rules</div>
+          <div class="p-4 space-y-4">
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Max Weekly Hours (per Employee)</label>
+              <input type="number" value="40" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" />
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Scheduler Interval (Hours)</label>
+              <input type="number" value="24" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" />
+              <p class="text-[11px] text-muted-foreground mt-1">How often the background worker updates statuses and health flags.</p>
+            </div>
+            <button class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-4 py-2">Save Rules</button>
+          </div>
+        </div>
+      </div>
+    </app-layout>

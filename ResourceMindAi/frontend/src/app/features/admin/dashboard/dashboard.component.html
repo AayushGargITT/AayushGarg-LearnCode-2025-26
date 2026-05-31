@@ -1,0 +1,36 @@
+<app-layout role="admin" title="Dashboard">
+      <app-page-header title="System Overview" subtitle="Snapshot of users, employees and project health"></app-page-header>
+      
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <app-stat-card label="Total Users" value="128" hint="+4 this week" accent="indigo"></app-stat-card>
+        <app-stat-card label="Active Projects" value="17" accent="emerald"></app-stat-card>
+        <app-stat-card label="Employees on Bench" value="9" accent="amber"></app-stat-card>
+        <app-stat-card label="At-Risk Projects" value="3" accent="rose"></app-stat-card>
+      </div>
+      
+      <div class="grid lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2 surface kendo-grid-shell">
+          <div class="px-4 py-3 border-b border-border text-sm font-medium">Recent Projects</div>
+          <kendo-grid [data]="recentProjects" [height]="280" [resizable]="true">
+            <kendo-grid-column field="name" title="Name" class="font-medium"></kendo-grid-column>
+            <kendo-grid-column field="manager" title="Manager" class="text-muted-foreground"></kendo-grid-column>
+            <kendo-grid-column field="status" title="Status" [width]="130">
+              <ng-template kendoGridCellTemplate let-dataItem><app-status-badge [status]="dataItem.status"></app-status-badge></ng-template>
+            </kendo-grid-column>
+            <kendo-grid-column field="health" title="Health" [width]="170">
+              <ng-template kendoGridCellTemplate let-dataItem><app-health-dot [health]="dataItem.health"></app-health-dot></ng-template>
+            </kendo-grid-column>
+          </kendo-grid>
+        </div>
+        
+        <div class="rounded-lg border border-border bg-card p-4">
+          <div class="text-sm font-medium mb-3">System Health</div>
+          <ul class="space-y-3 text-sm">
+            <li class="flex justify-between"><span class="text-muted-foreground">Scheduler</span><span class="font-mono text-emerald-300">running</span></li>
+            <li class="flex justify-between"><span class="text-muted-foreground">LLM Provider</span><span class="font-mono">Gemini</span></li>
+            <li class="flex justify-between"><span class="text-muted-foreground">Last util sync</span><span class="font-mono">12m ago</span></li>
+            <li class="flex justify-between"><span class="text-muted-foreground">Missed timesheets</span><span class="font-mono text-amber-300">2</span></li>
+          </ul>
+        </div>
+      </div>
+    </app-layout>

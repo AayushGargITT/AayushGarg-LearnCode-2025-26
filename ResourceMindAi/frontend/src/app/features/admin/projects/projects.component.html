@@ -1,0 +1,40 @@
+<app-layout role="admin" title="Manage Projects">
+      <app-page-header title="Projects" subtitle="Create new projects and manage milestones">
+        <button kendoButton themeColor="primary" (click)="openDrawer()">
+          <span class="material-symbols-outlined h-4 w-4 mr-1" style="font-size: 16px; vertical-align: middle;">add</span> Create Project
+        </button>
+      </app-page-header>
+      
+      <div class="surface kendo-grid-shell">
+        <kendo-grid [data]="rows" [height]="360" [resizable]="true">
+          <kendo-grid-column field="id" title="ID" [width]="110" class="font-mono text-xs text-muted-foreground"></kendo-grid-column>
+          <kendo-grid-column field="name" title="Project Name" class="font-medium"></kendo-grid-column>
+          <kendo-grid-column field="manager" title="Manager" class="text-muted-foreground"></kendo-grid-column>
+          <kendo-grid-column field="timeline" title="Timeline" class="font-mono text-xs text-muted-foreground"></kendo-grid-column>
+          <kendo-grid-column field="status" title="Status" [width]="130">
+            <ng-template kendoGridCellTemplate let-dataItem><app-status-badge [status]="dataItem.status"></app-status-badge></ng-template>
+          </kendo-grid-column>
+          <kendo-grid-column title="Actions" [width]="90" class="text-right">
+            <ng-template kendoGridCellTemplate>
+              <button class="icon-button" aria-label="More actions"><span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;">more_horiz</span></button>
+            </ng-template>
+          </kendo-grid-column>
+        </kendo-grid>
+      </div>
+      
+      <kendo-dialog *ngIf="drawerOpen()" title="Create Project" [width]="500" (close)="closeDrawer()">
+        <div class="form-stack">
+          <div class="field-stack"><label class="text-sm font-medium">Project Name</label><input kendoTextBox placeholder="Alpha Platform" /></div>
+          <div class="field-stack"><label class="text-sm font-medium">Description</label><textarea kendoTextArea rows="4"></textarea></div>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="field-stack"><label class="text-sm font-medium">Start Date</label><kendo-datepicker></kendo-datepicker></div>
+            <div class="field-stack"><label class="text-sm font-medium">End Date</label><kendo-datepicker></kendo-datepicker></div>
+          </div>
+          <div class="field-stack"><label class="text-sm font-medium">Manager ID</label><input kendoTextBox placeholder="U-1xxx" /></div>
+        </div>
+        <kendo-dialog-actions>
+          <button kendoButton (click)="closeDrawer()">Cancel</button>
+          <button kendoButton themeColor="primary" (click)="closeDrawer()">Create Project</button>
+        </kendo-dialog-actions>
+      </kendo-dialog>
+    </app-layout>

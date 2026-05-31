@@ -1,0 +1,64 @@
+<app-layout role="manager" title="Resource Dashboard">
+      <app-page-header title="Resource Capacity" subtitle="Monitor bench and active team allocations">
+        <button routerLink="/manager/allocate" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white h-9 px-4 py-2">
+          <span class="material-symbols-outlined h-4 w-4 mr-2" style="font-size: 16px; vertical-align: middle;">auto_awesome</span> Allocate with AI
+        </button>
+      </app-page-header>
+      
+      <div class="grid lg:grid-cols-2 gap-6">
+        <!-- Bench -->
+        <div class="rounded-lg border border-border bg-card">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium">Available on Bench</span>
+              <span class="inline-flex items-center justify-center rounded-full bg-amber-500/15 text-amber-300 px-2 py-0.5 text-xs font-medium">2</span>
+            </div>
+            <button class="text-xs text-muted-foreground hover:text-foreground">Filter skills</button>
+          </div>
+          <div class="p-0">
+            <div *ngFor="let emp of benchEmployees" class="p-4 border-b border-border/50 last:border-0 hover:bg-accent/40 transition-colors cursor-pointer">
+              <div class="flex items-start gap-4">
+                <app-avatar [name]="emp.name"></app-avatar>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <div class="font-medium">{{ emp.name }}</div>
+                    <app-status-badge status="BENCH"></app-status-badge>
+                  </div>
+                  <div class="text-sm text-muted-foreground">{{ emp.title }}</div>
+                  <div class="flex flex-wrap gap-1 mt-2">
+                    <span *ngFor="let skill of emp.skills" class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border border-border">{{ skill }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Allocated -->
+        <div class="rounded-lg border border-border bg-card">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium">Active Allocations</span>
+              <span class="inline-flex items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300 px-2 py-0.5 text-xs font-medium">4</span>
+            </div>
+          </div>
+          <div class="p-0">
+            <div *ngFor="let emp of allocatedEmployees" class="p-4 border-b border-border/50 last:border-0 hover:bg-accent/40 transition-colors cursor-pointer">
+              <div class="flex items-start gap-4">
+                <app-avatar [name]="emp.name"></app-avatar>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <div class="font-medium">{{ emp.name }}</div>
+                    <span class="text-xs font-mono" [ngClass]="emp.util === 100 ? 'text-emerald-400' : 'text-amber-400'">{{ emp.util }}% Utilised</span>
+                  </div>
+                  <div class="text-sm text-muted-foreground">{{ emp.title }}</div>
+                  <div class="mt-2 h-1.5 w-full bg-muted overflow-hidden rounded-full">
+                    <div class="h-full" [ngClass]="emp.util === 100 ? 'bg-emerald-500' : 'bg-amber-500'" [style.width.%]="emp.util"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </app-layout>

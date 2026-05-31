@@ -1,0 +1,58 @@
+<app-layout role="admin" title="Manage Employees">
+      <app-page-header title="Employees" subtitle="Maintain employee records, departments and skills">
+        <button kendoButton themeColor="primary" (click)="openDrawer()">
+          <span class="material-symbols-outlined h-4 w-4 mr-1" style="font-size: 16px; vertical-align: middle;">add</span> Add Employee
+        </button>
+      </app-page-header>
+      
+      <div class="surface kendo-grid-shell">
+        <div class="toolbar-surface">
+          <div class="flex items-center gap-1 rounded-md bg-muted p-1">
+            <button *ngFor="let p of ['All', 'Bench', 'Allocated']" (click)="setFilter(p)"
+              [ngClass]="filter() === p ? 'bg-indigo-600 text-white' : 'text-muted-foreground hover:text-foreground'"
+              class="px-3 py-1 text-xs rounded-md">{{ p }}</button>
+          </div>
+          <div class="relative flex-1 max-w-sm ml-auto">
+            <span class="material-symbols-outlined h-4 w-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" style="font-size: 16px; vertical-align: middle;">search</span>
+            <input kendoTextBox placeholder="Search employees..." class="w-full pl-8" />
+          </div>
+        </div>
+        
+        <kendo-grid [data]="filteredRows()" [height]="420" [resizable]="true">
+          <kendo-grid-column field="id" title="ID" [width]="110" class="font-mono text-xs text-muted-foreground"></kendo-grid-column>
+          <kendo-grid-column field="name" title="Full Name">
+            <ng-template kendoGridCellTemplate let-dataItem>
+              <a [routerLink]="['/admin/employees', dataItem.id]" class="font-medium hover:text-indigo-300">{{ dataItem.name }}</a>
+            </ng-template>
+          </kendo-grid-column>
+          <kendo-grid-column field="dept" title="Department" class="text-muted-foreground"></kendo-grid-column>
+          <kendo-grid-column field="title" title="Designation" class="text-muted-foreground"></kendo-grid-column>
+          <kendo-grid-column field="status" title="Status" [width]="135">
+            <ng-template kendoGridCellTemplate let-dataItem><app-status-badge [status]="dataItem.status"></app-status-badge></ng-template>
+          </kendo-grid-column>
+          <kendo-grid-column field="active" title="Active" [width]="120">
+            <ng-template kendoGridCellTemplate let-dataItem><app-status-badge [status]="dataItem.active"></app-status-badge></ng-template>
+          </kendo-grid-column>
+          <kendo-grid-column title="Actions" [width]="90" class="text-right">
+            <ng-template kendoGridCellTemplate>
+              <button class="icon-button" aria-label="More actions"><span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;">more_horiz</span></button>
+            </ng-template>
+          </kendo-grid-column>
+        </kendo-grid>
+      </div>
+      
+      <kendo-dialog *ngIf="drawerOpen()" title="Add Employee" [width]="460" (close)="closeDrawer()">
+        <div class="form-stack">
+          <div class="field-stack"><label class="text-sm font-medium">User ID</label><input kendoTextBox placeholder="U-1xxx" /></div>
+          <div class="field-stack"><label class="text-sm font-medium">Full Name</label><input kendoTextBox /></div>
+          <div class="field-stack"><label class="text-sm font-medium">Email</label><input kendoTextBox type="email" /></div>
+          <div class="field-stack"><label class="text-sm font-medium">Department</label><input kendoTextBox placeholder="Engineering" /></div>
+          <div class="field-stack"><label class="text-sm font-medium">Designation</label><input kendoTextBox placeholder="Backend Engineer" /></div>
+          <p class="hint-panel">Employee will start with BENCH status.</p>
+        </div>
+        <kendo-dialog-actions>
+          <button kendoButton (click)="closeDrawer()">Cancel</button>
+          <button kendoButton themeColor="primary" (click)="closeDrawer()">Add Employee</button>
+        </kendo-dialog-actions>
+      </kendo-dialog>
+    </app-layout>
