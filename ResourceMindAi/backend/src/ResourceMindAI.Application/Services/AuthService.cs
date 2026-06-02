@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Domain.Entities;
@@ -8,21 +9,39 @@ namespace ResourceMindAI.Application.Services;
 public class AuthService
 {
     private readonly IUserRepository _userRepository;
+    private readonly ILogger<AuthService> _logger;
 
-    public AuthService(IUserRepository userRepository)
+    public AuthService(IUserRepository userRepository, ILogger<AuthService> logger)
     {
         _userRepository = userRepository;
+        _logger = logger;
     }
 
     public async Task<UserProfileDto?> LoginAsync(LoginDto request)
     {
+        _logger.LogInformation("Authenticating username {Username}", request.Username);
+
         var user = await _userRepository.GetByUsernameAsync(request.Username);
 
-        if (user is null || !VerifyPassword(request.Password, user.PasswordHash))
+        if (user is null)
         {
+            _logger.LogWarning("Authentication failed because username {Username} was not found", request.Username);
             return null;
         }
 
+        if (!VerifyPassword(request.Password, user.PasswordHash))
+        {
+            _logger.LogWarning("Authentication failed because password was invalid for user {UserId}", user.Id);
+            return null;
+        }
+
+        if (!user.IsActive)
+        {
+            _logger.LogWarning("Authentication failed because user {UserId} is inactive", user.Id);
+            return null;
+        }
+
+        _logger.LogInformation("Authentication succeeded for user {UserId} with role {Role}", user.Id, user.Role);
         return ToProfile(user);
     }
 

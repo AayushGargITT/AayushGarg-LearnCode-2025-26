@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Domain.Entities;
 
@@ -7,27 +8,42 @@ namespace ResourceMindAI.Infrastructure.Persistence.Repositories;
 public class UserRepository : IUserRepository
 {
     private readonly AppDbContext _dbContext;
+    private readonly ILogger<UserRepository> _logger;
 
-    public UserRepository(AppDbContext dbContext)
+    public UserRepository(AppDbContext dbContext, ILogger<UserRepository> logger)
     {
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<User>> GetAllAsync()
     {
-        return await _dbContext.Users
+        _logger.LogDebug("Querying all users with employee profiles");
+
+        var users = await _dbContext.Users
             .Include(x => x.Employee)
             .OrderBy(x => x.FullName)
             .ToListAsync();
+
+        _logger.LogDebug("Queried {UserCount} users", users.Count);
+        return users;
     }
 
     public async Task<User?> GetByUsernameAsync(string username)
     {
         var normalized = username.Trim().ToLowerInvariant();
+        _logger.LogDebug("Querying user by username {Username}", normalized);
 
-        return await _dbContext.Users
+        var user = await _dbContext.Users
             .Include(x => x.Employee)
-            .FirstOrDefaultAsync(x => x.Username==normalized);
+            .FirstOrDefaultAsync(x => x.Username == normalized);
+
+        _logger.LogDebug(
+            "User lookup by username {Username} returned {Found}",
+            normalized,
+            user is not null);
+
+        return user;
     }
 
     public async Task<bool> ExistsByUsernameOrEmailAsync(string username, string email)
@@ -35,15 +51,31 @@ public class UserRepository : IUserRepository
         var normalizedUsername = username.Trim().ToLowerInvariant();
         var normalizedEmail = email.Trim().ToLowerInvariant();
 
-        return await _dbContext.Users.AnyAsync(x =>
-            x.Username == normalizedUsername && x.Email == normalizedEmail);
+        _logger.LogDebug(
+            "Checking whether user exists for username {Username} or email {Email}",
+            normalizedUsername,
+            normalizedEmail);
+
+        var exists = await _dbContext.Users.AnyAsync(x =>
+            x.Username == normalizedUsername || x.Email == normalizedEmail);
+
+        _logger.LogDebug(
+            "User existence check for username {Username} or email {Email} returned {Exists}",
+            normalizedUsername,
+            normalizedEmail,
+            exists);
+
+        return exists;
     }
 
     public async Task<User> CreateAsync(User user)
     {
+        _logger.LogInformation("Adding user {UserId} with role {Role} to database", user.Id, user.Role);
+
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync();
-        
+
+        _logger.LogInformation("Saved user {UserId} to database", user.Id);
         return user;
     }
 }

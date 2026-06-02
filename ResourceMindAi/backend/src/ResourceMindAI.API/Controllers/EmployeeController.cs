@@ -9,22 +9,37 @@ namespace ResourceMindAI.API.Controllers;
 public class EmployeeController : ControllerBase
 {
     private readonly EmployeeService _employeeService;
+    private readonly ILogger<EmployeeController> _logger;
 
-    public EmployeeController(EmployeeService employeeService)
+    public EmployeeController(EmployeeService employeeService, ILogger<EmployeeController> logger)
     {
         _employeeService = employeeService;
+        _logger = logger;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<UserProfileDto>>> GetAll()
     {
-        return Ok(await _employeeService.GetAllAsync());
+        _logger.LogInformation("Employee list request received");
+        var employees = await _employeeService.GetAllAsync();
+        _logger.LogInformation("Employee list request completed with {EmployeeCount} employees", employees.Count);
+
+        return Ok(employees);
     }
 
     [HttpGet("{userId:guid}")]
     public async Task<ActionResult<UserProfileDto>> GetById(Guid userId)
     {
+        _logger.LogInformation("Employee profile request received for user {UserId}", userId);
+
         var employee = await _employeeService.GetByIdAsync(userId);
-        return employee is null ? NotFound() : Ok(employee);
+        if (employee is null)
+        {
+            _logger.LogWarning("Employee profile was not found for user {UserId}", userId);
+            return NotFound();
+        }
+
+        _logger.LogInformation("Employee profile request completed for employee {EmployeeId}", employee.EmployeeId);
+        return Ok(employee);
     }
 }

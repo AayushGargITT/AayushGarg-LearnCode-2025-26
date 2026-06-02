@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.DTOs.Auth;
 
@@ -6,15 +7,19 @@ namespace ResourceMindAI.Application.Services;
 public class EmployeeService
 {
     private readonly IEmployeeRepository _employeeRepository;
+    private readonly ILogger<EmployeeService> _logger;
 
-    public EmployeeService(IEmployeeRepository employeeRepository)
+    public EmployeeService(IEmployeeRepository employeeRepository, ILogger<EmployeeService> logger)
     {
         _employeeRepository = employeeRepository;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<UserProfileDto>> GetAllAsync()
     {
+        _logger.LogInformation("Loading employees from repository");
         var employees = await _employeeRepository.GetAllAsync();
+        _logger.LogInformation("Loaded {EmployeeCount} employees from repository", employees.Count);
 
         return employees.Select(x => new UserProfileDto
         {
@@ -33,12 +38,15 @@ public class EmployeeService
 
     public async Task<UserProfileDto?> GetByIdAsync(Guid userId)
     {
+        _logger.LogInformation("Loading employee profile for user {UserId}", userId);
         var employee = await _employeeRepository.GetByIdAsync(userId);
         if (employee is null)
         {
+            _logger.LogWarning("Employee profile was not found for user {UserId}", userId);
             return null;
         }
 
+        _logger.LogInformation("Loaded employee profile {EmployeeId} for user {UserId}", employee.Id, userId);
         return new UserProfileDto
         {
             Id = employee.User.Id,
