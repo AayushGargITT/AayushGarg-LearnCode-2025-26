@@ -8,6 +8,4 @@ public class SystemConfig
     public string? LlmApiKey { get; set; }
     public int SchedulerIntervalHours { get; set; }
     public decimal MaxWeeklyHours { get; set; }
-
-    public SystemConfig() { }
 }

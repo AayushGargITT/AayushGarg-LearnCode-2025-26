@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using ResourceMindAI.Domain.Entities;
 
 namespace ResourceMindAI.Infrastructure.Persistence;
@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<Milestone> Milestones { get; set; }
     public DbSet<Allocation> Allocations { get; set; }
     public DbSet<Timesheet> Timesheets { get; set; }
+    public DbSet<ActivityTag> ActivityTags { get; set; }
     public DbSet<SystemConfig> SystemConfigs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

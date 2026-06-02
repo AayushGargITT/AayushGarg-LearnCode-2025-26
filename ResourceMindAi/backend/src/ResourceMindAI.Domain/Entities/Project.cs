@@ -21,6 +21,4 @@ public class Project
     public ICollection<Milestone> Milestones { get; set; } = new List<Milestone>();
     public ICollection<Allocation> Allocations { get; set; } = new List<Allocation>();
     public ICollection<Timesheet> Timesheets { get; set; } = new List<Timesheet>();
-
-    public Project() { }
 }

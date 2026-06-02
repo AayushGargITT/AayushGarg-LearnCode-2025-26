@@ -14,6 +14,4 @@ public class Allocation
 
     public Employee Employee { get; set; } = null!;
     public Project Project { get; set; } = null!;
-
-    public Allocation() { }
 }

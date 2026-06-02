@@ -14,6 +14,6 @@ public class Timesheet
 
     public Employee Employee { get; set; } = null!;
     public Project Project { get; set; } = null!;
-
-    public Timesheet() { }
+    public ICollection<ActivityTag> ActivityTags { get; set; }
+        = new List<ActivityTag>();
 }

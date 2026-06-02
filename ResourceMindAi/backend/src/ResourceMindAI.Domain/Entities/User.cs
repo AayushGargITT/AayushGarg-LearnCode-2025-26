@@ -18,6 +18,4 @@ public class User
 
     public Employee? Employee { get; set; }
     public ICollection<Project> ManagedProjects { get; set; } = new List<Project>();
-
-    public User() { }
 }

@@ -11,6 +11,4 @@ public class Milestone
     public MilestoneStatus Status { get; set; }
 
     public Project Project { get; set; } = null!;
-
-    public Milestone() { }
 }

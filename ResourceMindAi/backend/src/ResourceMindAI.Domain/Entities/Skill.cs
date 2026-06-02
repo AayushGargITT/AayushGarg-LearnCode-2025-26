@@ -12,6 +12,4 @@ public class Skill
     public DateTime AddedAt { get; set; }
 
     public Employee Employee { get; set; } = null!;
-
-    public Skill() { }
 }
