@@ -1,14 +1,13 @@
-import { Component, Input, inject, signal } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { AvatarComponent } from '../avatar/avatar.component';
 import { StatusBadgeComponent } from '../status-badge/status-badge.component';
-
-type Role = 'admin' | 'manager' | 'employee';
+import { Role } from '../../../core/models/user.model';
 
 const NAV: Record<Role, { to: string; label: string; icon: string }[]> = {
-  admin: [
+  [Role.ADMIN]: [
     { to: '/admin/dashboard', label: 'Dashboard', icon: 'dashboard' },
     { to: '/admin/users', label: 'Manage Users', icon: 'group' },
     { to: '/admin/employees', label: 'Manage Employees', icon: 'manage_accounts' },
@@ -16,24 +15,18 @@ const NAV: Record<Role, { to: string; label: string; icon: string }[]> = {
     { to: '/admin/allocations', label: 'All Allocations', icon: 'fact_check' },
     { to: '/admin/config', label: 'System Config', icon: 'settings' },
   ],
-  manager: [
+  [Role.MANAGER]: [
     { to: '/manager/resources', label: 'Resource Dashboard', icon: 'speed' },
     { to: '/manager/allocate', label: 'Allocate Resource', icon: 'auto_awesome' },
     { to: '/manager/projects', label: 'My Projects', icon: 'work' },
     { to: '/manager/timesheets', label: 'Timesheets', icon: 'schedule' },
     { to: '/manager/ai', label: 'AI Assistant', icon: 'auto_awesome' },
   ],
-  employee: [
+  [Role.EMPLOYEE]: [
     { to: '/employee/timesheets/submit', label: 'Submit Timesheet', icon: 'post_add' },
     { to: '/employee/allocations', label: 'My Allocations', icon: 'work' },
     { to: '/employee/timesheets/history', label: 'Timesheet History', icon: 'history' },
   ],
-};
-
-const USERS: Record<Role, { name: string; roleLabel: string }> = {
-  admin:    { name: 'Asha Rao',     roleLabel: 'Admin' },
-  manager:  { name: 'Marcus Lee',   roleLabel: 'Manager' },
-  employee: { name: 'Elena Patel',  roleLabel: 'Employee' },
 };
 
 @Component({
@@ -44,18 +37,24 @@ const USERS: Record<Role, { name: string; roleLabel: string }> = {
   styleUrl: './app-layout.component.css'
 })
 export class AppLayoutComponent {
-  @Input() role: Role = 'admin';
   @Input() title: string = '';
 
   authService = inject(AuthService);
   router = inject(Router);
 
   get navItems() {
-    return NAV[this.role] || [];
+    const currentUser=this.authService.currentUser()
+    if(!currentUser) return []
+    return NAV[currentUser.role] || [];
   }
 
   get user() {
-    return USERS[this.role];
+    const current = this.authService.currentUser();
+    if(!current) return {current:'', roleLabel:''}
+    return {
+      name: current.fullName,
+      roleLabel: current.role,
+    };
   }
 
   logout() {

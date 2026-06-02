@@ -1,56 +1,62 @@
 <app-layout role="admin" title="Manage Users">
-      <app-page-header title="User Accounts" subtitle="Create, deactivate and reset credentials for system users">
-        <button kendoButton themeColor="primary" (click)="openDrawer()">
-          <span class="material-symbols-outlined h-4 w-4 mr-1" style="font-size: 16px; vertical-align: middle;">add</span> Create User
-        </button>
-      </app-page-header>
-      
-      <div class="surface kendo-grid-shell">
-        <div class="toolbar-surface">
-          <div class="relative flex-1 max-w-sm">
-            <span class="material-symbols-outlined h-4 w-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" style="font-size: 16px; vertical-align: middle;">search</span>
-            <input kendoTextBox placeholder="Search by name or username..." class="w-full pl-8" />
-          </div>
-        </div>
-        
-        <kendo-grid [data]="rows" [height]="420" [resizable]="true">
-          <kendo-grid-column field="id" title="ID" [width]="110" headerClass="font-mono text-xs" class="font-mono text-xs text-muted-foreground"></kendo-grid-column>
-          <kendo-grid-column field="name" title="Full Name" class="font-medium"></kendo-grid-column>
-          <kendo-grid-column field="email" title="Email" class="text-muted-foreground"></kendo-grid-column>
-          <kendo-grid-column field="username" title="Username" class="font-mono text-xs"></kendo-grid-column>
-          <kendo-grid-column field="role" title="Role" [width]="130">
-            <ng-template kendoGridCellTemplate let-dataItem>
-              <app-status-badge [status]="dataItem.role"></app-status-badge>
-            </ng-template>
-          </kendo-grid-column>
-          <kendo-grid-column field="status" title="Status" [width]="120">
-            <ng-template kendoGridCellTemplate let-dataItem>
-              <app-status-badge [status]="dataItem.status"></app-status-badge>
-            </ng-template>
-          </kendo-grid-column>
-          <kendo-grid-column title="Actions" [width]="90" class="text-right">
-            <ng-template kendoGridCellTemplate>
-              <button class="icon-button" aria-label="More actions">
-                <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;">more_horiz</span>
-              </button>
-            </ng-template>
-          </kendo-grid-column>
-        </kendo-grid>
+  <app-page-header title="User Accounts" subtitle="Create, deactivate and reset credentials for system users">
+    <button kendoButton themeColor="primary" (click)="openDrawer()">
+      <span class="material-symbols-outlined h-4 w-4 mr-1" style="font-size: 16px; vertical-align: middle;">add</span> Create User
+    </button>
+  </app-page-header>
+
+  <div class="surface kendo-grid-shell">
+    <div class="toolbar-surface">
+      <div class="relative flex-1 max-w-sm">
+        <span class="material-symbols-outlined h-4 w-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" style="font-size: 16px; vertical-align: middle;">search</span>
+        <input kendoTextBox placeholder="Search by name or username..." class="w-full pl-8" />
       </div>
-      
-      <kendo-dialog *ngIf="drawerOpen()" title="Create User" [width]="460" (close)="closeDrawer()">
-        <p class="text-sm text-muted-foreground mb-4">Add a new account to ResourceMindAI.</p>
-        <div class="form-stack">
-          <div class="field-stack"><label class="text-sm font-medium">Full Name</label><input kendoTextBox placeholder="Jane Doe" /></div>
-          <div class="field-stack"><label class="text-sm font-medium">Email</label><input kendoTextBox type="email" /></div>
-          <div class="field-stack"><label class="text-sm font-medium">Username</label><input kendoTextBox /></div>
-          <div class="field-stack"><label class="text-sm font-medium">Temporary Password</label><input kendoTextBox type="password" /></div>
-          <div class="field-stack"><label class="text-sm font-medium">Role</label><kendo-dropdownlist [data]="roles"></kendo-dropdownlist></div>
-          <p class="hint-panel">User will be forced to change this password on first login.</p>
-        </div>
-        <kendo-dialog-actions>
-          <button kendoButton (click)="closeDrawer()">Cancel</button>
-          <button kendoButton themeColor="primary" (click)="closeDrawer()">Create User</button>
-        </kendo-dialog-actions>
-      </kendo-dialog>
-    </app-layout>
+    </div>
+
+    <kendo-grid [data]="rows()" [height]="420" [resizable]="true">
+      <kendo-grid-column field="id" title="ID" [width]="110" headerClass="font-mono text-xs" class="font-mono text-xs text-muted-foreground"></kendo-grid-column>
+      <kendo-grid-column field="fullName" title="Full Name" class="font-medium"></kendo-grid-column>
+      <kendo-grid-column field="email" title="Email" class="text-muted-foreground"></kendo-grid-column>
+      <kendo-grid-column field="username" title="Username" class="font-mono text-xs"></kendo-grid-column>
+      <kendo-grid-column field="role" title="Role" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.role"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="isActive" title="Status" [width]="120">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.isActive ? 'Active' : 'Inactive'"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Actions" [width]="90" class="text-right">
+        <ng-template kendoGridCellTemplate>
+          <button class="icon-button" aria-label="More actions">
+            <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;">more_horiz</span>
+          </button>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
+
+  <kendo-dialog *ngIf="drawerOpen()" title="Create User" [width]="460" (close)="closeDrawer()">
+    <p class="text-sm text-muted-foreground mb-4">Add a new account to ResourceMindAI.</p>
+
+    <div *ngIf="createError()" class="mb-4 border border-rose-500/30 bg-rose-500/10 text-rose-200 p-3 rounded-md text-sm">
+      {{ createError() }}
+    </div>
+
+    <form [formGroup]="createForm" class="form-stack">
+      <div class="field-stack"><label class="text-sm font-medium">Full Name</label><input kendoTextBox formControlName="fullName" placeholder="Jane Doe" /></div>
+      <div class="field-stack"><label class="text-sm font-medium">Email</label><input kendoTextBox formControlName="email" type="email" /></div>
+      <div class="field-stack"><label class="text-sm font-medium">Username</label><input kendoTextBox formControlName="username" /></div>
+      <div class="field-stack"><label class="text-sm font-medium">Temporary Password</label><input kendoTextBox formControlName="password" type="password" /></div>
+      <div class="field-stack"><label class="text-sm font-medium">Role</label><kendo-dropdownlist [data]="roles" formControlName="role"></kendo-dropdownlist></div>
+      <p class="hint-panel">User will be forced to change this password on first login.</p>
+    </form>
+
+    <kendo-dialog-actions>
+      <button kendoButton (click)="closeDrawer()">Cancel</button>
+      <button kendoButton themeColor="primary" (click)="createUser()">Create User</button>
+    </kendo-dialog-actions>
+  </kendo-dialog>
+</app-layout>

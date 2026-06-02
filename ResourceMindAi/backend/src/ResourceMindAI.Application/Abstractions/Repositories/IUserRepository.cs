@@ -1,10 +1,11 @@
-﻿using System;
-using System.Threading.Tasks;
 using ResourceMindAI.Domain.Entities;
 
 namespace ResourceMindAI.Application.Abstractions.Repositories;
+
 public interface IUserRepository
 {
-    // Minimal method signature for compilation
-    Task GetByIdAsync(Guid id);
+    Task<IReadOnlyList<User>> GetAllAsync();
+    Task<User?> GetByUsernameAsync(string username);
+    Task<bool> ExistsByUsernameOrEmailAsync(string username, string email);
+    Task<User> CreateAsync(User user);
 }

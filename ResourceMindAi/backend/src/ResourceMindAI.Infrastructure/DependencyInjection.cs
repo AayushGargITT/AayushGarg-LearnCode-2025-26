@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.Abstractions.Services;
+using ResourceMindAI.Application.Services;
 
 using ResourceMindAI.Infrastructure.Persistence;
 using ResourceMindAI.Infrastructure.Persistence.Repositories;
@@ -30,6 +31,9 @@ public static class DependencyInjection
         services.AddScoped<ISystemConfigRepository, SystemConfigRepository>();
 
         // Services
+        services.AddScoped<AuthService>();
+        services.AddScoped<UserService>();
+        services.AddScoped<EmployeeService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<ILlmClient, GeminiClient>();
         services.AddSingleton<LlmClientFactory>();

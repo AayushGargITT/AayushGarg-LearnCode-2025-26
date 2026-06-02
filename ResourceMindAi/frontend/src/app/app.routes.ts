@@ -8,16 +8,19 @@ export const routes: Routes = [
     {
         path: 'admin',
         canActivate: [authGuard],
+        data: { roles: ['Admin'] },
         loadChildren: () => import('./features/admin/admin.routes').then(m => m.adminRoutes)
     },
     {
         path: 'manager',
         canActivate: [authGuard],
+        data: { roles: ['Manager'] },
         loadChildren: () => import('./features/manager/manager.routes').then(m => m.managerRoutes)
     },
     {
         path: 'employee',
         canActivate: [authGuard],
+        data: { roles: ['Employee'] },
         loadChildren: () => import('./features/employee/employee.routes').then(m => m.employeeRoutes)
     },
     { path: '**', component: NotFoundComponent }

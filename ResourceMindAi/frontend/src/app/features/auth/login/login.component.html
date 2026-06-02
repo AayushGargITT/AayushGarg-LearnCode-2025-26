@@ -1,55 +1,36 @@
 <app-auth-shell>
-      <h2 class="text-lg font-semibold mb-1">Welcome back</h2>
-      <p class="text-xs text-muted-foreground mb-5">Sign in to your ResourceMindAI account</p>
-      
-      <div *ngIf="state() === 'error'" class="mb-4 border border-rose-500/30 bg-rose-500/10 text-rose-200 p-3 rounded-md flex items-start gap-3">
-        <span class="material-symbols-outlined h-4 w-4 mt-0.5" style="font-size: 16px; vertical-align: middle;">error_outline</span>
-        <div class="text-sm">Invalid username or password</div>
-      </div>
-      
-      <div *ngIf="state() === 'deactivated'" class="mb-4 border border-rose-500/30 bg-rose-500/10 text-rose-200 p-3 rounded-md flex items-start gap-3">
-        <span class="material-symbols-outlined h-4 w-4 mt-0.5" style="font-size: 16px; vertical-align: middle;">error_outline</span>
-        <div class="text-sm">Your account has been deactivated</div>
-      </div>
+  <h2 class="text-lg font-semibold mb-1">Welcome back</h2>
+  <p class="text-xs text-muted-foreground mb-5">Sign in to your ResourceMindAI account</p>
 
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
-        <div class="space-y-1.5">
-          <label for="u" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Username</label>
-          <input id="u" formControlName="username" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" placeholder="asha.rao" />
-        </div>
-        <div class="space-y-1.5">
-          <label for="p" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Password</label>
-          <div class="relative">
-            <input id="p" formControlName="password" [type]="show() ? 'text' : 'password'" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" placeholder="••••••••" />
-            <button type="button" (click)="toggleShow()" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground outline-none">
-              <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;" *ngIf="show()">visibility_off</span>
-              <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;" *ngIf="!show()">visibility</span>
-            </button>
-          </div>
-        </div>
-        
-        <button type="submit" [disabled]="loginForm.invalid" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 w-full bg-indigo-600 hover:bg-indigo-500 text-white h-9 px-4 py-2">
-          Sign In
+  <div *ngIf="state() === 'error'" class="mb-4 border border-rose-500/30 bg-rose-500/10 text-rose-200 p-3 rounded-md flex items-start gap-3">
+    <span class="material-symbols-outlined h-4 w-4 mt-0.5" style="font-size: 16px; vertical-align: middle;">error_outline</span>
+    <div class="text-sm">Invalid username or password</div>
+  </div>
+
+  <div *ngIf="state() === 'deactivated'" class="mb-4 border border-rose-500/30 bg-rose-500/10 text-rose-200 p-3 rounded-md flex items-start gap-3">
+    <span class="material-symbols-outlined h-4 w-4 mt-0.5" style="font-size: 16px; vertical-align: middle;">error_outline</span>
+    <div class="text-sm">Your account has been deactivated</div>
+  </div>
+
+  <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
+    <div class="space-y-1.5">
+      <label for="u" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Username</label>
+      <input id="u" formControlName="username" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" placeholder="asha.rao" />
+    </div>
+
+    <div class="space-y-1.5">
+      <label for="p" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Password</label>
+      <div class="relative">
+        <input id="p" formControlName="password" [type]="show() ? 'text' : 'password'" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" placeholder="Password" />
+        <button type="button" (click)="toggleShow()" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground outline-none">
+          <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;" *ngIf="show()">visibility_off</span>
+          <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;" *ngIf="!show()">visibility</span>
         </button>
+      </div>
+    </div>
 
-        <!-- Demo state switcher -->
-        <div class="flex items-center justify-between text-[11px] text-muted-foreground mt-4">
-          <span>Demo state:</span>
-          <div class="flex gap-1">
-            <button type="button" (click)="setState('idle')" class="rounded px-1.5 py-0.5 hover:bg-accent">Idle</button>
-            <button type="button" (click)="setState('error')" class="rounded px-1.5 py-0.5 hover:bg-accent">Error</button>
-            <button type="button" (click)="setState('deactivated')" class="rounded px-1.5 py-0.5 hover:bg-accent">Deactivated</button>
-          </div>
-        </div>
-
-        <div class="text-center text-xs text-muted-foreground mt-4">
-          Don't have an account? <a routerLink="/signup" class="text-indigo-400 hover:text-indigo-300">Sign Up</a>
-        </div>
-        <div class="text-center text-[11px] text-muted-foreground/70 mt-2">
-          Quick demo: 
-          <a routerLink="/admin/dashboard" class="underline hover:text-foreground">Admin</a> &middot; 
-          <a routerLink="/manager/resources" class="underline hover:text-foreground">Manager</a> &middot; 
-          <a routerLink="/employee/allocations" class="underline hover:text-foreground">Employee</a>
-        </div>
-      </form>
-    </app-auth-shell>
+    <button type="submit" [disabled]="loginForm.invalid" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 w-full bg-indigo-600 hover:bg-indigo-500 text-white h-9 px-4 py-2">
+      Sign In
+    </button>
+  </form>
+</app-auth-shell>

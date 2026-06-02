@@ -1,7 +1,7 @@
 export enum Role {
-  ADMIN = 'ADMIN',
-  MANAGER = 'MANAGER',
-  EMPLOYEE = 'EMPLOYEE'
+  ADMIN = 'Admin',
+  MANAGER = 'Manager',
+  EMPLOYEE = 'Employee'
 }
 
 export interface User {
@@ -10,9 +10,10 @@ export interface User {
   email: string;
   username: string;
   passwordHash?: string;
-  role: Role | string;
+  role: Role;
   isActive: boolean;
   forcePasswordChange: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  employeeId?: string;
+  department?: string;
+  designation?: string;
 }

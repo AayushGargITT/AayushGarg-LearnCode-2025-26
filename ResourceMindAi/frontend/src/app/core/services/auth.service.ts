@@ -1,52 +1,52 @@
-import { Injectable, signal } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { delay } from 'rxjs/operators';
-import { User, Role } from '../models/user.model';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject, signal } from '@angular/core';
+import { Observable, tap } from 'rxjs';
+import { Role, User } from '../models/user.model';
+import { Router } from '@angular/router';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  // A signal to hold the currently logged-in user
-  currentUser = signal<User | null>(null);
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly apiUrl = 'https://localhost:7071/api';
+  private readonly storageKey = 'resourceMindUser';
 
-  constructor() {}
+  currentUser = signal<User | null>(this.loadUser());
 
-  login(username: string, password: string): Observable<{ user: User, token: string }> {
-    // Mock login logic
-    if (username === 'error') {
-      return throwError(() => new Error('Invalid credentials'));
-    }
-    
-    const mockUser: User = {
-      id: 'U-1001',
-      fullName: 'Asha Rao',
-      email: 'asha@acme.io',
-      username: username,
-      role: Role.ADMIN,
-      isActive: true,
-      forcePasswordChange: false,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    // Update the signal
-    this.currentUser.set(mockUser);
-    
-    return of({ user: mockUser, token: 'mock-jwt-token' }).pipe(delay(500));
+  login(username: string, password: string): Observable<{ user: User }> {
+    return this.http.post<{ user: User }>(`${this.apiUrl}/auth/login`, { username, password }).pipe(
+      tap((res) => this.setCurrentUser(res.user))
+    );
   }
 
   logout(): void {
-    this.currentUser.set(null);
+    sessionStorage.removeItem(this.storageKey);
+    this.router.navigate(['/login'])
   }
 
-  signUp(signUpRequest: any): Observable<User> {
-    return of(signUpRequest).pipe(delay(500));
+  setCurrentUser(user: User): void {
+    this.currentUser.set(user);
+    sessionStorage.setItem(this.storageKey, JSON.stringify(user));
   }
 
-  changePassword(newPassword: string): Observable<boolean> {
-    const user = this.currentUser();
-    if (user) {
-      this.currentUser.set({ ...user, forcePasswordChange: false });
+  defaultRouteForRole(role: Role | string): string {
+    const normalized = String(role).toLowerCase();
+    if (normalized === 'admin') return '/admin/dashboard';
+    if (normalized === 'manager') return '/manager/resources';
+    return '/employee/allocations';
+  }
+
+  private loadUser(): User | null {
+    const raw = sessionStorage.getItem(this.storageKey);
+    if (!raw) {
+      return null;
     }
-    return of(true).pipe(delay(500));
+
+    try {
+      return JSON.parse(raw) as User;
+    } catch {
+      sessionStorage.removeItem(this.storageKey);
+      return null;
+    }
   }
 }

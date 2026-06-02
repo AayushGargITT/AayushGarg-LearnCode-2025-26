@@ -35,24 +35,14 @@ export class LoginComponent {
 
   onSubmit() {
     if (this.loginForm.invalid) return;
-    
-    // Simulate login
+
     const { username, password } = this.loginForm.value;
-    if (this.state() === 'error' || username === 'error') {
-      this.state.set('error');
-      return;
-    }
-    
-    if (this.state() === 'deactivated') {
-      return;
-    }
-    
+
     this.authService.login(username!, password!).subscribe({
       next: (res) => {
-        // Redirect based on role in a real app, hardcode to admin dashboard for mock
-        this.router.navigate(['/admin/dashboard']);
+        this.router.navigate([this.authService.defaultRouteForRole(res.user.role)]);
       },
-      error: () => this.state.set('error')
+      error: (err) => this.state.set(err.status === 403 ? 'deactivated' : 'error')
     });
   }
 }
