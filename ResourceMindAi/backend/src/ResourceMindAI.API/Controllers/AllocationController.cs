@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ResourceMindAI.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class AllocationController : ControllerBase
 {
@@ -11,5 +13,4 @@ public class AllocationController : ControllerBase
     {
         return Ok("Allocation Controller Working");
     }
-
 }

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using ResourceMindAI.API.Extensions;
 using ResourceMindAI.API.Middleware;
 using ResourceMindAI.Infrastructure;
 using Serilog;
@@ -30,10 +31,13 @@ try
         options.AddPolicy("Frontend", policy =>
             policy.WithOrigins("http://localhost:4200")
                 .AllowAnyHeader()
-                .AllowAnyMethod());
+                .AllowAnyMethod()
+                .AllowCredentials());
     });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
+    builder.Services.AddApiServices();
+    builder.Services.AddJwtCookieAuthentication(builder.Configuration);
     builder.Services.AddInfrastructure(builder.Configuration);
 
     // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -68,6 +72,7 @@ try
 
     app.UseCors("Frontend");
 
+    app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapControllers();

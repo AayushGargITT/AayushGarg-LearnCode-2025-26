@@ -1,7 +1,8 @@
-﻿using System;
+using ResourceMindAI.Application.Abstractions.Services;
 
 namespace ResourceMindAI.Application.Services;
-public class ProjectService
+
+public class ProjectService : IProjectService
 {
     public void Execute()
     {

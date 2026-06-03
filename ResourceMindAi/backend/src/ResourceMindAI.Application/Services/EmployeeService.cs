@@ -1,11 +1,12 @@
 using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
+using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Domain.Exceptions;
 
 namespace ResourceMindAI.Application.Services;
 
-public class EmployeeService
+public class EmployeeService : IEmployeeService
 {
     private readonly IEmployeeRepository _employeeRepository;
     private readonly ILogger<EmployeeService> _logger;

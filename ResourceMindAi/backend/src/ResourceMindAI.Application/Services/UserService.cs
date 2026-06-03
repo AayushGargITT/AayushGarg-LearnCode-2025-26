@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
+using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Application.DTOs.User;
 using ResourceMindAI.Domain.Entities;
@@ -7,7 +8,7 @@ using ResourceMindAI.Domain.Exceptions;
 
 namespace ResourceMindAI.Application.Services;
 
-public class UserService
+public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
     private readonly ILogger<UserService> _logger;
@@ -27,10 +28,6 @@ public class UserService
         return users.Select(AuthService.ToProfile).ToList();
     }
 
-    /// <summary>
-    /// Retrieves a single user by ID.
-    /// </summary>
-    /// <exception cref="EntityNotFoundException">Thrown when the user does not exist.</exception>
     public async Task<UserProfileDto> GetByIdAsync(Guid id)
     {
         _logger.LogInformation("Loading user {UserId} from repository", id);
@@ -46,10 +43,6 @@ public class UserService
         return AuthService.ToProfile(user);
     }
 
-    /// <summary>
-    /// Creates a new user account.
-    /// </summary>
-    /// <exception cref="ConflictException">Thrown when a user with the same username or email already exists.</exception>
     public async Task<UserProfileDto> CreateAsync(CreateUserDto request)
     {
         var username = request.Username.Trim();

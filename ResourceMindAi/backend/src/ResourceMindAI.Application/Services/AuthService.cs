@@ -1,12 +1,13 @@
 using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
+using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Domain.Entities;
 using ResourceMindAI.Domain.Exceptions;
 
 namespace ResourceMindAI.Application.Services;
 
-public class AuthService
+public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly ILogger<AuthService> _logger;
@@ -17,11 +18,6 @@ public class AuthService
         _logger = logger;
     }
 
-    /// <summary>
-    /// Authenticates a user by username and password.
-    /// </summary>
-    /// <exception cref="ForbiddenException">Thrown when the user's account is inactive.</exception>
-    /// <exception cref="UnauthorizedAccessException">Thrown when credentials are invalid.</exception>
     public async Task<UserProfileDto> LoginAsync(LoginDto request)
     {
         _logger.LogInformation("Authenticating username {Username}", request.Username);
@@ -44,13 +40,6 @@ public class AuthService
         return ToProfile(user);
     }
 
-    /// <summary>
-    /// Changes the password for an authenticated user.
-    /// </summary>
-    /// <exception cref="ValidationException">Thrown when input fails business validation rules.</exception>
-    /// <exception cref="EntityNotFoundException">Thrown when the user does not exist.</exception>
-    /// <exception cref="ForbiddenException">Thrown when the user's account is inactive.</exception>
-    /// <exception cref="UnauthorizedAccessException">Thrown when the current password is incorrect.</exception>
     public async Task<UserProfileDto> ChangePasswordAsync(ChangePasswordDto request)
     {
         _logger.LogInformation("Change password requested for user {UserId}", request.UserId);

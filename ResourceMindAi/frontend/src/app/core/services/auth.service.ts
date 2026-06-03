@@ -36,6 +36,7 @@ export class AuthService {
   }
 
   logout(): void {
+    this.http.post<void>(`${this.apiUrl}/auth/logout`, {}).subscribe();
     sessionStorage.removeItem(this.storageKey);
     this.router.navigate(['/login'])
   }

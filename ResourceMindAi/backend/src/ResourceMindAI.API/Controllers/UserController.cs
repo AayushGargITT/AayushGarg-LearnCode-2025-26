@@ -1,18 +1,20 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Application.DTOs.User;
-using ResourceMindAI.Application.Services;
 
 namespace ResourceMindAI.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/v1/[controller]")]
 public class UserController : ControllerBase
 {
-    private readonly UserService _userService;
+    private readonly IUserService _userService;
     private readonly ILogger<UserController> _logger;
 
-    public UserController(UserService userService, ILogger<UserController> logger)
+    public UserController(IUserService userService, ILogger<UserController> logger)
     {
         _userService = userService;
         _logger = logger;

@@ -1,17 +1,19 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
-using ResourceMindAI.Application.Services;
 
 namespace ResourceMindAI.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/v1/[controller]")]
 public class EmployeeController : ControllerBase
 {
-    private readonly EmployeeService _employeeService;
+    private readonly IEmployeeService _employeeService;
     private readonly ILogger<EmployeeController> _logger;
 
-    public EmployeeController(EmployeeService employeeService, ILogger<EmployeeController> logger)
+    public EmployeeController(IEmployeeService employeeService, ILogger<EmployeeController> logger)
     {
         _employeeService = employeeService;
         _logger = logger;

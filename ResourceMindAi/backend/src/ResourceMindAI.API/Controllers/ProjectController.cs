@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ResourceMindAI.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class ProjectController : ControllerBase
 {
@@ -11,5 +13,4 @@ public class ProjectController : ControllerBase
     {
         return Ok("Project Controller Working");
     }
-
 }
