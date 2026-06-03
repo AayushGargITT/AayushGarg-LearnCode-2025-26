@@ -45,4 +45,25 @@ public class AuthController : ControllerBase
         _logger.LogWarning("Login request failed for username {Username}", request.Username);
         return Unauthorized(new { message = "Invalid username or password." });
     }
+
+    [HttpPost("change-password")]
+    public async Task<ActionResult<LoginResponseDto>> ChangePassword(ChangePasswordDto request)
+    {
+        _logger.LogInformation("Change password request received for user {UserId}", request.UserId);
+
+        var result = await _authService.ChangePasswordAsync(request);
+        if (result.User is null)
+        {
+            _logger.LogWarning(
+                "Change password request failed for user {UserId} with status {StatusCode}: {Error}",
+                request.UserId,
+                result.StatusCode,
+                result.Error);
+
+            return StatusCode(result.StatusCode, new { message = result.Error });
+        }
+
+        _logger.LogInformation("Change password request completed for user {UserId}", result.User.Id);
+        return Ok(new LoginResponseDto { User = result.User });
+    }
 }

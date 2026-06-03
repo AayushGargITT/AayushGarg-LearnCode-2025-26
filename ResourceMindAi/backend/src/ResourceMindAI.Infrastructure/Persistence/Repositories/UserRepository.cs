@@ -46,6 +46,22 @@ public class UserRepository : IUserRepository
         return user;
     }
 
+    public async Task<User?> GetByIdAsync(Guid id)
+    {
+        _logger.LogDebug("Querying user by id {UserId}", id);
+
+        var user = await _dbContext.Users
+            .Include(x => x.Employee)
+            .FirstOrDefaultAsync(x => x.Id == id);
+
+        _logger.LogDebug(
+            "User lookup by id {UserId} returned {Found}",
+            id,
+            user is not null);
+
+        return user;
+    }
+
     public async Task<bool> ExistsByUsernameOrEmailAsync(string username, string email)
     {
         var normalizedUsername = username.Trim().ToLowerInvariant();
@@ -76,6 +92,20 @@ public class UserRepository : IUserRepository
         await _dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Saved user {UserId} to database", user.Id);
+        return user;
+    }
+
+    public async Task<User> UpdatePasswordAsync(User user, string passwordHash)
+    {
+        _logger.LogInformation("Updating password for user {UserId}", user.Id);
+
+        user.PasswordHash = passwordHash;
+        user.ForcePasswordChange = false;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        _logger.LogInformation("Updated password for user {UserId}", user.Id);
         return user;
     }
 }

@@ -50,7 +50,7 @@ export class AppLayoutComponent {
 
   get user() {
     const current = this.authService.currentUser();
-    if(!current) return {current:'', roleLabel:''}
+    if(!current) return {name:'', roleLabel:''}
     return {
       name: current.fullName,
       roleLabel: current.role,

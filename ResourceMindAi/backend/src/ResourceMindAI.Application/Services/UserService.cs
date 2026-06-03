@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.DTOs.Auth;
@@ -47,7 +46,7 @@ public class UserService
             FullName = request.FullName.Trim(),
             Email = email,
             Username = username,
-            PasswordHash = HashPassword(request.Password),
+            PasswordHash = PasswordHasher.Hash(request.Password),
             Role = request.Role,
             IsActive = true,
             ForcePasswordChange = true,
@@ -59,14 +58,5 @@ public class UserService
         _logger.LogInformation("Persisted new user {UserId}", createdUser.Id);
 
         return (AuthService.ToProfile(createdUser), null, 201);
-    }
-
-    private static string HashPassword(string password)
-    {
-        const int iterations = 100_000;
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, 32);
-
-        return $"pbkdf2${iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
     }
 }

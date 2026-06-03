@@ -35,12 +35,14 @@ export class LoginComponent {
 
   onSubmit() {
     if (this.loginForm.invalid) return;
-
+    
     const { username, password } = this.loginForm.value;
+  if(!username || !password) return;
 
-    this.authService.login(username!, password!).subscribe({
+    this.authService.login(username, password).subscribe({
       next: (res) => {
-        this.router.navigate([this.authService.defaultRouteForRole(res.user.role)]);
+        if(res.user.forcePasswordChange) this.router.navigate(['/change-password'])
+        else this.router.navigate([this.authService.defaultRouteForRole(res.user.role)]);
       },
       error: (err) => this.state.set(err.status === 403 ? 'deactivated' : 'error')
     });
