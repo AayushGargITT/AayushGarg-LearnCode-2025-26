@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
+using ResourceMindAI.API.Middleware;
 using ResourceMindAI.Infrastructure;
 using Serilog;
+
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -49,7 +51,8 @@ try
         };
     });
 
-    // Configure the HTTP request pipeline.
+    app.UseMiddleware<GlobalExceptionMiddleware>();
+
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi();

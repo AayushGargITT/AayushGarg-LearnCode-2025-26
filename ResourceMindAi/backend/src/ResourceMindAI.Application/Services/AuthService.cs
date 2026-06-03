@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Domain.Entities;
+using ResourceMindAI.Domain.Exceptions;
 
 namespace ResourceMindAI.Application.Services;
 
@@ -16,79 +17,91 @@ public class AuthService
         _logger = logger;
     }
 
-    public async Task<UserProfileDto?> LoginAsync(LoginDto request)
+    /// <summary>
+    /// Authenticates a user by username and password.
+    /// </summary>
+    /// <exception cref="ForbiddenException">Thrown when the user's account is inactive.</exception>
+    /// <exception cref="UnauthorizedAccessException">Thrown when credentials are invalid.</exception>
+    public async Task<UserProfileDto> LoginAsync(LoginDto request)
     {
         _logger.LogInformation("Authenticating username {Username}", request.Username);
 
         var user = await _userRepository.GetByUsernameAsync(request.Username);
 
-        if (user is null)
+        if (user is null || !PasswordHasher.Verify(request.Password, user.PasswordHash))
         {
-            _logger.LogWarning("Authentication failed because username {Username} was not found", request.Username);
-            return null;
-        }
-
-        if (!PasswordHasher.Verify(request.Password, user.PasswordHash))
-        {
-            _logger.LogWarning("Authentication failed because password was invalid for user {UserId}", user.Id);
-            return null;
+            _logger.LogWarning("Authentication failed for username {Username}: invalid credentials", request.Username);
+            throw new UnauthorizedAccessException("Invalid username or password.");
         }
 
         if (!user.IsActive)
         {
-            _logger.LogWarning("Authentication failed because user {UserId} is inactive", user.Id);
-            return null;
+            _logger.LogWarning("Authentication failed for user {UserId}: account is inactive", user.Id);
+            throw new ForbiddenException("Your account has been deactivated.", "INACTIVE_ACCOUNT");
         }
 
         _logger.LogInformation("Authentication succeeded for user {UserId} with role {Role}", user.Id, user.Role);
         return ToProfile(user);
     }
 
-    public async Task<(UserProfileDto? User, string? Error, int StatusCode)> ChangePasswordAsync(ChangePasswordDto request)
+    /// <summary>
+    /// Changes the password for an authenticated user.
+    /// </summary>
+    /// <exception cref="ValidationException">Thrown when input fails business validation rules.</exception>
+    /// <exception cref="EntityNotFoundException">Thrown when the user does not exist.</exception>
+    /// <exception cref="ForbiddenException">Thrown when the user's account is inactive.</exception>
+    /// <exception cref="UnauthorizedAccessException">Thrown when the current password is incorrect.</exception>
+    public async Task<UserProfileDto> ChangePasswordAsync(ChangePasswordDto request)
     {
         _logger.LogInformation("Change password requested for user {UserId}", request.UserId);
 
         if (request.NewPassword != request.ConfirmPassword)
         {
-            _logger.LogWarning("Change password rejected for user {UserId} because confirmation did not match", request.UserId);
-            return (null, "New password and confirmation do not match.", 400);
+            _logger.LogWarning("Change password rejected for user {UserId}: confirmation did not match", request.UserId);
+            throw new ValidationException(
+                nameof(request.ConfirmPassword),
+                "New password and confirmation do not match.");
         }
 
         if (!IsStrongPassword(request.NewPassword))
         {
-            _logger.LogWarning("Change password rejected for user {UserId} because password did not meet strength rules", request.UserId);
-            return (null, "Password must be at least 8 characters and include an uppercase letter and a number.", 400);
+            _logger.LogWarning("Change password rejected for user {UserId}: password did not meet strength rules", request.UserId);
+            throw new ValidationException(
+                nameof(request.NewPassword),
+                "Password must be at least 8 characters and include an uppercase letter and a number.");
         }
 
         var user = await _userRepository.GetByIdAsync(request.UserId);
         if (user is null)
         {
-            _logger.LogWarning("Change password rejected because user {UserId} was not found", request.UserId);
-            return (null, "User was not found.", 404);
+            _logger.LogWarning("Change password rejected: user {UserId} was not found", request.UserId);
+            throw new EntityNotFoundException("User", request.UserId);
         }
 
         if (!user.IsActive)
         {
-            _logger.LogWarning("Change password rejected because user {UserId} is inactive", user.Id);
-            return (null, "Your account has been deactivated.", 403);
+            _logger.LogWarning("Change password rejected: user {UserId} is inactive", user.Id);
+            throw new ForbiddenException("Your account has been deactivated.", "INACTIVE_ACCOUNT");
         }
 
         if (!PasswordHasher.Verify(request.CurrentPassword, user.PasswordHash))
         {
-            _logger.LogWarning("Change password rejected because current password was invalid for user {UserId}", user.Id);
-            return (null, "Current password is incorrect.", 400);
+            _logger.LogWarning("Change password rejected: current password was invalid for user {UserId}", user.Id);
+            throw new UnauthorizedAccessException("Current password is incorrect.");
         }
 
         if (PasswordHasher.Verify(request.NewPassword, user.PasswordHash))
         {
-            _logger.LogWarning("Change password rejected because new password matches current password for user {UserId}", user.Id);
-            return (null, "New password must be different from the current password.", 400);
+            _logger.LogWarning("Change password rejected: new password matches current password for user {UserId}", user.Id);
+            throw new ValidationException(
+                nameof(request.NewPassword),
+                "New password must be different from the current password.");
         }
 
         var updatedUser = await _userRepository.UpdatePasswordAsync(user, PasswordHasher.Hash(request.NewPassword));
 
         _logger.LogInformation("Password changed successfully for user {UserId}", updatedUser.Id);
-        return (ToProfile(updatedUser), null, 200);
+        return ToProfile(updatedUser);
     }
 
     public static UserProfileDto ToProfile(User user)

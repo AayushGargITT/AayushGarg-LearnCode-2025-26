@@ -19,10 +19,11 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<IEnumerable<UserProfileDto>>> Get(Guid id)
+    public async Task<ActionResult<UserProfileDto>> Get(Guid id)
     {
         _logger.LogInformation("User lookup requested for user {UserId}", id);
-        return Ok(await _userService.GetAllAsync());
+        var user = await _userService.GetByIdAsync(id);
+        return Ok(user);
     }
 
     [HttpGet]
@@ -31,7 +32,6 @@ public class UserController : ControllerBase
         _logger.LogInformation("User list request received");
         var users = await _userService.GetAllAsync();
         _logger.LogInformation("User list request completed with {UserCount} users", users.Count);
-
         return Ok(users);
     }
 
@@ -43,23 +43,13 @@ public class UserController : ControllerBase
             request.Username,
             request.Role);
 
-        var result = await _userService.CreateAsync(request);
-        if (result.User is null)
-        {
-            _logger.LogWarning(
-                "Create user request failed for username {Username} with status {StatusCode}: {Error}",
-                request.Username,
-                result.StatusCode,
-                result.Error);
-
-            return StatusCode(result.StatusCode, new { message = result.Error });
-        }
+        var user = await _userService.CreateAsync(request);
 
         _logger.LogInformation(
             "Create user request completed for user {UserId} with role {Role}",
-            result.User.Id,
-            result.User.Role);
+            user.Id,
+            user.Role);
 
-        return CreatedAtAction(nameof(Get), new { id = result.User.Id }, result.User);
+        return CreatedAtAction(nameof(Get), new { id = user.Id }, user);
     }
 }

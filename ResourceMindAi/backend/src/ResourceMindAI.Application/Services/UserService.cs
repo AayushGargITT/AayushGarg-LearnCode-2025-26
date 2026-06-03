@@ -3,6 +3,7 @@ using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Application.DTOs.User;
 using ResourceMindAI.Domain.Entities;
+using ResourceMindAI.Domain.Exceptions;
 
 namespace ResourceMindAI.Application.Services;
 
@@ -26,7 +27,30 @@ public class UserService
         return users.Select(AuthService.ToProfile).ToList();
     }
 
-    public async Task<(UserProfileDto? User, string? Error, int StatusCode)> CreateAsync(CreateUserDto request)
+    /// <summary>
+    /// Retrieves a single user by ID.
+    /// </summary>
+    /// <exception cref="EntityNotFoundException">Thrown when the user does not exist.</exception>
+    public async Task<UserProfileDto> GetByIdAsync(Guid id)
+    {
+        _logger.LogInformation("Loading user {UserId} from repository", id);
+        var user = await _userRepository.GetByIdAsync(id);
+
+        if (user is null)
+        {
+            _logger.LogWarning("User {UserId} was not found", id);
+            throw new EntityNotFoundException("User", id);
+        }
+
+        _logger.LogInformation("Loaded user {UserId}", user.Id);
+        return AuthService.ToProfile(user);
+    }
+
+    /// <summary>
+    /// Creates a new user account.
+    /// </summary>
+    /// <exception cref="ConflictException">Thrown when a user with the same username or email already exists.</exception>
+    public async Task<UserProfileDto> CreateAsync(CreateUserDto request)
     {
         var username = request.Username.Trim();
         var email = request.Email.Trim();
@@ -35,8 +59,10 @@ public class UserService
 
         if (await _userRepository.ExistsByUsernameOrEmailAsync(username, email))
         {
-            _logger.LogWarning("User creation rejected because username/email already exists for {Username}", username);
-            return (null, "A user with this username or email already exists.", 409);
+            _logger.LogWarning("User creation rejected: username/email already exists for {Username}", username);
+            throw new ConflictException(
+                "A user with this username or email already exists.",
+                "DUPLICATE_USER");
         }
 
         var now = DateTime.UtcNow;
@@ -57,6 +83,6 @@ public class UserService
         var createdUser = await _userRepository.CreateAsync(user);
         _logger.LogInformation("Persisted new user {UserId}", createdUser.Id);
 
-        return (AuthService.ToProfile(createdUser), null, 201);
+        return AuthService.ToProfile(createdUser);
     }
 }

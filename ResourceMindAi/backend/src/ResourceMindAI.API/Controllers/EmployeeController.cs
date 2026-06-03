@@ -23,7 +23,6 @@ public class EmployeeController : ControllerBase
         _logger.LogInformation("Employee list request received");
         var employees = await _employeeService.GetAllAsync();
         _logger.LogInformation("Employee list request completed with {EmployeeCount} employees", employees.Count);
-
         return Ok(employees);
     }
 
@@ -33,11 +32,6 @@ public class EmployeeController : ControllerBase
         _logger.LogInformation("Employee profile request received for user {UserId}", userId);
 
         var employee = await _employeeService.GetByIdAsync(userId);
-        if (employee is null)
-        {
-            _logger.LogWarning("Employee profile was not found for user {UserId}", userId);
-            return NotFound();
-        }
 
         _logger.LogInformation("Employee profile request completed for employee {EmployeeId}", employee.EmployeeId);
         return Ok(employee);

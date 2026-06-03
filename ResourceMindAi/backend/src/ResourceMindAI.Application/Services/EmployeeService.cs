@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.DTOs.Auth;
+using ResourceMindAI.Domain.Exceptions;
 
 namespace ResourceMindAI.Application.Services;
 
@@ -36,14 +37,19 @@ public class EmployeeService
         }).ToList();
     }
 
-    public async Task<UserProfileDto?> GetByIdAsync(Guid userId)
+    /// <summary>
+    /// Retrieves a single employee profile by the associated user ID.
+    /// </summary>
+    /// <exception cref="EntityNotFoundException">Thrown when no employee is linked to the given user ID.</exception>
+    public async Task<UserProfileDto> GetByIdAsync(Guid userId)
     {
         _logger.LogInformation("Loading employee profile for user {UserId}", userId);
         var employee = await _employeeRepository.GetByIdAsync(userId);
+
         if (employee is null)
         {
             _logger.LogWarning("Employee profile was not found for user {UserId}", userId);
-            return null;
+            throw new EntityNotFoundException("Employee", userId);
         }
 
         _logger.LogInformation("Loaded employee profile {EmployeeId} for user {UserId}", employee.Id, userId);

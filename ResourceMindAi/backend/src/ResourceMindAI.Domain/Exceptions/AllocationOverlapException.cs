@@ -1,6 +1,8 @@
-﻿using System;
 namespace ResourceMindAI.Domain.Exceptions;
-public class AllocationOverlapException : Exception
+
+public class AllocationOverlapException : DomainException
 {
-    public AllocationOverlapException(string message) : base(message) { }
+    public AllocationOverlapException(string message)
+        : base(message, "ALLOCATION_OVERLAP") { }
 }
+
