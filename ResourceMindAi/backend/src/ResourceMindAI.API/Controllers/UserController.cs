@@ -3,18 +3,21 @@ using Microsoft.AspNetCore.Authorization;
 using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Application.DTOs.User;
+using ResourceMindAI.Application.DTOs.Employee;
 
 namespace ResourceMindAI.API.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Admin")]
 [Route("api/v1/[controller]")]
 public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly ILogger<UserController> _logger;
 
-    public UserController(IUserService userService, ILogger<UserController> logger)
+    public UserController(
+        IUserService userService,
+        ILogger<UserController> logger)
     {
         _userService = userService;
         _logger = logger;
@@ -53,5 +56,29 @@ public class UserController : ControllerBase
             user.Role);
 
         return CreatedAtAction(nameof(Get), new { id = user.Id }, user);
+    }
+
+    [HttpPost("reset-password/{id:guid}")]
+    public async Task<ActionResult<UserProfileDto>> ResetPassword(Guid id)
+    {
+        _logger.LogInformation("Reset password request received for user {UserId}", id);
+        var user = await _userService.ResetPasswordAsync(id);
+        return Ok(user);
+    }
+
+    [HttpPatch("toggle-status/{id:guid}")]
+    public async Task<ActionResult<UserProfileDto>> ToggleStatus(Guid id)
+    {
+        _logger.LogInformation("Toggle status request received for user {UserId}", id);
+        var user = await _userService.ToggleStatusAsync(id);
+        return Ok(user);
+    }
+
+    [HttpPost("add-employee/{id:guid}")]
+    public async Task<ActionResult<UserProfileDto>> AddEmployee(Guid id, AddEmployeeDto request)
+    {
+        _logger.LogInformation("Add employee request received for user {UserId}", id);
+        var user = await _userService.AddEmployeeAsync(id, request);
+        return Ok(user);
     }
 }

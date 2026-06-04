@@ -17,3 +17,15 @@ export interface User {
   department?: string;
   designation?: string;
 }
+
+export interface CreateUserRequest {
+  fullName: string;
+  email: string;
+  username: string;
+  role: Role;
+}
+
+export interface AddEmployeeRequest {
+  designation: string;
+  department: string;
+}

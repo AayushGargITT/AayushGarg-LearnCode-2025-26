@@ -5,6 +5,14 @@
     </button>
   </app-page-header>
 
+  <div *ngIf="successMessage()" class="mb-4 border border-emerald-500/30 bg-emerald-500/10 text-emerald-200 p-3 rounded-md text-sm">
+    {{ successMessage() }}
+  </div>
+
+  <div *ngIf="actionError()" class="mb-4 border border-rose-500/30 bg-rose-500/10 text-rose-200 p-3 rounded-md text-sm">
+    {{ actionError() }}
+  </div>
+
   <div class="surface kendo-grid-shell">
     <div class="toolbar-surface">
       <div class="relative flex-1 max-w-sm">
@@ -13,7 +21,7 @@
       </div>
     </div>
 
-    <kendo-grid [data]="rows()" [height]="420" [resizable]="true">
+    <kendo-grid [data]="rows()" [height]="420" [resizable]="true" [loading]="isLoading()">
       <kendo-grid-column field="id" title="ID" [width]="110" headerClass="font-mono text-xs" class="font-mono text-xs text-muted-foreground"></kendo-grid-column>
       <kendo-grid-column field="fullName" title="Full Name" class="font-medium"></kendo-grid-column>
       <kendo-grid-column field="email" title="Email" class="text-muted-foreground"></kendo-grid-column>
@@ -28,18 +36,27 @@
           <app-status-badge [status]="dataItem.isActive ? 'Active' : 'Inactive'"></app-status-badge>
         </ng-template>
       </kendo-grid-column>
-      <kendo-grid-column title="Actions" [width]="90" class="text-right">
-        <ng-template kendoGridCellTemplate>
-          <button class="icon-button" aria-label="More actions">
+      <kendo-grid-column title="Actions" [width]="110" class="text-right">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <kendo-dropdownbutton
+            [data]="actionsFor(dataItem)"
+            textField="text"
+            fillMode="flat"
+            [disabled]="actionUserId() === dataItem.id"
+            [buttonAttributes]="{ 'aria-label': 'More actions' }"
+            (itemClick)="onUserAction(dataItem, $event)">
             <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;">more_horiz</span>
-          </button>
+            <ng-template kendoDropDownButtonItemTemplate let-dataItem>
+              <span [class.text-muted-foreground]="dataItem.disabled">{{ dataItem.text }}</span>
+            </ng-template>
+          </kendo-dropdownbutton>
         </ng-template>
       </kendo-grid-column>
     </kendo-grid>
   </div>
 
   <kendo-dialog *ngIf="drawerOpen()" title="Create User" [width]="460" (close)="closeDrawer()">
-    <p class="text-sm text-muted-foreground mb-4">Add a new account to ResourceMindAI.</p>
+    <p class="text-sm text-muted-foreground mb-4">Add a new account to ResourceMindAI. The initial password will match the username.</p>
 
     <div *ngIf="createError()" class="mb-4 border border-rose-500/30 bg-rose-500/10 text-rose-200 p-3 rounded-md text-sm">
       {{ createError() }}
@@ -49,14 +66,56 @@
       <div class="field-stack"><label class="text-sm font-medium">Full Name</label><input kendoTextBox formControlName="fullName" placeholder="Jane Doe" /></div>
       <div class="field-stack"><label class="text-sm font-medium">Email</label><input kendoTextBox formControlName="email" type="email" /></div>
       <div class="field-stack"><label class="text-sm font-medium">Username</label><input kendoTextBox formControlName="username" /></div>
-      <div class="field-stack"><label class="text-sm font-medium">Temporary Password</label><input kendoTextBox formControlName="password" type="password" /></div>
       <div class="field-stack"><label class="text-sm font-medium">Role</label><kendo-dropdownlist [data]="roles" formControlName="role"></kendo-dropdownlist></div>
-      <p class="hint-panel">User will be forced to change this password on first login.</p>
+      <p class="hint-panel">User will be forced to change the initial password on first login.</p>
     </form>
 
     <kendo-dialog-actions>
-      <button kendoButton (click)="closeDrawer()">Cancel</button>
-      <button kendoButton themeColor="primary" (click)="createUser()">Create User</button>
+      <button kendoButton (click)="closeDrawer()" [disabled]="isCreating()">Cancel</button>
+      <button kendoButton themeColor="primary" (click)="createUser()" [disabled]="isCreating()">
+        {{ isCreating() ? 'Creating...' : 'Create User' }}
+      </button>
+    </kendo-dialog-actions>
+  </kendo-dialog>
+
+  <kendo-dialog *ngIf="resetPasswordUser()" title="Reset Password" [width]="420" (close)="closeResetPasswordDialog()">
+    <p class="text-sm text-muted-foreground mb-4">
+      Reset password for {{ resetPasswordUser()?.username }}? The temporary password will match the username and the user will be forced to change it on next login.
+    </p>
+
+    <kendo-dialog-actions>
+      <button kendoButton (click)="closeResetPasswordDialog()" [disabled]="actionUserId() === resetPasswordUser()?.id">Cancel</button>
+      <button kendoButton themeColor="primary" (click)="confirmResetPassword()" [disabled]="actionUserId() === resetPasswordUser()?.id">
+        {{ actionUserId() === resetPasswordUser()?.id ? 'Resetting...' : 'Reset Password' }}
+      </button>
+    </kendo-dialog-actions>
+  </kendo-dialog>
+
+  <kendo-dialog *ngIf="employeeDialogUser()" title="Add as Employee" [width]="460" (close)="closeEmployeeDialog()">
+    <p class="text-sm text-muted-foreground mb-4">
+      Create an employee profile for {{ employeeDialogUser()?.fullName }}.
+    </p>
+
+    <div *ngIf="employeeError()" class="mb-4 border border-rose-500/30 bg-rose-500/10 text-rose-200 p-3 rounded-md text-sm">
+      {{ employeeError() }}
+    </div>
+
+    <form [formGroup]="employeeForm" class="form-stack">
+      <div class="field-stack">
+        <label class="text-sm font-medium">Designation</label>
+        <input kendoTextBox formControlName="designation" />
+      </div>
+      <div class="field-stack">
+        <label class="text-sm font-medium">Department</label>
+        <input kendoTextBox formControlName="department" />
+      </div>
+    </form>
+
+    <kendo-dialog-actions>
+      <button kendoButton (click)="closeEmployeeDialog()" [disabled]="isAddingEmployee()">Cancel</button>
+      <button kendoButton themeColor="primary" (click)="submitEmployee()" [disabled]="isAddingEmployee()">
+        {{ isAddingEmployee() ? 'Adding...' : 'Add as Employee' }}
+      </button>
     </kendo-dialog-actions>
   </kendo-dialog>
 </app-layout>

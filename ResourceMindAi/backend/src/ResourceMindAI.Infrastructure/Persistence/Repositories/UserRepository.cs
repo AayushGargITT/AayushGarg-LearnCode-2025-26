@@ -95,6 +95,17 @@ public class UserRepository : IUserRepository
         return user;
     }
 
+    public async Task<User> UpdateAsync(User user)
+    {
+        _logger.LogInformation("Updating user {UserId}", user.Id);
+
+        user.UpdatedAt = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync();
+
+        _logger.LogInformation("Updated user {UserId}", user.Id);
+        return user;
+    }
+
     public async Task<User> UpdatePasswordAsync(User user, string passwordHash)
     {
         _logger.LogInformation("Updating password for user {UserId}", user.Id);
@@ -107,5 +118,16 @@ public class UserRepository : IUserRepository
 
         _logger.LogInformation("Updated password for user {UserId}", user.Id);
         return user;
+    }
+
+    public async Task<Employee> AddEmployeeAsync(Employee employee)
+    {
+        _logger.LogInformation("Adding employee {EmployeeId} for user {UserId}", employee.Id, employee.UserId);
+
+        _dbContext.Employees.Add(employee);
+        await _dbContext.SaveChangesAsync();
+
+        _logger.LogInformation("Saved employee {EmployeeId} for user {UserId}", employee.Id, employee.UserId);
+        return employee;
     }
 }

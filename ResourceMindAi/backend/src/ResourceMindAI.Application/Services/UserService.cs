@@ -2,8 +2,10 @@ using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
+using ResourceMindAI.Application.DTOs.Employee;
 using ResourceMindAI.Application.DTOs.User;
 using ResourceMindAI.Domain.Entities;
+using ResourceMindAI.Domain.Enums;
 using ResourceMindAI.Domain.Exceptions;
 
 namespace ResourceMindAI.Application.Services;
@@ -11,11 +13,13 @@ namespace ResourceMindAI.Application.Services;
 public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IEmployeeRepository _employeeRepository;
     private readonly ILogger<UserService> _logger;
 
-    public UserService(IUserRepository userRepository, ILogger<UserService> logger)
+    public UserService(IUserRepository userRepository, IEmployeeRepository employeeRepository, ILogger<UserService> logger)
     {
         _userRepository = userRepository;
+        _employeeRepository=employeeRepository;
         _logger = logger;
     }
 
@@ -45,6 +49,7 @@ public class UserService : IUserService
 
     public async Task<UserProfileDto> CreateAsync(CreateUserDto request)
     {
+        var fullName = request.FullName.Trim();
         var username = request.Username.Trim();
         var email = request.Email.Trim();
 
@@ -62,11 +67,11 @@ public class UserService : IUserService
         var user = new User
         {
             Id = Guid.NewGuid(),
-            FullName = request.FullName.Trim(),
+            FullName = fullName,
             Email = email,
             Username = username,
-            PasswordHash = PasswordHasher.Hash(request.Password),
-            Role = request.Role,
+            PasswordHash = PasswordHasher.Hash(username),
+            Role = request.Role!.Value,
             IsActive = true,
             ForcePasswordChange = true,
             CreatedAt = now
@@ -77,5 +82,84 @@ public class UserService : IUserService
         _logger.LogInformation("Persisted new user {UserId}", createdUser.Id);
 
         return AuthService.ToProfile(createdUser);
+    }
+
+    public async Task<UserProfileDto> ResetPasswordAsync(Guid id)
+    {
+        _logger.LogInformation("Reset password requested for user {UserId}", id);
+
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user is null)
+        {
+            _logger.LogWarning("Reset password rejected: user {UserId} was not found", id);
+            throw new EntityNotFoundException("User", id);
+        }
+
+        user.PasswordHash = PasswordHasher.Hash(user.Username);
+        user.ForcePasswordChange = true;
+        var updatedUser = await _userRepository.UpdateAsync(user);
+
+        _logger.LogInformation("Password reset completed for user {UserId}", updatedUser.Id);
+        return AuthService.ToProfile(updatedUser);
+    }
+
+    public async Task<UserProfileDto> ToggleStatusAsync(Guid id)
+    {
+        _logger.LogInformation("Toggle status requested for user {UserId}", id);
+
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user is null)
+        {
+            _logger.LogWarning("Toggle status rejected: user {UserId} was not found", id);
+            throw new EntityNotFoundException("User", id);
+        }
+
+        user.IsActive = !user.IsActive;
+        var updatedUser = await _userRepository.UpdateAsync(user);
+
+        _logger.LogInformation("Toggle status completed for user {UserId}; active={IsActive}", updatedUser.Id, updatedUser.IsActive);
+        return AuthService.ToProfile(updatedUser);
+    }
+
+    public async Task<UserProfileDto> AddEmployeeAsync(Guid userId, AddEmployeeDto request)
+    {
+        _logger.LogInformation("Add employee requested for user {UserId}", userId);
+
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user is null)
+        {
+            _logger.LogWarning("Add employee rejected: user {UserId} was not found", userId);
+            throw new EntityNotFoundException("User", userId);
+        }
+
+        if (user.Role == Role.Admin)
+        {
+            _logger.LogWarning("Add employee rejected: user {UserId} is an Admin", userId);
+            throw new ForbiddenException("Admin users cannot be added as employees.", "ADMIN_EMPLOYEE_NOT_ALLOWED");
+        }
+
+        var existingEmployee = await _employeeRepository.GetByIdAsync(userId);
+        if (existingEmployee is not null)
+        {
+            _logger.LogWarning("Add employee rejected: user {UserId} is already mapped to employee {EmployeeId}", userId, existingEmployee.Id);
+            throw new ConflictException("This user is already added as an employee.", "EMPLOYEE_ALREADY_EXISTS");
+        }
+
+        var employee = new Employee
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Department = request.Department.Trim(),
+            Designation = request.Designation.Trim(),
+            Status = EmployeeStatus.Active,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        var createdEmployee = await _userRepository.AddEmployeeAsync(employee);
+        user.Employee = createdEmployee;
+
+        _logger.LogInformation("Add employee completed for user {UserId} with employee {EmployeeId}", userId, createdEmployee.Id);
+        return AuthService.ToProfile(user);
     }
 }

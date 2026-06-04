@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 using ResourceMindAI.API.Extensions;
 using ResourceMindAI.API.Middleware;
+using ResourceMindAI.Domain.Exceptions;
 using ResourceMindAI.Infrastructure;
 using Serilog;
 
@@ -24,8 +26,28 @@ try
     builder.Services.AddControllers()
         .AddJsonOptions(options =>
         {
-            options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
         });
+    builder.Services.Configure<ApiBehaviorOptions>(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(x => x.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    x => x.Key,
+                    x => x.Value!.Errors
+                        .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
+                            ? "The request value is invalid."
+                            : error.ErrorMessage)
+                        .ToArray());
+
+            var message = errors.Values.FirstOrDefault()?.FirstOrDefault()
+                ?? "One or more validation errors occurred.";
+
+            throw new ValidationException(message, errors);
+        };
+    });
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("Frontend", policy =>

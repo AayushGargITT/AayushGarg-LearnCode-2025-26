@@ -15,7 +15,8 @@ import { AuthShellComponent } from '../../../shared/components/auth-shell/auth-s
 export class LoginComponent {
   show = signal(false);
   state = signal<'idle' | 'error' | 'deactivated'>('idle');
-  
+  errorMessage = signal<string | null>(null);
+
   authService = inject(AuthService);
   router = inject(Router);
   fb = inject(FormBuilder);
@@ -44,7 +45,10 @@ export class LoginComponent {
         if(res.user.forcePasswordChange) this.router.navigate(['/change-password'])
         else this.router.navigate([this.authService.defaultRouteForRole(res.user.role)]);
       },
-      error: (err) => this.state.set(err.status === 403 ? 'deactivated' : 'error')
+      error: (err)=>{
+        this.state.set(err.status === 403 ? 'deactivated' : 'error')
+        this.errorMessage.set(err.message || err.error?.message)
+      }
     });
   }
 }
