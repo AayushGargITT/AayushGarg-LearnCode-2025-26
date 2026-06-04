@@ -1,9 +1,9 @@
 <app-layout role="admin" title="Manage Employees">
       <app-page-header title="Employees" subtitle="Maintain employee records, departments and skills">
-        <button kendoButton themeColor="primary" (click)="openDrawer()">
-          <span class="material-symbols-outlined h-4 w-4 mr-1" style="font-size: 16px; vertical-align: middle;">add</span> Add Employee
-        </button>
       </app-page-header>
+
+      <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
+      <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
       
       <div class="surface kendo-grid-shell">
         <div class="toolbar-surface">
@@ -33,9 +33,13 @@
           <kendo-grid-column field="active" title="Active" [width]="120">
             <ng-template kendoGridCellTemplate let-dataItem><app-status-badge [status]="dataItem.active"></app-status-badge></ng-template>
           </kendo-grid-column>
-          <kendo-grid-column title="Actions" [width]="90" class="text-right">
-            <ng-template kendoGridCellTemplate>
-              <button class="icon-button" aria-label="More actions"><span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;">more_horiz</span></button>
+          <kendo-grid-column title="Actions" [width]="110" class="text-right">
+            <ng-template kendoGridCellTemplate let-dataItem>
+              <app-row-action-menu
+                [actions]="actionsFor(dataItem)"
+                [disabled]="pageState.activeActionId() === dataItem.id"
+                (actionSelected)="onEmployeeAction(dataItem, $event)">
+              </app-row-action-menu>
             </ng-template>
           </kendo-grid-column>
         </kendo-grid>
@@ -55,4 +59,14 @@
           <button kendoButton themeColor="primary" (click)="closeDrawer()">Add Employee</button>
         </kendo-dialog-actions>
       </kendo-dialog>
+
+      <app-confirm-dialog
+        *ngIf="actionEmployee()"
+        [title]="actionEmployee()?.active === 'Active' ? 'Deactivate Employee' : 'Activate Employee'"
+        [message]="'Are you sure you want to ' + (actionEmployee()?.active === 'Active' ? 'deactivate ' : 'activate ') + actionEmployee()?.name + '?'"
+        [confirmText]="actionEmployee()?.active === 'Active' ? 'Deactivate' : 'Activate'"
+        [isBusy]="pageState.activeActionId() === actionEmployee()?.id"
+        (cancelled)="closeConfirmDialog()"
+        (confirmed)="confirmToggleStatus()">
+      </app-confirm-dialog>
     </app-layout>

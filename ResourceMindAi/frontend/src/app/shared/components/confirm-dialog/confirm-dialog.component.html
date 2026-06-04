@@ -1,0 +1,10 @@
+<kendo-dialog [title]="title" [width]="420" (close)="cancelled.emit()">
+  <p class="text-sm text-muted-foreground mb-4">{{ message }}</p>
+
+  <kendo-dialog-actions>
+    <button kendoButton (click)="cancelled.emit()" [disabled]="isBusy">{{ cancelText }}</button>
+    <button kendoButton themeColor="primary" (click)="confirmed.emit()" [disabled]="isBusy">
+      {{ isBusy ? 'Working...' : confirmText }}
+    </button>
+  </kendo-dialog-actions>
+</kendo-dialog>

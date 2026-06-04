@@ -47,7 +47,7 @@ export class LoginComponent {
       },
       error: (err)=>{
         this.state.set(err.status === 403 ? 'deactivated' : 'error')
-        this.errorMessage.set(err.message || err.error?.message)
+        this.errorMessage.set(err.error?.message)
       }
     });
   }

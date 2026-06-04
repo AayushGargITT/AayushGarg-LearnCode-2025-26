@@ -1,0 +1,25 @@
+.page-feedback {
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  padding: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.page-feedback.success {
+  border-color: color-mix(in srgb, oklch(0.72 0.16 162) 30%, transparent);
+  background: color-mix(in srgb, oklch(0.72 0.16 162) 10%, transparent);
+  color: oklch(0.82 0.14 162);
+}
+
+.page-feedback.error {
+  border-color: color-mix(in srgb, oklch(0.65 0.22 27) 30%, transparent);
+  background: color-mix(in srgb, oklch(0.65 0.22 27) 10%, transparent);
+  color: oklch(0.9 0.05 27);
+}
+
+.page-feedback.info {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--foreground);
+}

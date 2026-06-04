@@ -1,0 +1,13 @@
+<kendo-dropdownbutton
+  [data]="actions"
+  textField="text"
+  fillMode="flat"
+  [disabled]="disabled"
+  [buttonAttributes]="{ 'aria-label': ariaLabel }"
+  (itemClick)="select($event)">
+  <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;">more_horiz</span>
+
+  <ng-template kendoDropDownButtonItemTemplate let-dataItem>
+    <span [class.text-muted-foreground]="dataItem.disabled">{{ dataItem.text }}</span>
+  </ng-template>
+</kendo-dropdownbutton>

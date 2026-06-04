@@ -1,9 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ButtonsModule } from '@progress/kendo-angular-buttons';
-import { DialogModule } from '@progress/kendo-angular-dialog';
-import { DropDownsModule } from '@progress/kendo-angular-dropdowns';
 import { GridModule } from '@progress/kendo-angular-grid';
 import { InputsModule } from '@progress/kendo-angular-inputs';
 import { AppLayoutComponent } from '../../../shared/components/app-layout/app-layout.component';
@@ -11,109 +8,89 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { AddEmployeeRequest, CreateUserRequest, Role, User } from '../../../core/models/user.model';
 import { UserService } from '../../../core/services/user.service';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
+import { RowActionItem, RowActionMenuComponent } from '../../../shared/components/row-action-menu/row-action-menu.component';
+import { PageStateService } from '../../../shared/services/page-state.service';
+import { AddEmployeeDialogComponent } from './components/add-employee-dialog/add-employee-dialog.component';
+import { CreateUserDialogComponent } from './components/create-user-dialog/create-user-dialog.component';
 
 type UserAction = 'resetPassword' | 'toggleStatus' | 'addEmployee';
-
-interface UserActionItem {
-  text: string;
-  action: UserAction;
-  disabled?: boolean;
-}
+type UserActionItem = RowActionItem<UserAction>;
 
 @Component({
   selector: 'app-users',
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
     ButtonsModule,
-    DialogModule,
-    DropDownsModule,
     GridModule,
     InputsModule,
     AppLayoutComponent,
     PageHeaderComponent,
-    StatusBadgeComponent
+    StatusBadgeComponent,
+    ConfirmDialogComponent,
+    PageFeedbackComponent,
+    RowActionMenuComponent,
+    CreateUserDialogComponent,
+    AddEmployeeDialogComponent
   ],
   templateUrl: './users.component.html',
-  styleUrl: './users.component.css'
+  styleUrl: './users.component.css',
+  providers: [PageStateService]
 })
 export class AdminUsersComponent {
-  private readonly fb = inject(FormBuilder);
   private readonly userService = inject(UserService);
+  readonly pageState = inject(PageStateService);
 
   drawerOpen = signal(false);
   rows = signal<User[]>([]);
-  isLoading = signal(false);
   isCreating = signal(false);
-  actionUserId = signal<string | null>(null);
   resetPasswordUser = signal<User | null>(null);
   employeeDialogUser = signal<User | null>(null);
   isAddingEmployee = signal(false);
   createError = signal<string | null>(null);
-  actionError = signal<string | null>(null);
   employeeError = signal<string | null>(null);
-  successMessage = signal<string | null>(null);
-  roles = [Role.ADMIN, Role.MANAGER, Role.EMPLOYEE];
-
-  createForm = this.fb.group({
-    fullName: ['', Validators.required],
-    email: ['', [Validators.required, Validators.email]],
-    username: ['', Validators.required],
-    role: [Role.EMPLOYEE, Validators.required],
-  });
-
-  employeeForm = this.fb.group({
-    designation: ['', Validators.required],
-    department: ['', Validators.required],
-  });
 
   constructor() {
     this.loadUsers();
   }
 
   openDrawer() {
-    this.successMessage.set(null);
-    this.actionError.set(null);
+    this.pageState.clearFeedback();
     this.drawerOpen.set(true);
   }
 
   closeDrawer() {
     this.drawerOpen.set(false);
     this.createError.set(null);
-    this.createForm.reset({ role: Role.EMPLOYEE });
   }
 
   loadUsers() {
-    this.isLoading.set(true);
+    this.pageState.startLoading();
     this.userService.getAllUsers().subscribe({
       next: (users) => {
         this.rows.set(users);
-        this.isLoading.set(false);
+        this.pageState.stopLoading();
       },
       error: () => {
-        this.isLoading.set(false);
+        this.pageState.stopLoading();
         this.createError.set('Unable to load users.');
       }
     });
   }
 
-  createUser() {
+  createUser(request: CreateUserRequest) {
     this.createError.set(null);
-    this.successMessage.set(null);
-
-    if (this.createForm.invalid) {
-      this.createForm.markAllAsTouched();
-      return;
-    }
+    this.pageState.clearFeedback();
 
     this.isCreating.set(true);
 
-    this.userService.createUser(this.createForm.getRawValue() as CreateUserRequest).subscribe({
+    this.userService.createUser(request).subscribe({
       next: () => {
         this.isCreating.set(false);
         this.closeDrawer();
-        this.successMessage.set('User created successfully.');
+        this.pageState.setSuccess('User created successfully.');
         this.loadUsers();
       },
       error: (err) => {
@@ -135,19 +112,8 @@ export class AdminUsersComponent {
     ];
   }
 
-  onUserAction(user: User, event: UserActionItem | { item?: UserActionItem }): void {
-    const item = (event as { item?: UserActionItem }).item ?? event as UserActionItem;
-
-    if (!item) {
-      return;
-    }
-
-    if (item.disabled) {
-      return;
-    }
-
-    this.actionError.set(null);
-    this.successMessage.set(null);
+  onUserAction(user: User, item: UserActionItem): void {
+    this.pageState.clearFeedback();
 
     if (item.action === 'resetPassword') {
       this.openResetPasswordDialog(user);
@@ -176,39 +142,38 @@ export class AdminUsersComponent {
       return;
     }
 
-    this.actionUserId.set(user.id);
+    this.pageState.startAction(user.id);
     this.userService.resetPassword(user.id).subscribe({
       next: (updatedUser) => {
         this.updateRow(updatedUser);
-        this.actionUserId.set(null);
+        this.pageState.stopAction();
         this.closeResetPasswordDialog();
-        this.successMessage.set('Password reset successfully.');
+        this.pageState.setSuccess('Password reset successfully.');
       },
       error: (err) => {
-        this.actionUserId.set(null);
-        this.actionError.set(err.error?.message ?? 'Unable to reset password.');
+        this.pageState.stopAction();
+        this.pageState.setError(err.error?.message ?? 'Unable to reset password.');
       }
     });
   }
 
   toggleStatus(user: User): void {
-    this.actionUserId.set(user.id);
+    this.pageState.startAction(user.id);
     this.userService.toggleStatus(user.id).subscribe({
       next: (updatedUser) => {
         this.updateRow(updatedUser);
-        this.actionUserId.set(null);
-        this.successMessage.set(updatedUser.isActive ? 'User activated successfully.' : 'User deactivated successfully.');
+        this.pageState.stopAction();
+        this.pageState.setSuccess(updatedUser.isActive ? 'User activated successfully.' : 'User deactivated successfully.');
       },
       error: (err) => {
-        this.actionUserId.set(null);
-        this.actionError.set(err.error?.message ?? 'Unable to update user status.');
+        this.pageState.stopAction();
+        this.pageState.setError(err.error?.message ?? 'Unable to update user status.');
       }
     });
   }
 
   openEmployeeDialog(user: User): void {
     this.employeeError.set(null);
-    this.employeeForm.reset();
     this.employeeDialogUser.set(user);
   }
 
@@ -216,10 +181,9 @@ export class AdminUsersComponent {
     this.employeeDialogUser.set(null);
     this.employeeError.set(null);
     this.isAddingEmployee.set(false);
-    this.employeeForm.reset();
   }
 
-  submitEmployee(): void {
+  submitEmployee(request: AddEmployeeRequest): void {
     const user = this.employeeDialogUser();
     if (!user) {
       return;
@@ -227,17 +191,12 @@ export class AdminUsersComponent {
 
     this.employeeError.set(null);
 
-    if (this.employeeForm.invalid) {
-      this.employeeForm.markAllAsTouched();
-      return;
-    }
-
     this.isAddingEmployee.set(true);
-    this.userService.addEmployee(user.id, this.employeeForm.getRawValue() as AddEmployeeRequest).subscribe({
+    this.userService.addEmployee(user.id, request).subscribe({
       next: (updatedUser) => {
         this.updateRow(updatedUser);
         this.closeEmployeeDialog();
-        this.successMessage.set('Employee profile created successfully.');
+        this.pageState.setSuccess('Employee profile created successfully.');
       },
       error: (err) => {
         this.isAddingEmployee.set(false);

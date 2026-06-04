@@ -1,0 +1,25 @@
+<kendo-dialog title="Add as Employee" [width]="460" (close)="cancel()">
+  <p class="text-sm text-muted-foreground mb-4">
+    Create an employee profile for {{ user?.fullName }}.
+  </p>
+
+  <app-page-feedback type="error" [message]="error"></app-page-feedback>
+
+  <form [formGroup]="form" class="form-stack">
+    <div class="field-stack">
+      <label class="text-sm font-medium">Designation</label>
+      <input kendoTextBox formControlName="designation" />
+    </div>
+    <div class="field-stack">
+      <label class="text-sm font-medium">Department</label>
+      <input kendoTextBox formControlName="department" />
+    </div>
+  </form>
+
+  <kendo-dialog-actions>
+    <button kendoButton (click)="cancel()" [disabled]="isSaving">Cancel</button>
+    <button kendoButton themeColor="primary" (click)="submit()" [disabled]="isSaving">
+      {{ isSaving ? 'Adding...' : 'Add as Employee' }}
+    </button>
+  </kendo-dialog-actions>
+</kendo-dialog>
