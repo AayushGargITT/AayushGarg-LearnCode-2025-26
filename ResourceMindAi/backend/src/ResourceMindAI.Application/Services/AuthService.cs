@@ -48,7 +48,6 @@ public class AuthService : IAuthService
         {
             _logger.LogWarning("Change password rejected for user {UserId}: confirmation did not match", request.UserId);
             throw new ValidationException(
-                nameof(request.ConfirmPassword),
                 "New password and confirmation do not match.");
         }
 
@@ -56,7 +55,6 @@ public class AuthService : IAuthService
         {
             _logger.LogWarning("Change password rejected for user {UserId}: password did not meet strength rules", request.UserId);
             throw new ValidationException(
-                nameof(request.NewPassword),
                 "Password must be at least 8 characters and include an uppercase letter and a number.");
         }
 
@@ -83,7 +81,6 @@ public class AuthService : IAuthService
         {
             _logger.LogWarning("Change password rejected: new password matches current password for user {UserId}", user.Id);
             throw new ValidationException(
-                nameof(request.NewPassword),
                 "New password must be different from the current password.");
         }
 

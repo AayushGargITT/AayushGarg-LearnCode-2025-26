@@ -43,7 +43,7 @@ export class ChangePasswordComponent {
 
   get passwordsMatch(): boolean {
     const { newPassword, confirmPassword } = this.form.value;
-    return !confirmPassword || newPassword === confirmPassword;
+    return newPassword === confirmPassword;
   }
 
   onSubmit(): void {

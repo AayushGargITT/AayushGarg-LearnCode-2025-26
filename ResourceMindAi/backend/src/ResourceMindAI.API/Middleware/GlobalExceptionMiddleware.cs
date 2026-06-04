@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 using ResourceMindAI.Domain.Exceptions;
-using ValidationException = ResourceMindAI.Domain.Exceptions.ValidationException;
 
 namespace ResourceMindAI.API.Middleware;
 

@@ -30,14 +30,4 @@ public class ValidationException : DomainException
     {
         Errors = new Dictionary<string, string[]>(errors);
     }
-
-    /// <summary>Convenience: single field with a single error message.</summary>
-    public ValidationException(string field, string fieldError, string errorCode = "VALIDATION_ERROR")
-        : base($"Validation failed for '{field}'.", errorCode)
-    {
-        Errors = new Dictionary<string, string[]>
-        {
-            [field] = [fieldError]
-        };
-    }
 }

@@ -8,7 +8,7 @@ import { Router } from '@angular/router';
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
-  private readonly apiUrl = 'https://localhost:7071/api/v1';
+  private readonly apiUrl = 'https://localhost:44374/api/v1';
   private readonly storageKey = 'resourceMindUser';
 
   currentUser = signal<User | null>(this.loadUser());
