@@ -40,6 +40,15 @@ public class UserController : ControllerBase
         return Ok(users);
     }
 
+    [HttpGet("active-managers")]
+    public async Task<ActionResult<IEnumerable<UserProfileDto>>> GetActiveManagers()
+    {
+        _logger.LogInformation("Active manager list request received");
+        var managers = await _userService.GetActiveManagersAsync();
+        _logger.LogInformation("Active manager list request completed with {ManagerCount} managers", managers.Count);
+        return Ok(managers);
+    }
+
     [HttpPost]
     public async Task<ActionResult<UserProfileDto>> Create(CreateUserDto request)
     {

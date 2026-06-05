@@ -1,40 +1,68 @@
 <app-layout role="admin" title="Manage Projects">
-      <app-page-header title="Projects" subtitle="Create new projects and manage milestones">
-        <button kendoButton themeColor="primary" (click)="openDrawer()">
-          <span class="material-symbols-outlined h-4 w-4 mr-1" style="font-size: 16px; vertical-align: middle;">add</span> Create Project
-        </button>
-      </app-page-header>
-      
-      <div class="surface kendo-grid-shell">
-        <kendo-grid [data]="rows" [height]="360" [resizable]="true">
-          <kendo-grid-column field="id" title="ID" [width]="110" class="font-mono text-xs text-muted-foreground"></kendo-grid-column>
-          <kendo-grid-column field="name" title="Project Name" class="font-medium"></kendo-grid-column>
-          <kendo-grid-column field="manager" title="Manager" class="text-muted-foreground"></kendo-grid-column>
-          <kendo-grid-column field="timeline" title="Timeline" class="font-mono text-xs text-muted-foreground"></kendo-grid-column>
-          <kendo-grid-column field="status" title="Status" [width]="130">
-            <ng-template kendoGridCellTemplate let-dataItem><app-status-badge [status]="dataItem.status"></app-status-badge></ng-template>
-          </kendo-grid-column>
-          <kendo-grid-column title="Actions" [width]="90" class="text-right">
-            <ng-template kendoGridCellTemplate>
-              <button class="icon-button" aria-label="More actions"><span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;">more_horiz</span></button>
-            </ng-template>
-          </kendo-grid-column>
-        </kendo-grid>
-      </div>
-      
-      <kendo-dialog *ngIf="drawerOpen()" title="Create Project" [width]="500" (close)="closeDrawer()">
-        <div class="form-stack">
-          <div class="field-stack"><label class="text-sm font-medium">Project Name</label><input kendoTextBox placeholder="Alpha Platform" /></div>
-          <div class="field-stack"><label class="text-sm font-medium">Description</label><textarea kendoTextArea rows="4"></textarea></div>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="field-stack"><label class="text-sm font-medium">Start Date</label><kendo-datepicker></kendo-datepicker></div>
-            <div class="field-stack"><label class="text-sm font-medium">End Date</label><kendo-datepicker></kendo-datepicker></div>
-          </div>
-          <div class="field-stack"><label class="text-sm font-medium">Manager ID</label><input kendoTextBox placeholder="U-1xxx" /></div>
-        </div>
-        <kendo-dialog-actions>
-          <button kendoButton (click)="closeDrawer()">Cancel</button>
-          <button kendoButton themeColor="primary" (click)="closeDrawer()">Create Project</button>
-        </kendo-dialog-actions>
-      </kendo-dialog>
-    </app-layout>
+  <app-page-header title="Projects" subtitle="Create new projects and manage milestones">
+    <button kendoButton themeColor="primary" (click)="openCreateDialog()">
+      <span class="material-symbols-outlined h-4 w-4 mr-1" style="font-size: 16px; vertical-align: middle;">add</span>
+      Create Project
+    </button>
+  </app-page-header>
+
+  <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div class="surface kendo-grid-shell">
+    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading projects...</div>
+
+    <div *ngIf="!pageState.isLoading() && rows().length === 0" class="hint-panel">
+      No projects found.
+    </div>
+
+    <kendo-grid
+      *ngIf="!pageState.isLoading() && rows().length > 0"
+      [data]="rows()"
+      [height]="380"
+      [resizable]="true">
+      <kendo-grid-column field="managerName" title="Manager Name" class="text-muted-foreground"></kendo-grid-column>
+      <kendo-grid-column field="name" title="Project Name" class="font-medium"></kendo-grid-column>
+      <kendo-grid-column title="Start Date" [width]="140">
+        <ng-template kendoGridCellTemplate let-dataItem>{{ dataItem.startDate | date:'mediumDate' }}</ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="End Date" [width]="140">
+        <ng-template kendoGridCellTemplate let-dataItem>{{ dataItem.endDate | date:'mediumDate' }}</ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="status" title="Status" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.status"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Actions" [width]="110" class="text-right">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-row-action-menu
+            [actions]="actionsFor()"
+            [disabled]="isMilestoneLoading() || isMilestoneSaving()"
+            (actionSelected)="onProjectAction(dataItem, $event)">
+          </app-row-action-menu>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
+
+  <app-create-project-dialog
+    *ngIf="createDialogOpen()"
+    [managers]="managers()"
+    [isSubmitting]="isCreating()"
+    [error]="createError()"
+    (cancelled)="closeCreateDialog()"
+    (submitted)="createProject($event)">
+  </app-create-project-dialog>
+
+  <app-milestones-dialog
+    [project]="selectedProject()"
+    [milestones]="milestones()"
+    [isLoading]="isMilestoneLoading()"
+    [isSaving]="isMilestoneSaving()"
+    [error]="milestoneError()"
+    (closed)="closeMilestones()"
+    (milestoneAdded)="addMilestone($event)"
+    (milestoneUpdated)="updateMilestone($event)">
+  </app-milestones-dialog>
+</app-layout>

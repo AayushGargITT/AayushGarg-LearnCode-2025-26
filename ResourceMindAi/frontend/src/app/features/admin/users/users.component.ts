@@ -101,15 +101,19 @@ export class AdminUsersComponent {
   }
 
   actionsFor(user: User): UserActionItem[] {
-    return [
+    const actions: UserActionItem[] = [
       { text: 'Reset Password', action: 'resetPassword' },
-      { text: user.isActive ? 'Deactivate User' : 'Activate User', action: 'toggleStatus' },
-      {
-        text: 'Add as Employee',
-        action: 'addEmployee',
-        disabled: user.role === Role.ADMIN || !!user.employeeId
-      }
+      { text: user.isActive ? 'Deactivate User' : 'Activate User', action: 'toggleStatus' }
     ];
+
+    if (user.role === Role.EMPLOYEE && !user.employeeId) {
+      actions.push({
+        text: 'Add as Employee',
+        action: 'addEmployee'
+      });
+    }
+
+    return actions;
   }
 
   onUserAction(user: User, item: UserActionItem): void {

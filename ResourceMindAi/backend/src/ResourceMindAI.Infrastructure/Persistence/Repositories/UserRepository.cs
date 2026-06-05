@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Domain.Entities;
+using ResourceMindAI.Domain.Enums;
 
 namespace ResourceMindAI.Infrastructure.Persistence.Repositories;
 
@@ -27,6 +28,20 @@ public class UserRepository : IUserRepository
 
         _logger.LogDebug("Queried {UserCount} users", users.Count);
         return users;
+    }
+
+    public async Task<IReadOnlyList<User>> GetActiveManagersAsync()
+    {
+        _logger.LogDebug("Querying active managers with employee profiles");
+
+        var managers = await _dbContext.Users
+            .Include(x => x.Employee)
+            .Where(x => x.Role == Role.Manager && x.IsActive)
+            .OrderBy(x => x.FullName)
+            .ToListAsync();
+
+        _logger.LogDebug("Queried {ManagerCount} active managers", managers.Count);
+        return managers;
     }
 
     public async Task<User?> GetByUsernameAsync(string username)
@@ -92,6 +107,20 @@ public class UserRepository : IUserRepository
         await _dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Saved user {UserId} to database", user.Id);
+        return user;
+    }
+
+    public async Task<User> CreateWithEmployeeAsync(User user, Employee employee)
+    {
+        _logger.LogInformation("Adding user {UserId} and employee {EmployeeId} to database", user.Id, employee.Id);
+
+        _dbContext.Users.Add(user);
+        _dbContext.Employees.Add(employee);
+        await _dbContext.SaveChangesAsync();
+
+        user.Employee = employee;
+
+        _logger.LogInformation("Saved user {UserId} and employee {EmployeeId} to database", user.Id, employee.Id);
         return user;
     }
 

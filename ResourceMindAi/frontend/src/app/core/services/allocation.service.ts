@@ -1,15 +1,14 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
-import { Allocation, AllocationDTO } from '../models/allocation.model';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { Allocation } from '../models/allocation.model';
 
 @Injectable({ providedIn: 'root' })
 export class AllocationService {
-  private allocations: AllocationDTO[] = [
-    { id: 'A-301', employeeId: 'E-2001', employeeName: 'Elena Patel', employeeDesignation: 'Senior Backend Engineer', projectId: 'P-101', projectName: 'Atlas Payments', projectManager: 'Marcus Lee', utilisationPercent: 100, fromDate: new Date(), toDate: new Date(), isActive: true, createdAt: new Date() },
-  ];
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = 'https://localhost:44374/api/v1/allocation';
 
-  getAllAllocations(): Observable<AllocationDTO[]> {
-    return of(this.allocations).pipe(delay(300));
+  getAllAllocations(): Observable<Allocation[]> {
+    return this.http.get<Allocation[]>(this.apiUrl);
   }
 }

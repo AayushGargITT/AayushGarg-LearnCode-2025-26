@@ -12,6 +12,9 @@ namespace ResourceMindAI.Application.Services;
 
 public class UserService : IUserService
 {
+    private const string DefaultManagerDepartment = "Management";
+    private const string DefaultManagerDesignation = "Manager";
+
     private readonly IUserRepository _userRepository;
     private readonly IEmployeeRepository _employeeRepository;
     private readonly ILogger<UserService> _logger;
@@ -30,6 +33,15 @@ public class UserService : IUserService
         _logger.LogInformation("Loaded {UserCount} users from repository", users.Count);
 
         return users.Select(AuthService.ToProfile).ToList();
+    }
+
+    public async Task<IReadOnlyList<UserProfileDto>> GetActiveManagersAsync()
+    {
+        _logger.LogInformation("Loading active managers from repository");
+        var managers = await _userRepository.GetActiveManagersAsync();
+        _logger.LogInformation("Loaded {ManagerCount} active managers from repository", managers.Count);
+
+        return managers.Select(AuthService.ToProfile).ToList();
     }
 
     public async Task<UserProfileDto> GetByIdAsync(Guid id)
@@ -78,7 +90,9 @@ public class UserService : IUserService
         };
 
         _logger.LogInformation("Persisting new user {UserId} with role {Role}", user.Id, user.Role);
-        var createdUser = await _userRepository.CreateAsync(user);
+        var createdUser = user.Role == Role.Manager
+            ? await CreateManagerWithEmployeeAsync(user, now)
+            : await _userRepository.CreateAsync(user);
         _logger.LogInformation("Persisted new user {UserId}", createdUser.Id);
 
         return AuthService.ToProfile(createdUser);
@@ -161,5 +175,31 @@ public class UserService : IUserService
 
         _logger.LogInformation("Add employee completed for user {UserId} with employee {EmployeeId}", userId, createdEmployee.Id);
         return AuthService.ToProfile(user);
+    }
+
+    private async Task<User> CreateManagerWithEmployeeAsync(User user, DateTime now)
+    {
+        var existingEmployee = await _employeeRepository.GetByIdAsync(user.Id);
+        if (existingEmployee is not null)
+        {
+            _logger.LogWarning(
+                "Manager creation rejected: user {UserId} is already mapped to employee {EmployeeId}",
+                user.Id,
+                existingEmployee.Id);
+            throw new ConflictException("This user is already added as an employee.", "EMPLOYEE_ALREADY_EXISTS");
+        }
+
+        var employee = new Employee
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Department = DefaultManagerDepartment,
+            Designation = DefaultManagerDesignation,
+            Status = EmployeeStatus.Active,
+            IsActive = true,
+            CreatedAt = now,
+        };
+
+        return await _userRepository.CreateWithEmployeeAsync(user, employee);
     }
 }

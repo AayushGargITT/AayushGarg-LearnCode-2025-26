@@ -12,6 +12,10 @@ export class UserService {
     return this.http.get<User[]>(this.apiUrl);
   }
 
+  getActiveManagers(): Observable<User[]> {
+    return this.http.get<User[]>(`${this.apiUrl}/active-managers`);
+  }
+
   createUser(user: CreateUserRequest): Observable<User> {
     return this.http.post<User>(this.apiUrl, user);
   }

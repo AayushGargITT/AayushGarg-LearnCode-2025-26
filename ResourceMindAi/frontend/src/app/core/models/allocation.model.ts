@@ -1,17 +1,16 @@
 export interface Allocation {
   id: string;
   employeeId: string;
-  employeeName?: string;
+  employeeName: string;
+  employeeDesignation: string;
   projectId: string;
-  projectName?: string;
+  projectName: string;
+  projectManager: string;
   utilisationPercent: number;
   fromDate: Date | string;
   toDate: Date | string;
   isActive: boolean;
-  createdAt: Date;
+  createdAt: Date | string;
 }
 
-export interface AllocationDTO extends Allocation {
-  employeeDesignation?: string;
-  projectManager?: string;
-}
+export type AllocationDTO = Allocation;

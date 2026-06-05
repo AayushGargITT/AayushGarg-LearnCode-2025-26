@@ -1,6 +1,8 @@
+using ResourceMindAI.Application.DTOs.Allocation;
+
 namespace ResourceMindAI.Application.Abstractions.Services;
 
 public interface IAllocationService
 {
-    void Execute();
+    Task<IReadOnlyList<AllocationDto>> GetAllAsync();
 }

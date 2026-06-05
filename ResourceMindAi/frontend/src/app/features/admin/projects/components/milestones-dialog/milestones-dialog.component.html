@@ -1,0 +1,59 @@
+<kendo-dialog
+  *ngIf="project"
+  [title]="'Manage Milestones - ' + project.name"
+  [width]="760"
+  (close)="closed.emit()">
+  <div class="form-stack">
+    <app-page-feedback type="error" [message]="error"></app-page-feedback>
+
+    <div *ngIf="isLoading" class="hint-panel">Loading milestones...</div>
+
+    <div *ngIf="!isLoading" class="form-stack">
+      <section>
+        <h3 class="text-sm font-semibold mb-3">Current Milestones</h3>
+
+        <div *ngIf="milestones.length === 0" class="hint-panel">No milestones have been added for this project.</div>
+
+        <div *ngFor="let milestone of milestones" class="milestone-row">
+          <div>
+            <div class="font-medium">{{ milestone.title }}</div>
+            <div class="text-xs text-muted-foreground">{{ milestone.dueDate | date:'mediumDate' }}</div>
+          </div>
+
+          <app-status-badge [status]="milestone.status"></app-status-badge>
+
+          <button kendoButton size="small" [disabled]="isSaving" (click)="edit(milestone)">Edit</button>
+        </div>
+      </section>
+
+      <section *ngIf="editingMilestoneId()" class="form-stack">
+        <h3 class="text-sm font-semibold">Update Milestone</h3>
+
+        <form [formGroup]="editForm" class="milestone-form" (ngSubmit)="submitUpdate()">
+          <input kendoTextBox formControlName="title" />
+          <kendo-datepicker formControlName="dueDate"></kendo-datepicker>
+          <kendo-dropdownlist [data]="statuses" formControlName="status"></kendo-dropdownlist>
+          <button kendoButton themeColor="primary" [disabled]="isSaving || editForm.invalid" type="submit">Update</button>
+          <button kendoButton [disabled]="isSaving" type="button" (click)="cancelEdit()">Cancel</button>
+        </form>
+      </section>
+
+      <section class="form-stack">
+        <h3 class="text-sm font-semibold">Add Milestone</h3>
+
+        <form [formGroup]="addForm" class="milestone-form" (ngSubmit)="submitAdd()">
+          <input kendoTextBox placeholder="Milestone title" formControlName="title" />
+          <kendo-datepicker formControlName="dueDate"></kendo-datepicker>
+          <kendo-dropdownlist [data]="statuses" formControlName="status"></kendo-dropdownlist>
+          <button kendoButton themeColor="primary" [disabled]="isSaving || addForm.invalid" type="submit">
+            {{ isSaving ? 'Saving...' : 'Add' }}
+          </button>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <kendo-dialog-actions>
+    <button kendoButton [disabled]="isSaving" (click)="closed.emit()">Close</button>
+  </kendo-dialog-actions>
+</kendo-dialog>

@@ -1,22 +1,36 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
-import { Project, ProjectStatus } from '../models/project.model';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import {
+  CreateMilestoneRequest,
+  CreateProjectRequest,
+  Milestone,
+  Project,
+  UpdateMilestoneRequest
+} from '../models/project.model';
 
 @Injectable({ providedIn: 'root' })
 export class ProjectService {
-  private projects: Project[] = [
-    { id: 'P-101', name: 'Atlas Payments', description: 'Payment gateway', startDate: new Date(), endDate: new Date(), status: ProjectStatus.ACTIVE, managerId: 'U-1002', managerName: 'Marcus Lee', health: 'ON_TRACK', createdAt: new Date(), updatedAt: new Date() },
-    { id: 'P-102', name: 'Borealis CRM', description: 'CRM migration', startDate: new Date(), endDate: new Date(), status: ProjectStatus.ACTIVE, managerId: 'U-1003', managerName: 'Priya Shah', health: 'NEEDS_ATTENTION', createdAt: new Date(), updatedAt: new Date() },
-    { id: 'P-103', name: 'Cobalt Insights', description: 'Data analytics platform', startDate: new Date(), endDate: new Date(), status: ProjectStatus.ON_HOLD, managerId: 'U-1002', managerName: 'Marcus Lee', health: 'AT_RISK', createdAt: new Date(), updatedAt: new Date() },
-    { id: 'P-104', name: 'Delta Auth', description: 'SSO provider', startDate: new Date(), endDate: new Date(), status: ProjectStatus.PLANNED, managerId: 'U-1004', managerName: 'Sara Kim', health: 'ON_TRACK', createdAt: new Date(), updatedAt: new Date() },
-  ];
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = 'https://localhost:44374/api/v1/project';
 
   getAllProjects(): Observable<Project[]> {
-    return of(this.projects).pipe(delay(300));
+    return this.http.get<Project[]>(this.apiUrl);
   }
 
-  getProjectsByManager(managerId: string): Observable<Project[]> {
-    return of(this.projects.filter(p => p.managerId === managerId)).pipe(delay(300));
+  createProject(request: CreateProjectRequest): Observable<Project> {
+    return this.http.post<Project>(this.apiUrl, request);
+  }
+
+  getProjectMilestones(projectId: string): Observable<Milestone[]> {
+    return this.http.get<Milestone[]>(`${this.apiUrl}/${projectId}/milestones`);
+  }
+
+  addMilestone(projectId: string, request: CreateMilestoneRequest): Observable<Milestone> {
+    return this.http.post<Milestone>(`${this.apiUrl}/${projectId}/milestones`, request);
+  }
+
+  updateMilestone(projectId: string, milestoneId: string, request: UpdateMilestoneRequest): Observable<Milestone> {
+    return this.http.put<Milestone>(`${this.apiUrl}/${projectId}/milestones/${milestoneId}`, request);
   }
 }
