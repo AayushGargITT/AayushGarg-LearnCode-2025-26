@@ -17,4 +17,6 @@ public class Employee
     public ICollection<Skill> Skills { get; set; } = new List<Skill>();
     public ICollection<Allocation> Allocations { get; set; } = new List<Allocation>();
     public ICollection<Timesheet> Timesheets { get; set; } = new List<Timesheet>();
+    public Guid? ManagerId { get; set; }
+    public User? Manager { get; set; }
 }
