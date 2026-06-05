@@ -1,36 +1,51 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
-import { Employee, EmployeeDetailDTO, EmployeeStatus } from '../models/employee.model';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable, map } from 'rxjs';
+import {
+  CreateEmployeeSkillRequest,
+  Employee,
+  EmployeeDetailDTO,
+  EmployeeSkill,
+  UpdateEmployeeSkillProficiencyRequest
+} from '../models/employee.model';
 
 @Injectable({ providedIn: 'root' })
 export class EmployeeService {
-  private employees: Employee[] = [
-    { id: 'E-2001', userId: 'U-1004', fullName: 'Elena Patel', email: 'elena@acme.io', department: 'Engineering', designation: 'Senior Backend Engineer', status: EmployeeStatus.ALLOCATED, isActive: true, createdAt: new Date(), updatedAt: new Date() },
-    { id: 'E-2002', userId: 'U-1005', fullName: 'Jonas Weber', email: 'jonas@acme.io', department: 'Engineering', designation: 'Frontend Engineer', status: EmployeeStatus.BENCH, isActive: true, createdAt: new Date(), updatedAt: new Date() },
-    { id: 'E-2003', userId: 'U-1006', fullName: 'Maya Chen', email: 'maya@acme.io', department: 'QA', designation: 'QA Lead', status: EmployeeStatus.ALLOCATED, isActive: true, createdAt: new Date(), updatedAt: new Date() },
-    { id: 'E-2004', userId: 'U-1007', fullName: 'Diego Alvarez', email: 'diego@acme.io', department: 'DevOps', designation: 'Platform Engineer', status: EmployeeStatus.BENCH, isActive: true, createdAt: new Date(), updatedAt: new Date() },
-    { id: 'E-2005', userId: 'U-1008', fullName: 'Ada Okonkwo', email: 'ada@acme.io', department: 'Engineering', designation: 'Staff Engineer', status: EmployeeStatus.ALLOCATED, isActive: true, createdAt: new Date(), updatedAt: new Date() },
-    { id: 'E-2006', userId: 'U-1009', fullName: 'Tomás Silva', email: 'tomas@acme.io', department: 'Engineering', designation: 'Backend Engineer', status: EmployeeStatus.BENCH, isActive: false, createdAt: new Date(), updatedAt: new Date() },
-  ];
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = 'https://localhost:44374/api/v1/employee';
 
   getAllEmployees(): Observable<Employee[]> {
-    return of(this.employees).pipe(delay(300));
+    return this.http.get<Employee[]>(this.apiUrl);
   }
 
-  getEmployeeById(id: string): Observable<Employee | undefined> {
-    return of(this.employees.find(e => e.id === id)).pipe(delay(300));
+  getEmployeeById(userId: string): Observable<Employee> {
+    return this.http.get<Employee>(`${this.apiUrl}/${userId}`);
   }
 
-  getEmployeeDetails(id: string): Observable<EmployeeDetailDTO> {
-    const emp = this.employees.find(e => e.id === id);
-    if (!emp) throw new Error('Not found');
-    
-    return of({
-      ...emp,
-      skills: [],
-      activeAllocations: [],
-      recentTags: []
-    }).pipe(delay(300));
+  getEmployeeDetails(userId: string): Observable<EmployeeDetailDTO> {
+    return this.getEmployeeById(userId).pipe(
+      map(employee => ({
+        ...employee,
+        skills: [],
+        activeAllocations: [],
+        recentTags: []
+      }))
+    );
+  }
+
+  getEmployeeSkills(employeeId: string): Observable<EmployeeSkill[]> {
+    return this.http.get<EmployeeSkill[]>(`${this.apiUrl}/${employeeId}/skills`);
+  }
+
+  addEmployeeSkill(employeeId: string, request: CreateEmployeeSkillRequest): Observable<EmployeeSkill> {
+    return this.http.post<EmployeeSkill>(`${this.apiUrl}/${employeeId}/skills`, request);
+  }
+
+  updateEmployeeSkillProficiency(
+    employeeId: string,
+    skillId: string,
+    request: UpdateEmployeeSkillProficiencyRequest
+  ): Observable<EmployeeSkill> {
+    return this.http.patch<EmployeeSkill>(`${this.apiUrl}/${employeeId}/skills/${skillId}/proficiency`, request);
   }
 }

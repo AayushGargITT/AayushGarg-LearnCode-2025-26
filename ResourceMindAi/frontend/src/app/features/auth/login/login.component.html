@@ -4,12 +4,12 @@
 
   <div *ngIf="state() === 'error'" class="mb-4 border border-rose-500/30 bg-rose-500/10 text-rose-200 p-3 rounded-md flex items-start gap-3">
     <span class="material-symbols-outlined h-4 w-4 mt-0.5" style="font-size: 16px; vertical-align: middle;">error_outline</span>
-    <div class="text-sm">{{errorMessage}}</div>
+    <div class="text-sm">{{ errorMessage() }}</div>
   </div>
 
   <div *ngIf="state() === 'deactivated'" class="mb-4 border border-rose-500/30 bg-rose-500/10 text-rose-200 p-3 rounded-md flex items-start gap-3">
     <span class="material-symbols-outlined h-4 w-4 mt-0.5" style="font-size: 16px; vertical-align: middle;">error_outline</span>
-    <div class="text-sm">{{errorMessage}}</div>
+    <div class="text-sm">{{ errorMessage() }}</div>
   </div>
 
   <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">

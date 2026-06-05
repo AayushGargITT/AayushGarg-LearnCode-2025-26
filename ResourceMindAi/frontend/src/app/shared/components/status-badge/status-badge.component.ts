@@ -16,6 +16,8 @@ export class StatusBadgeComponent {
     const map: Record<string, string> = {
       BENCH: "muted",
       ALLOCATED: "indigo",
+      Bench: "muted",
+      Allocated: "indigo",
       SUBMITTED: "emerald",
       MISSED: "amber",
       PLANNED: "slate",
@@ -34,6 +36,7 @@ export class StatusBadgeComponent {
       Beginner: "muted",
       Intermediate: "sky",
       Advanced: "emerald",
+      Expert: "indigo",
     };
     return map[this.status] ?? "muted";
   }

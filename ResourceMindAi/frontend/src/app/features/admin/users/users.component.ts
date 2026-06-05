@@ -144,11 +144,11 @@ export class AdminUsersComponent {
 
     this.pageState.startAction(user.id);
     this.userService.resetPassword(user.id).subscribe({
-      next: (updatedUser) => {
-        this.updateRow(updatedUser);
+      next: () => {
         this.pageState.stopAction();
         this.closeResetPasswordDialog();
         this.pageState.setSuccess('Password reset successfully.');
+        this.loadUsers();
       },
       error: (err) => {
         this.pageState.stopAction();
@@ -160,10 +160,10 @@ export class AdminUsersComponent {
   toggleStatus(user: User): void {
     this.pageState.startAction(user.id);
     this.userService.toggleStatus(user.id).subscribe({
-      next: (updatedUser) => {
-        this.updateRow(updatedUser);
+      next: () => {
         this.pageState.stopAction();
-        this.pageState.setSuccess(updatedUser.isActive ? 'User activated successfully.' : 'User deactivated successfully.');
+        this.pageState.setSuccess(user.isActive ? 'User deactivated successfully.' : 'User activated successfully.');
+        this.loadUsers();
       },
       error: (err) => {
         this.pageState.stopAction();
@@ -193,19 +193,15 @@ export class AdminUsersComponent {
 
     this.isAddingEmployee.set(true);
     this.userService.addEmployee(user.id, request).subscribe({
-      next: (updatedUser) => {
-        this.updateRow(updatedUser);
+      next: () => {
         this.closeEmployeeDialog();
         this.pageState.setSuccess('Employee profile created successfully.');
+        this.loadUsers();
       },
       error: (err) => {
         this.isAddingEmployee.set(false);
         this.employeeError.set(err.error?.message ?? 'Unable to add user as employee.');
       }
     });
-  }
-
-  private updateRow(updatedUser: User): void {
-    this.rows.update((users) => users.map((user) => user.id === updatedUser.id ? updatedUser : user));
   }
 }

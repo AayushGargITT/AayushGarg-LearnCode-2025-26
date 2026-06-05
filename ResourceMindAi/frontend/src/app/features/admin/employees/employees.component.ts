@@ -1,29 +1,27 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { ButtonsModule } from '@progress/kendo-angular-buttons';
-import { DialogModule } from '@progress/kendo-angular-dialog';
 import { GridModule } from '@progress/kendo-angular-grid';
 import { InputsModule } from '@progress/kendo-angular-inputs';
+import {
+  CreateEmployeeSkillRequest,
+  Employee,
+  EmployeeSkill,
+  EmployeeStatus,
+  UpdateEmployeeSkillProficiencyRequest
+} from '../../../core/models/employee.model';
+import { Role } from '../../../core/models/user.model';
+import { EmployeeService } from '../../../core/services/employee.service';
 import { AppLayoutComponent } from '../../../shared/components/app-layout/app-layout.component';
-import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { RowActionItem, RowActionMenuComponent } from '../../../shared/components/row-action-menu/row-action-menu.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { PageStateService } from '../../../shared/services/page-state.service';
+import { EmployeeSkillsDialogComponent } from './components/employee-skills-dialog/employee-skills-dialog.component';
 
-type EmployeeAction = 'toggleStatus';
+type EmployeeAction = 'manageSkills';
 type EmployeeActionItem = RowActionItem<EmployeeAction>;
-
-interface EmployeeRow {
-  id: string;
-  name: string;
-  dept: string;
-  title: string;
-  status: string;
-  active: 'Active' | 'Inactive';
-}
 
 @Component({
   selector: 'app-employees',
@@ -31,87 +29,172 @@ interface EmployeeRow {
   imports: [
     CommonModule,
     RouterModule,
-    ButtonsModule,
-    DialogModule,
     GridModule,
     InputsModule,
     AppLayoutComponent,
     PageHeaderComponent,
     StatusBadgeComponent,
-    ConfirmDialogComponent,
     PageFeedbackComponent,
-    RowActionMenuComponent
+    RowActionMenuComponent,
+    EmployeeSkillsDialogComponent
   ],
   templateUrl: './employees.component.html',
   styleUrl: './employees.component.css',
   providers: [PageStateService]
 })
 export class AdminEmployeesComponent {
+  private readonly employeeService = inject(EmployeeService);
   readonly pageState = inject(PageStateService);
 
-  filter = signal<string>('All');
-  drawerOpen = signal(false);
-  actionEmployee = signal<EmployeeRow | null>(null);
+  readonly filter = signal<string>('All');
+  readonly searchTerm = signal<string>('');
+  readonly rows = signal<Employee[]>([]);
+  readonly selectedEmployee = signal<Employee | null>(null);
+  readonly selectedEmployeeSkills = signal<EmployeeSkill[]>([]);
+  readonly isSkillLoading = signal(false);
+  readonly isSkillSaving = signal(false);
+  readonly skillError = signal<string | null>(null);
 
-  rows = signal<EmployeeRow[]>([
-    { id: 'E-2001', name: 'Elena Patel', dept: 'Engineering', title: 'Senior Backend Engineer', status: 'ALLOCATED', active: 'Active' },
-    { id: 'E-2002', name: 'Jonas Weber', dept: 'Engineering', title: 'Frontend Engineer', status: 'BENCH', active: 'Active' },
-    { id: 'E-2003', name: 'Maya Chen', dept: 'QA', title: 'QA Lead', status: 'ALLOCATED', active: 'Active' },
-    { id: 'E-2004', name: 'Diego Alvarez', dept: 'DevOps', title: 'Platform Engineer', status: 'BENCH', active: 'Active' },
-    { id: 'E-2005', name: 'Ada Okonkwo', dept: 'Engineering', title: 'Staff Engineer', status: 'ALLOCATED', active: 'Active' },
-    { id: 'E-2006', name: 'Tomas Silva', dept: 'Engineering', title: 'Backend Engineer', status: 'BENCH', active: 'Inactive' },
-  ]);
-
-  filteredRows = computed(() => {
+  readonly filteredRows = computed(() => {
     const filter = this.filter();
-    return this.rows().filter(row =>
-      filter === 'All' || (filter === 'Bench' ? row.status === 'BENCH' : row.status === 'ALLOCATED'));
+    const searchTerm = this.searchTerm().trim().toLowerCase();
+
+    return this.rows().filter(row => {
+      const matchesFilter =
+        filter === 'All'
+        || (filter === 'Bench' && row.allocationStatus === EmployeeStatus.BENCH)
+        || (filter === 'Allocated' && row.allocationStatus === EmployeeStatus.ALLOCATED);
+
+      const matchesSearch =
+        !searchTerm
+        || row.fullName.toLowerCase().includes(searchTerm)
+        || row.department.toLowerCase().includes(searchTerm)
+        || row.designation.toLowerCase().includes(searchTerm);
+
+      return matchesFilter && matchesSearch;
+    });
   });
+
+  constructor() {
+    this.loadEmployees();
+  }
+
+  loadEmployees(): void {
+    this.pageState.startLoading();
+    this.employeeService.getAllEmployees().subscribe({
+      next: employees => {
+        this.rows.set(employees);
+        this.pageState.stopLoading();
+      },
+      error: err => {
+        this.rows.set([]);
+        this.pageState.stopLoading();
+        this.pageState.setError(err.error?.message ?? 'Unable to load employees.');
+      }
+    });
+  }
 
   setFilter(filter: string): void {
     this.filter.set(filter);
   }
 
-  openDrawer(): void {
-    this.pageState.clearFeedback();
-    this.drawerOpen.set(true);
+  setSearchTerm(value: string): void {
+    this.searchTerm.set(value);
   }
 
-  closeDrawer(): void {
-    this.drawerOpen.set(false);
+  canManageSkills(employee: Employee): boolean {
+    return employee.role === Role.EMPLOYEE;
   }
 
-  actionsFor(row: EmployeeRow): EmployeeActionItem[] {
-    return [
-      { text: row.active === 'Active' ? 'Deactivate Employee' : 'Activate Employee', action: 'toggleStatus' }
-    ];
+  actionsFor(employee: Employee): EmployeeActionItem[] {
+    if (!this.canManageSkills(employee)) {
+      return [];
+    }
+
+    return [{ text: 'Manage Skills', action: 'manageSkills' }];
   }
 
-  onEmployeeAction(row: EmployeeRow, item: EmployeeActionItem): void {
-    if (item.action !== 'toggleStatus') {
+  onEmployeeAction(employee: Employee, item: EmployeeActionItem): void {
+    if (item.action === 'manageSkills') {
+      this.openSkills(employee);
+    }
+  }
+
+  openSkills(employee: Employee): void {
+    if (!this.canManageSkills(employee)) {
       return;
     }
 
-    this.pageState.clearFeedback();
-    this.actionEmployee.set(row);
+    this.selectedEmployee.set(employee);
+    this.skillError.set(null);
+    this.loadSkills(employee.id);
   }
 
-  closeConfirmDialog(): void {
-    this.actionEmployee.set(null);
-    this.pageState.stopAction();
+  closeSkills(): void {
+    this.selectedEmployee.set(null);
+    this.selectedEmployeeSkills.set([]);
+    this.skillError.set(null);
+    this.isSkillLoading.set(false);
+    this.isSkillSaving.set(false);
   }
 
-  confirmToggleStatus(): void {
-    const employee = this.actionEmployee();
+  addSkill(request: CreateEmployeeSkillRequest): void {
+    const employee = this.selectedEmployee();
     if (!employee) {
       return;
     }
 
-    this.pageState.startAction(employee.id);
-    this.rows.update(rows => rows.map(row => row.id === employee.id
-      ? { ...row, active: row.active === 'Active' ? 'Inactive' : 'Active' }
-      : row));
-    this.pageState.setSuccess(`${employee.name} ${employee.active === 'Active' ? 'deactivated' : 'activated'} successfully.`);
-    this.closeConfirmDialog();
+    this.skillError.set(null);
+    this.isSkillSaving.set(true);
+
+    this.employeeService.addEmployeeSkill(employee.id, request).subscribe({
+      next: () => {
+        this.pageState.setSuccess('Skill added successfully.');
+        this.loadSkills(employee.id);
+      },
+      error: err => {
+        this.isSkillSaving.set(false);
+        this.skillError.set(err.error?.message ?? 'Unable to add skill.');
+      }
+    });
+  }
+
+  updateSkillProficiency(event: { skillId: string; request: UpdateEmployeeSkillProficiencyRequest }): void {
+    const employee = this.selectedEmployee();
+    if (!employee) {
+      return;
+    }
+
+    this.skillError.set(null);
+    this.isSkillSaving.set(true);
+
+    this.employeeService.updateEmployeeSkillProficiency(employee.id, event.skillId, event.request).subscribe({
+      next: () => {
+        this.pageState.setSuccess('Skill proficiency updated successfully.');
+        this.loadSkills(employee.id);
+      },
+      error: err => {
+        this.isSkillSaving.set(false);
+        this.skillError.set(err.error?.message ?? 'Unable to update skill proficiency.');
+      }
+    });
+  }
+
+  private loadSkills(employeeId: string): void {
+    this.isSkillLoading.set(true);
+
+    this.employeeService.getEmployeeSkills(employeeId).subscribe({
+      next: skills => {
+        this.selectedEmployeeSkills.set(skills);
+        this.isSkillLoading.set(false);
+        this.isSkillSaving.set(false);
+      },
+      error: err => {
+        this.selectedEmployeeSkills.set([]);
+        this.isSkillLoading.set(false);
+        this.isSkillSaving.set(false);
+        this.skillError.set(err.error?.message ?? 'Unable to load employee skills.');
+      }
+    });
   }
 }

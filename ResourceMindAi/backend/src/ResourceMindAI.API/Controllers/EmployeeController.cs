@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
+using ResourceMindAI.Application.DTOs.Employee;
 
 namespace ResourceMindAI.API.Controllers;
 
@@ -20,7 +21,7 @@ public class EmployeeController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<UserProfileDto>>> GetAll()
+    public async Task<ActionResult<IEnumerable<EmployeeListDto>>> GetAll()
     {
         _logger.LogInformation("Employee list request received");
         var employees = await _employeeService.GetAllAsync();
@@ -37,5 +38,46 @@ public class EmployeeController : ControllerBase
 
         _logger.LogInformation("Employee profile request completed for employee {EmployeeId}", employee.EmployeeId);
         return Ok(employee);
+    }
+
+    [HttpGet("{employeeId:guid}/skills")]
+    public async Task<ActionResult<IEnumerable<EmployeeSkillDto>>> GetSkills(Guid employeeId)
+    {
+        _logger.LogInformation("Employee skills request received for employee {EmployeeId}", employeeId);
+
+        var skills = await _employeeService.GetSkillsAsync(employeeId);
+
+        _logger.LogInformation("Employee skills request completed with {SkillCount} skills", skills.Count);
+        return Ok(skills);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("{employeeId:guid}/skills")]
+    public async Task<ActionResult<EmployeeSkillDto>> AddSkill(Guid employeeId, CreateEmployeeSkillDto request)
+    {
+        _logger.LogInformation("Add employee skill request received for employee {EmployeeId}", employeeId);
+
+        var skill = await _employeeService.AddSkillAsync(employeeId, request);
+
+        _logger.LogInformation("Add employee skill request completed for skill {SkillId}", skill.Id);
+        return Ok(skill);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPatch("{employeeId:guid}/skills/{skillId:guid}/proficiency")]
+    public async Task<ActionResult<EmployeeSkillDto>> UpdateSkillProficiency(
+        Guid employeeId,
+        Guid skillId,
+        UpdateEmployeeSkillProficiencyDto request)
+    {
+        _logger.LogInformation(
+            "Update skill proficiency request received for skill {SkillId} and employee {EmployeeId}",
+            skillId,
+            employeeId);
+
+        var skill = await _employeeService.UpdateSkillProficiencyAsync(employeeId, skillId, request);
+
+        _logger.LogInformation("Update skill proficiency request completed for skill {SkillId}", skill.Id);
+        return Ok(skill);
     }
 }

@@ -1,29 +1,31 @@
+import { Role } from './user.model';
+
 export enum EmployeeStatus {
-  BENCH = 'BENCH',
-  ALLOCATED = 'ALLOCATED'
+  BENCH = 'Bench',
+  ALLOCATED = 'Allocated'
 }
 
 export enum SkillCategory {
-  BACKEND = 'BACKEND',
-  FRONTEND = 'FRONTEND',
-  DEVOPS = 'DEVOPS',
-  QA = 'QA',
-  OTHER = 'OTHER'
+  TECHNICAL = 'Technical',
+  SOFT = 'Soft',
+  MANAGEMENT = 'Management',
+  DOMAIN = 'Domain'
 }
 
 export enum ProficiencyLevel {
-  BEGINNER = 'BEGINNER',
-  INTERMEDIATE = 'INTERMEDIATE',
-  ADVANCED = 'ADVANCED'
+  BEGINNER = 'Beginner',
+  INTERMEDIATE = 'Intermediate',
+  ADVANCED = 'Advanced',
+  EXPERT = 'Expert'
 }
 
-export interface Skill {
+export interface EmployeeSkill {
   id: string;
   employeeId: string;
   skillName: string;
   category: SkillCategory | string;
   proficiency: ProficiencyLevel | string;
-  addedAt: Date;
+  addedAt: string | Date;
 }
 
 export interface Employee {
@@ -31,16 +33,25 @@ export interface Employee {
   userId: string;
   fullName: string;
   email: string;
+  role: Role | string;
   department: string;
   designation: string;
-  status: EmployeeStatus | string;
+  allocationStatus: EmployeeStatus | string;
   isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+}
+
+export interface CreateEmployeeSkillRequest {
+  skillName: string;
+  category: SkillCategory;
+  proficiency: ProficiencyLevel;
+}
+
+export interface UpdateEmployeeSkillProficiencyRequest {
+  proficiency: ProficiencyLevel;
 }
 
 export interface EmployeeDetailDTO extends Employee {
-  skills: Skill[];
-  activeAllocations: any[]; // To be defined with Allocation
+  skills: EmployeeSkill[];
+  activeAllocations: any[];
   recentTags: string[];
 }

@@ -1,72 +1,91 @@
 <app-layout role="admin" title="Manage Employees">
-      <app-page-header title="Employees" subtitle="Maintain employee records, departments and skills">
-      </app-page-header>
+  <app-page-header title="Employees" subtitle="Maintain employee records, departments and skills"></app-page-header>
 
-      <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
-      <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
-      
-      <div class="surface kendo-grid-shell">
-        <div class="toolbar-surface">
-          <div class="flex items-center gap-1 rounded-md bg-muted p-1">
-            <button *ngFor="let p of ['All', 'Bench', 'Allocated']" (click)="setFilter(p)"
-              [ngClass]="filter() === p ? 'bg-indigo-600 text-white' : 'text-muted-foreground hover:text-foreground'"
-              class="px-3 py-1 text-xs rounded-md">{{ p }}</button>
-          </div>
-          <div class="relative flex-1 max-w-sm ml-auto">
-            <span class="material-symbols-outlined h-4 w-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" style="font-size: 16px; vertical-align: middle;">search</span>
-            <input kendoTextBox placeholder="Search employees..." class="w-full pl-8" />
-          </div>
-        </div>
-        
-        <kendo-grid [data]="filteredRows()" [height]="420" [resizable]="true">
-          <kendo-grid-column field="id" title="ID" [width]="110" class="font-mono text-xs text-muted-foreground"></kendo-grid-column>
-          <kendo-grid-column field="name" title="Full Name">
-            <ng-template kendoGridCellTemplate let-dataItem>
-              <a [routerLink]="['/admin/employees', dataItem.id]" class="font-medium hover:text-indigo-300">{{ dataItem.name }}</a>
-            </ng-template>
-          </kendo-grid-column>
-          <kendo-grid-column field="dept" title="Department" class="text-muted-foreground"></kendo-grid-column>
-          <kendo-grid-column field="title" title="Designation" class="text-muted-foreground"></kendo-grid-column>
-          <kendo-grid-column field="status" title="Status" [width]="135">
-            <ng-template kendoGridCellTemplate let-dataItem><app-status-badge [status]="dataItem.status"></app-status-badge></ng-template>
-          </kendo-grid-column>
-          <kendo-grid-column field="active" title="Active" [width]="120">
-            <ng-template kendoGridCellTemplate let-dataItem><app-status-badge [status]="dataItem.active"></app-status-badge></ng-template>
-          </kendo-grid-column>
-          <kendo-grid-column title="Actions" [width]="110" class="text-right">
-            <ng-template kendoGridCellTemplate let-dataItem>
-              <app-row-action-menu
-                [actions]="actionsFor(dataItem)"
-                [disabled]="pageState.activeActionId() === dataItem.id"
-                (actionSelected)="onEmployeeAction(dataItem, $event)">
-              </app-row-action-menu>
-            </ng-template>
-          </kendo-grid-column>
-        </kendo-grid>
+  <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div class="surface kendo-grid-shell">
+    <div class="toolbar-surface">
+      <div class="flex items-center gap-1 rounded-md bg-muted p-1">
+        <button
+          *ngFor="let p of ['All', 'Bench', 'Allocated']"
+          (click)="setFilter(p)"
+          [ngClass]="filter() === p ? 'bg-indigo-600 text-white' : 'text-muted-foreground hover:text-foreground'"
+          class="px-3 py-1 text-xs rounded-md">
+          {{ p }}
+        </button>
       </div>
-      
-      <kendo-dialog *ngIf="drawerOpen()" title="Add Employee" [width]="460" (close)="closeDrawer()">
-        <div class="form-stack">
-          <div class="field-stack"><label class="text-sm font-medium">User ID</label><input kendoTextBox placeholder="U-1xxx" /></div>
-          <div class="field-stack"><label class="text-sm font-medium">Full Name</label><input kendoTextBox /></div>
-          <div class="field-stack"><label class="text-sm font-medium">Email</label><input kendoTextBox type="email" /></div>
-          <div class="field-stack"><label class="text-sm font-medium">Department</label><input kendoTextBox placeholder="Engineering" /></div>
-          <div class="field-stack"><label class="text-sm font-medium">Designation</label><input kendoTextBox placeholder="Backend Engineer" /></div>
-          <p class="hint-panel">Employee will start with BENCH status.</p>
-        </div>
-        <kendo-dialog-actions>
-          <button kendoButton (click)="closeDrawer()">Cancel</button>
-          <button kendoButton themeColor="primary" (click)="closeDrawer()">Add Employee</button>
-        </kendo-dialog-actions>
-      </kendo-dialog>
 
-      <app-confirm-dialog
-        *ngIf="actionEmployee()"
-        [title]="actionEmployee()?.active === 'Active' ? 'Deactivate Employee' : 'Activate Employee'"
-        [message]="'Are you sure you want to ' + (actionEmployee()?.active === 'Active' ? 'deactivate ' : 'activate ') + actionEmployee()?.name + '?'"
-        [confirmText]="actionEmployee()?.active === 'Active' ? 'Deactivate' : 'Activate'"
-        [isBusy]="pageState.activeActionId() === actionEmployee()?.id"
-        (cancelled)="closeConfirmDialog()"
-        (confirmed)="confirmToggleStatus()">
-      </app-confirm-dialog>
-    </app-layout>
+      <div class="relative flex-1 max-w-sm ml-auto">
+        <span
+          class="material-symbols-outlined h-4 w-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+          style="font-size: 16px; vertical-align: middle;">
+          search
+        </span>
+        <input
+          kendoTextBox
+          placeholder="Search employees..."
+          class="w-full pl-8"
+          [value]="searchTerm()"
+          (input)="setSearchTerm($any($event.target).value)" />
+      </div>
+    </div>
+
+    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading employees...</div>
+
+    <div *ngIf="!pageState.isLoading() && filteredRows().length === 0" class="hint-panel">
+      No employees found.
+    </div>
+
+    <kendo-grid
+      *ngIf="!pageState.isLoading() && filteredRows().length > 0"
+      [data]="filteredRows()"
+      [height]="420"
+      [resizable]="true">
+      <kendo-grid-column field="fullName" title="Name">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <a [routerLink]="['/admin/employees', dataItem.userId]" class="font-medium hover:text-indigo-300">
+            {{ dataItem.fullName }}
+          </a>
+        </ng-template>
+      </kendo-grid-column>
+
+      <kendo-grid-column field="role" title="Role" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.role"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+
+      <kendo-grid-column field="allocationStatus" title="Status" [width]="135">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.allocationStatus"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+
+      <kendo-grid-column field="department" title="Department" class="text-muted-foreground"></kendo-grid-column>
+      <kendo-grid-column field="designation" title="Designation" class="text-muted-foreground"></kendo-grid-column>
+
+      <kendo-grid-column title="Actions" [width]="110" class="text-right">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-row-action-menu
+            *ngIf="actionsFor(dataItem).length > 0"
+            [actions]="actionsFor(dataItem)"
+            [disabled]="isSkillLoading() || isSkillSaving()"
+            (actionSelected)="onEmployeeAction(dataItem, $event)">
+          </app-row-action-menu>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
+
+  <app-employee-skills-dialog
+    [employee]="selectedEmployee()"
+    [skills]="selectedEmployeeSkills()"
+    [isLoading]="isSkillLoading()"
+    [isSaving]="isSkillSaving()"
+    [error]="skillError()"
+    (closed)="closeSkills()"
+    (skillAdded)="addSkill($event)"
+    (proficiencyUpdated)="updateSkillProficiency($event)">
+  </app-employee-skills-dialog>
+</app-layout>

@@ -1,0 +1,73 @@
+<kendo-dialog
+  *ngIf="employee"
+  [title]="'Manage Skills - ' + employee.fullName"
+  [width]="720"
+  (close)="resetForm(); closed.emit()">
+  <div class="form-stack">
+    <app-page-feedback type="error" [message]="error"></app-page-feedback>
+
+    <div *ngIf="isLoading" class="hint-panel">Loading employee skills...</div>
+
+    <div *ngIf="!isLoading" class="form-stack">
+      <section>
+        <h3 class="text-sm font-semibold mb-3">Current Skills</h3>
+
+        <div *ngIf="skills.length === 0" class="hint-panel">No skills have been added for this employee.</div>
+
+        <div *ngFor="let skill of skills" class="skill-row">
+          <div>
+            <div class="font-medium">{{ skill.skillName }}</div>
+            <div class="text-xs text-muted-foreground">{{ skill.category }}</div>
+          </div>
+
+          <kendo-dropdownlist
+            [data]="proficiencies"
+            [value]="proficiencyBySkill()[skill.id]"
+            [disabled]="isSaving"
+            (valueChange)="setSkillProficiency(skill.id, $event)">
+          </kendo-dropdownlist>
+
+          <button
+            kendoButton
+            themeColor="primary"
+            [disabled]="isSaving || proficiencyBySkill()[skill.id] === skill.proficiency"
+            (click)="updateProficiency(skill)">
+            Update
+          </button>
+        </div>
+      </section>
+
+      <section class="form-stack">
+        <h3 class="text-sm font-semibold">Add Skill</h3>
+
+        <form [formGroup]="addSkillForm" class="skill-form" (ngSubmit)="submitSkill()">
+          <div class="field-stack">
+            <label class="text-sm font-medium">Skill</label>
+            <input kendoTextBox formControlName="skillName" />
+            <span *ngIf="addSkillForm.controls.skillName.touched && addSkillForm.controls.skillName.invalid" class="text-xs text-rose-400">
+              Skill is required.
+            </span>
+          </div>
+
+          <div class="field-stack">
+            <label class="text-sm font-medium">Category</label>
+            <kendo-dropdownlist [data]="categories" formControlName="category"></kendo-dropdownlist>
+          </div>
+
+          <div class="field-stack">
+            <label class="text-sm font-medium">Proficiency</label>
+            <kendo-dropdownlist [data]="proficiencies" formControlName="proficiency"></kendo-dropdownlist>
+          </div>
+
+          <button kendoButton themeColor="primary" [disabled]="isSaving" type="submit">
+            {{ isSaving ? 'Saving...' : 'Add Skill' }}
+          </button>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <kendo-dialog-actions>
+    <button kendoButton [disabled]="isSaving" (click)="closed.emit()">Close</button>
+  </kendo-dialog-actions>
+</kendo-dialog>
