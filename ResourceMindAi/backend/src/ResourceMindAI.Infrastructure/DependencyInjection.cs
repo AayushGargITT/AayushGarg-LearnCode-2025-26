@@ -25,6 +25,7 @@ public static class DependencyInjection
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+        services.AddScoped<IManagerRepository, ManagerRepository>();
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<IAllocationRepository, AllocationRepository>();
         services.AddScoped<ITimesheetRepository, TimesheetRepository>();
@@ -32,7 +33,11 @@ public static class DependencyInjection
 
         // Services
         services.AddScoped<IJwtService, JwtService>();
-        services.AddScoped<ILlmClient, GeminiClient>();
+        services.AddHttpClient<ILlmClient, GeminiClient>(client =>
+        {
+            client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
         services.AddSingleton<LlmClientFactory>();
 
         return services;

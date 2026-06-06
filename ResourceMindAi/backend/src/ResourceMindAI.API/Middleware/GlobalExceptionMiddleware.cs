@@ -100,6 +100,9 @@ public class GlobalExceptionMiddleware
             ConflictException ex
                 => (StatusCodes.Status409Conflict, "Conflict", ex.ErrorCode),
 
+            ExternalServiceException
+                => (StatusCodes.Status502BadGateway, "Bad Gateway", "EXTERNAL_SERVICE_ERROR"),
+
             DomainException ex
                 => (StatusCodes.Status422UnprocessableEntity, "Unprocessable Entity", ex.ErrorCode),
 
