@@ -8,21 +8,23 @@ using ResourceMindAI.Domain.Exceptions;
 
 namespace ResourceMindAI.Application.Services;
 
-public class EmployeeService : IEmployeeService
+public class AdminEmployeeService : IAdminEmployeeService
 {
-    private readonly IEmployeeRepository _employeeRepository;
-    private readonly ILogger<EmployeeService> _logger;
+    private readonly IAdminEmployeeRepository _adminEmployeeRepository;
+    private readonly ILogger<AdminEmployeeService> _logger;
 
-    public EmployeeService(IEmployeeRepository employeeRepository, ILogger<EmployeeService> logger)
+    public AdminEmployeeService(
+        IAdminEmployeeRepository adminEmployeeRepository,
+        ILogger<AdminEmployeeService> logger)
     {
-        _employeeRepository = employeeRepository;
+        _adminEmployeeRepository = adminEmployeeRepository;
         _logger = logger;
     }
 
     public async Task<IReadOnlyList<EmployeeListDto>> GetAllAsync()
     {
         _logger.LogInformation("Loading employees from repository");
-        var employees = await _employeeRepository.GetAllAsync();
+        var employees = await _adminEmployeeRepository.GetAllAsync();
         _logger.LogInformation("Loaded {EmployeeCount} employees from repository", employees.Count);
 
         return employees.Select(x => new EmployeeListDto
@@ -42,7 +44,7 @@ public class EmployeeService : IEmployeeService
     public async Task<UserProfileDto> GetByIdAsync(Guid userId)
     {
         _logger.LogInformation("Loading employee profile for user {UserId}", userId);
-        var employee = await _employeeRepository.GetByIdAsync(userId);
+        var employee = await _adminEmployeeRepository.GetByIdAsync(userId);
 
         if (employee is null)
         {
@@ -70,7 +72,7 @@ public class EmployeeService : IEmployeeService
     {
         await EnsureEmployeeExistsAsync(employeeId);
 
-        var skills = await _employeeRepository.GetSkillsAsync(employeeId);
+        var skills = await _adminEmployeeRepository.GetSkillsAsync(employeeId);
         return skills.Select(MapSkill).ToList();
     }
 
@@ -79,7 +81,7 @@ public class EmployeeService : IEmployeeService
         await EnsureEmployeeExistsAsync(employeeId);
 
         var skillName = request.SkillName.Trim();
-        var existingSkill = await _employeeRepository.GetSkillByNameAsync(employeeId, skillName);
+        var existingSkill = await _adminEmployeeRepository.GetSkillByNameAsync(employeeId, skillName);
         if (existingSkill is not null)
         {
             throw new ConflictException($"Skill '{skillName}' already exists for this employee.");
@@ -95,7 +97,7 @@ public class EmployeeService : IEmployeeService
             AddedAt = DateTime.UtcNow,
         };
 
-        var createdSkill = await _employeeRepository.AddSkillAsync(skill);
+        var createdSkill = await _adminEmployeeRepository.AddSkillAsync(skill);
         return MapSkill(createdSkill);
     }
 
@@ -106,7 +108,7 @@ public class EmployeeService : IEmployeeService
     {
         await EnsureEmployeeExistsAsync(employeeId);
 
-        var skill = await _employeeRepository.GetSkillAsync(employeeId, skillId);
+        var skill = await _adminEmployeeRepository.GetSkillAsync(employeeId, skillId);
         if (skill is null)
         {
             throw new EntityNotFoundException("Skill", skillId);
@@ -114,13 +116,13 @@ public class EmployeeService : IEmployeeService
 
         skill.Proficiency = request.Proficiency!.Value;
 
-        var updatedSkill = await _employeeRepository.UpdateSkillAsync(skill);
+        var updatedSkill = await _adminEmployeeRepository.UpdateSkillAsync(skill);
         return MapSkill(updatedSkill);
     }
 
     private async Task EnsureEmployeeExistsAsync(Guid employeeId)
     {
-        var employee = await _employeeRepository.GetByEmployeeIdAsync(employeeId);
+        var employee = await _adminEmployeeRepository.GetByEmployeeIdAsync(employeeId);
         if (employee is null)
         {
             throw new EntityNotFoundException("Employee", employeeId);

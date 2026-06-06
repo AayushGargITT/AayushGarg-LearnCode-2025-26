@@ -5,12 +5,14 @@ using ResourceMindAI.Domain.Entities;
 
 namespace ResourceMindAI.Infrastructure.Persistence.Repositories;
 
-public class EmployeeRepository : IEmployeeRepository
+public class AdminEmployeeRepository : IAdminEmployeeRepository
 {
     private readonly AppDbContext _dbContext;
-    private readonly ILogger<EmployeeRepository> _logger;
+    private readonly ILogger<AdminEmployeeRepository> _logger;
 
-    public EmployeeRepository(AppDbContext dbContext, ILogger<EmployeeRepository> logger)
+    public AdminEmployeeRepository(
+        AppDbContext dbContext,
+        ILogger<AdminEmployeeRepository> logger)
     {
         _dbContext = dbContext;
         _logger = logger;

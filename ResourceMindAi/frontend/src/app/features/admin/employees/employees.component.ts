@@ -11,7 +11,7 @@ import {
   UpdateEmployeeSkillProficiencyRequest
 } from '../../../core/models/employee.model';
 import { Role } from '../../../core/models/user.model';
-import { EmployeeService } from '../../../core/services/employee.service';
+import { AdminEmployeeService } from '../../../core/services/admin-employee.service';
 import { AppLayoutComponent } from '../../../shared/components/app-layout/app-layout.component';
 import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -43,7 +43,7 @@ type EmployeeActionItem = RowActionItem<EmployeeAction>;
   providers: [PageStateService]
 })
 export class AdminEmployeesComponent {
-  private readonly employeeService = inject(EmployeeService);
+  private readonly adminEmployeeService = inject(AdminEmployeeService);
   readonly pageState = inject(PageStateService);
 
   readonly filter = signal<string>('All');
@@ -81,7 +81,7 @@ export class AdminEmployeesComponent {
 
   loadEmployees(): void {
     this.pageState.startLoading();
-    this.employeeService.getAllEmployees().subscribe({
+    this.adminEmployeeService.getAllEmployees().subscribe({
       next: employees => {
         this.rows.set(employees);
         this.pageState.stopLoading();
@@ -147,7 +147,7 @@ export class AdminEmployeesComponent {
     this.skillError.set(null);
     this.isSkillSaving.set(true);
 
-    this.employeeService.addEmployeeSkill(employee.id, request).subscribe({
+    this.adminEmployeeService.addEmployeeSkill(employee.id, request).subscribe({
       next: () => {
         this.pageState.setSuccess('Skill added successfully.');
         this.loadSkills(employee.id);
@@ -168,7 +168,7 @@ export class AdminEmployeesComponent {
     this.skillError.set(null);
     this.isSkillSaving.set(true);
 
-    this.employeeService.updateEmployeeSkillProficiency(employee.id, event.skillId, event.request).subscribe({
+    this.adminEmployeeService.updateEmployeeSkillProficiency(employee.id, event.skillId, event.request).subscribe({
       next: () => {
         this.pageState.setSuccess('Skill proficiency updated successfully.');
         this.loadSkills(employee.id);
@@ -183,7 +183,7 @@ export class AdminEmployeesComponent {
   private loadSkills(employeeId: string): void {
     this.isSkillLoading.set(true);
 
-    this.employeeService.getEmployeeSkills(employeeId).subscribe({
+    this.adminEmployeeService.getEmployeeSkills(employeeId).subscribe({
       next: skills => {
         this.selectedEmployeeSkills.set(skills);
         this.isSkillLoading.set(false);

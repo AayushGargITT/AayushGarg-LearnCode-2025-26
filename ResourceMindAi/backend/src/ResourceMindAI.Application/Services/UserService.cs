@@ -16,13 +16,13 @@ public class UserService : IUserService
     private const string DefaultManagerDesignation = "Manager";
 
     private readonly IUserRepository _userRepository;
-    private readonly IEmployeeRepository _employeeRepository;
     private readonly ILogger<UserService> _logger;
 
-    public UserService(IUserRepository userRepository, IEmployeeRepository employeeRepository, ILogger<UserService> logger)
+    public UserService(
+        IUserRepository userRepository,
+        ILogger<UserService> logger)
     {
         _userRepository = userRepository;
-        _employeeRepository=employeeRepository;
         _logger = logger;
     }
 
@@ -152,10 +152,12 @@ public class UserService : IUserService
             throw new ForbiddenException("Admin users cannot be added as employees.", "ADMIN_EMPLOYEE_NOT_ALLOWED");
         }
 
-        var existingEmployee = await _employeeRepository.GetByIdAsync(userId);
-        if (existingEmployee is not null)
+        if (user.Employee is not null)
         {
-            _logger.LogWarning("Add employee rejected: user {UserId} is already mapped to employee {EmployeeId}", userId, existingEmployee.Id);
+            _logger.LogWarning(
+                "Add employee rejected: user {UserId} is already mapped to employee {EmployeeId}",
+                userId,
+                user.Employee.Id);
             throw new ConflictException("This user is already added as an employee.", "EMPLOYEE_ALREADY_EXISTS");
         }
 
@@ -179,16 +181,6 @@ public class UserService : IUserService
 
     private async Task<User> CreateManagerWithEmployeeAsync(User user, DateTime now)
     {
-        var existingEmployee = await _employeeRepository.GetByIdAsync(user.Id);
-        if (existingEmployee is not null)
-        {
-            _logger.LogWarning(
-                "Manager creation rejected: user {UserId} is already mapped to employee {EmployeeId}",
-                user.Id,
-                existingEmployee.Id);
-            throw new ConflictException("This user is already added as an employee.", "EMPLOYEE_ALREADY_EXISTS");
-        }
-
         var employee = new Employee
         {
             Id = Guid.NewGuid(),

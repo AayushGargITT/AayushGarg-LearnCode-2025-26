@@ -3,7 +3,7 @@ using ResourceMindAI.Application.DTOs.Employee;
 
 namespace ResourceMindAI.Application.Abstractions.Services;
 
-public interface IEmployeeService
+public interface IAdminEmployeeService
 {
     Task<IReadOnlyList<EmployeeListDto>> GetAllAsync();
     Task<UserProfileDto> GetByIdAsync(Guid userId);

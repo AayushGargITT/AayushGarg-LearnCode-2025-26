@@ -10,9 +10,9 @@ import {
 } from '../models/employee.model';
 
 @Injectable({ providedIn: 'root' })
-export class EmployeeService {
+export class AdminEmployeeService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'https://localhost:44374/api/v1/employee';
+  private readonly apiUrl = 'https://localhost:44374/api/v1/admin/employees';
 
   getAllEmployees(): Observable<Employee[]> {
     return this.http.get<Employee[]>(this.apiUrl);
@@ -46,6 +46,9 @@ export class EmployeeService {
     skillId: string,
     request: UpdateEmployeeSkillProficiencyRequest
   ): Observable<EmployeeSkill> {
-    return this.http.patch<EmployeeSkill>(`${this.apiUrl}/${employeeId}/skills/${skillId}/proficiency`, request);
+    return this.http.patch<EmployeeSkill>(
+      `${this.apiUrl}/${employeeId}/skills/${skillId}/proficiency`,
+      request
+    );
   }
 }

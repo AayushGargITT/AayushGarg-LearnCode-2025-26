@@ -2,7 +2,7 @@ using ResourceMindAI.Domain.Entities;
 
 namespace ResourceMindAI.Application.Abstractions.Repositories;
 
-public interface IEmployeeRepository
+public interface IAdminEmployeeRepository
 {
     Task<IReadOnlyList<Employee>> GetAllAsync();
     Task<Employee?> GetByIdAsync(Guid userId);
