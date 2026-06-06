@@ -1,64 +1,100 @@
 <app-layout role="manager" title="Resource Dashboard">
-      <app-page-header title="Resource Capacity" subtitle="Monitor bench and active team allocations">
-        <button routerLink="/manager/allocate" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white h-9 px-4 py-2">
-          <span class="material-symbols-outlined h-4 w-4 mr-2" style="font-size: 16px; vertical-align: middle;">auto_awesome</span> Allocate with AI
-        </button>
-      </app-page-header>
-      
-      <div class="grid lg:grid-cols-2 gap-6">
-        <!-- Bench -->
-        <div class="rounded-lg border border-border bg-card">
-          <div class="flex items-center justify-between px-4 py-3 border-b border-border">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-medium">Available on Bench</span>
-              <span class="inline-flex items-center justify-center rounded-full bg-amber-500/15 text-amber-300 px-2 py-0.5 text-xs font-medium">2</span>
-            </div>
-            <button class="text-xs text-muted-foreground hover:text-foreground">Filter skills</button>
-          </div>
-          <div class="p-0">
-            <div *ngFor="let emp of benchEmployees" class="p-4 border-b border-border/50 last:border-0 hover:bg-accent/40 transition-colors cursor-pointer">
-              <div class="flex items-start gap-4">
-                <app-avatar [name]="emp.name"></app-avatar>
-                <div class="flex-1">
-                  <div class="flex items-center justify-between">
-                    <div class="font-medium">{{ emp.name }}</div>
-                    <app-status-badge status="BENCH"></app-status-badge>
-                  </div>
-                  <div class="text-sm text-muted-foreground">{{ emp.title }}</div>
-                  <div class="flex flex-wrap gap-1 mt-2">
-                    <span *ngFor="let skill of emp.skills" class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border border-border">{{ skill }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  <app-page-header title="Resource Capacity" subtitle="Monitor bench and active team allocations">
+    <button routerLink="/manager/allocate" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white h-9 px-4 py-2">
+      <span class="material-symbols-outlined h-4 w-4 mr-2" style="font-size: 16px; vertical-align: middle;">auto_awesome</span>
+      Allocate Resource
+    </button>
+  </app-page-header>
 
-        <!-- Allocated -->
-        <div class="rounded-lg border border-border bg-card">
-          <div class="flex items-center justify-between px-4 py-3 border-b border-border">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-medium">Active Allocations</span>
-              <span class="inline-flex items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300 px-2 py-0.5 text-xs font-medium">4</span>
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div *ngIf="pageState.isLoading()" class="hint-panel">Loading resources...</div>
+
+  <div *ngIf="!pageState.isLoading()" class="grid lg:grid-cols-2 gap-6">
+    <div class="rounded-lg border border-border bg-card">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-medium">On Bench</span>
+          <span class="inline-flex items-center justify-center rounded-full bg-amber-500/15 text-amber-300 px-2 py-0.5 text-xs font-medium">{{ dashboard().onBench.length }}</span>
+        </div>
+      </div>
+
+      <div *ngIf="dashboard().onBench.length === 0" class="hint-panel m-4">No bench employees found.</div>
+
+      <div *ngFor="let emp of dashboard().onBench" class="p-4 border-b border-border/50 last:border-0 hover:bg-accent/40 transition-colors cursor-pointer" (click)="openDetails(emp)">
+        <div class="flex items-start gap-4">
+          <app-avatar [name]="emp.fullName"></app-avatar>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <div class="font-medium">{{ emp.fullName }}</div>
+              <app-status-badge [status]="emp.currentStatus"></app-status-badge>
             </div>
-          </div>
-          <div class="p-0">
-            <div *ngFor="let emp of allocatedEmployees" class="p-4 border-b border-border/50 last:border-0 hover:bg-accent/40 transition-colors cursor-pointer">
-              <div class="flex items-start gap-4">
-                <app-avatar [name]="emp.name"></app-avatar>
-                <div class="flex-1">
-                  <div class="flex items-center justify-between">
-                    <div class="font-medium">{{ emp.name }}</div>
-                    <span class="text-xs font-mono" [ngClass]="emp.util === 100 ? 'text-emerald-400' : 'text-amber-400'">{{ emp.util }}% Utilised</span>
-                  </div>
-                  <div class="text-sm text-muted-foreground">{{ emp.title }}</div>
-                  <div class="mt-2 h-1.5 w-full bg-muted overflow-hidden rounded-full">
-                    <div class="h-full" [ngClass]="emp.util === 100 ? 'bg-emerald-500' : 'bg-amber-500'" [style.width.%]="emp.util"></div>
-                  </div>
-                </div>
-              </div>
+            <div class="text-sm text-muted-foreground">{{ emp.designation }}</div>
+            <div class="flex flex-wrap gap-1 mt-2">
+              <span *ngFor="let skill of emp.skills" class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border border-border">{{ skill }}</span>
             </div>
           </div>
         </div>
       </div>
-    </app-layout>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-medium">Active Employees</span>
+          <span class="inline-flex items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300 px-2 py-0.5 text-xs font-medium">{{ dashboard().activeEmployees.length }}</span>
+        </div>
+      </div>
+
+      <div *ngIf="dashboard().activeEmployees.length === 0" class="hint-panel m-4">No active employees found.</div>
+
+      <div *ngFor="let emp of dashboard().activeEmployees" class="p-4 border-b border-border/50 last:border-0 hover:bg-accent/40 transition-colors cursor-pointer" (click)="openDetails(emp)">
+        <div class="flex items-start gap-4">
+          <app-avatar [name]="emp.fullName"></app-avatar>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <div class="font-medium">{{ emp.fullName }}</div>
+              <span class="text-xs font-mono" [ngClass]="emp.allocationPercent >= 100 ? 'text-emerald-400' : 'text-amber-400'">{{ emp.allocationPercent }}% Utilised</span>
+            </div>
+            <div class="text-sm text-muted-foreground">{{ emp.designation }}</div>
+            <div class="mt-2 h-1.5 w-full bg-muted overflow-hidden rounded-full">
+              <div class="h-full" [ngClass]="emp.allocationPercent >= 100 ? 'bg-emerald-500' : 'bg-amber-500'" [style.width.%]="emp.allocationPercent"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <kendo-dialog *ngIf="selectedResource()" [title]="selectedResource()!.fullName" [width]="680" (close)="closeDetails()">
+    <div class="form-stack">
+      <div class="grid grid-cols-2 gap-4 text-sm">
+        <div><span class="text-muted-foreground">Department</span><div class="font-medium">{{ selectedResource()!.department }}</div></div>
+        <div><span class="text-muted-foreground">Status</span><div><app-status-badge [status]="selectedResource()!.currentStatus"></app-status-badge></div></div>
+      </div>
+
+      <section>
+        <h3 class="text-sm font-semibold mb-2">Profile Skills</h3>
+        <div class="flex flex-wrap gap-1">
+          <span *ngFor="let skill of selectedResource()!.skills" class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border border-border">{{ skill }}</span>
+        </div>
+      </section>
+
+      <section>
+        <h3 class="text-sm font-semibold mb-2">Active Allocations</h3>
+        <div *ngIf="selectedResource()!.activeAllocations.length === 0" class="hint-panel">No active allocations.</div>
+        <div *ngFor="let allocation of selectedResource()!.activeAllocations" class="py-2 border-b border-border/50">
+          <div class="font-medium">{{ allocation.projectName }}</div>
+          <div class="text-xs text-muted-foreground">{{ allocation.utilisationPercent }}% · {{ allocation.fromDate | date:'mediumDate' }} - {{ allocation.toDate | date:'mediumDate' }}</div>
+        </div>
+      </section>
+
+      <section>
+        <h3 class="text-sm font-semibold mb-2">Recent Activity</h3>
+        <div class="flex flex-wrap gap-1">
+          <span *ngFor="let tag of selectedResource()!.recentActivityTags" class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border border-border">{{ tag }}</span>
+        </div>
+      </section>
+    </div>
+  </kendo-dialog>
+</app-layout>

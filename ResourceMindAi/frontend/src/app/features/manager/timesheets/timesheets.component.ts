@@ -1,22 +1,52 @@
-import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, inject, signal } from '@angular/core';
+import { GridModule } from '@progress/kendo-angular-grid';
+import { ManagerTimesheet } from '../../../core/models/manager.model';
+import { ManagerService } from '../../../core/services/manager.service';
 import { AppLayoutComponent } from '../../../shared/components/app-layout/app-layout.component';
-import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { AvatarComponent } from '../../../shared/components/avatar/avatar.component';
+import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
+import { PageStateService } from '../../../shared/services/page-state.service';
 
 @Component({
   selector: 'app-manager-timesheets',
   standalone: true,
-  imports: [CommonModule, AppLayoutComponent, PageHeaderComponent, AvatarComponent, StatusBadgeComponent],
+  imports: [
+    CommonModule,
+    GridModule,
+    AppLayoutComponent,
+    PageHeaderComponent,
+    AvatarComponent,
+    StatusBadgeComponent,
+    PageFeedbackComponent
+  ],
   templateUrl: './timesheets.component.html',
-  styleUrl: './timesheets.component.css'
+  styleUrl: './timesheets.component.css',
+  providers: [PageStateService]
 })
 export class ManagerTimesheetsComponent {
-  rows = [
-    { empName: "Elena Patel", project: "Atlas Payments", hours: 40, tags: ["Backend API", "Bug Fixes"], status: "SUBMITTED" },
-    { empName: "Maya Chen", project: "Atlas Payments", hours: 40, tags: ["Integration Testing", "E2E"], status: "SUBMITTED" },
-    { empName: "Ada Okonkwo", project: "Borealis CRM", hours: 32, tags: ["Architecture"], status: "SUBMITTED" },
-    { empName: "Sara Kim", project: "Delta Auth", hours: 0, tags: [], status: "MISSED" },
-  ];
+  private readonly managerService = inject(ManagerService);
+  readonly pageState = inject(PageStateService);
+
+  readonly rows = signal<ManagerTimesheet[]>([]);
+
+  constructor() {
+    this.loadTimesheets();
+  }
+
+  loadTimesheets(): void {
+    this.pageState.startLoading();
+    this.managerService.getSubmittedTimesheets().subscribe({
+      next: timesheets => {
+        this.rows.set(timesheets);
+        this.pageState.stopLoading();
+      },
+      error: err => {
+        this.pageState.stopLoading();
+        this.pageState.setError(err.error?.message ?? 'Unable to load timesheets.');
+      }
+    });
+  }
 }

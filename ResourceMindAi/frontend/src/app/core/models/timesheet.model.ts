@@ -1,5 +1,8 @@
 export enum TimesheetStatus {
-  SUBMITTED = 'SUBMITTED',
+  DRAFT = 'Draft',
+  SUBMITTED = 'Submitted',
+  APPROVED = 'Approved',
+  REJECTED = 'Rejected',
   MISSED = 'MISSED'
 }
 

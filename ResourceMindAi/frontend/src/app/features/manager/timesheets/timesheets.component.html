@@ -1,47 +1,40 @@
 <app-layout role="manager" title="Timesheets">
-      <app-page-header title="Team Timesheets" subtitle="Review submitted hours and activity tags">
-        <div class="flex items-center gap-2">
-          <button class="inline-flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 w-9">
-            <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;">chevron_left</span>
-          </button>
-          <div class="text-sm font-medium px-2">Week of Oct 14, 2024</div>
-          <button class="inline-flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 w-9">
-            <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;">chevron_right</span>
-          </button>
-        </div>
-      </app-page-header>
-      
-      <div class="rounded-lg border border-border bg-card">
-        <div class="w-full overflow-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-border text-left [&>th]:font-medium [&>th]:text-muted-foreground [&>th]:p-4 [&>th]:align-middle">
-                <th>Employee</th>
-                <th>Project</th>
-                <th>Hours</th>
-                <th>Activity Tags</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let r of rows" class="border-b border-border hover:bg-accent/40 [&>td]:p-4 [&>td]:align-middle">
-                <td>
-                  <div class="flex items-center gap-3">
-                    <app-avatar [name]="r.empName" [size]="28"></app-avatar>
-                    <div class="font-medium">{{ r.empName }}</div>
-                  </div>
-                </td>
-                <td class="text-indigo-400 font-medium">{{ r.project }}</td>
-                <td class="font-mono">{{ r.hours }}h</td>
-                <td>
-                  <div class="flex flex-wrap gap-1">
-                    <span *ngFor="let t of r.tags" class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border border-border">{{ t }}</span>
-                  </div>
-                </td>
-                <td><app-status-badge [status]="r.status"></app-status-badge></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </app-layout>
+  <app-page-header title="Team Timesheets" subtitle="Review submitted hours and activity tags"></app-page-header>
+
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div class="surface kendo-grid-shell">
+    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading timesheets...</div>
+    <div *ngIf="!pageState.isLoading() && rows().length === 0" class="hint-panel">No submitted timesheets found.</div>
+
+    <kendo-grid *ngIf="!pageState.isLoading() && rows().length > 0" [data]="rows()" [height]="420" [resizable]="true">
+      <kendo-grid-column title="Employee">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <div class="flex items-center gap-3">
+            <app-avatar [name]="dataItem.employeeName" [size]="28"></app-avatar>
+            <div class="font-medium">{{ dataItem.employeeName }}</div>
+          </div>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="projectName" title="Project" class="text-indigo-400 font-medium"></kendo-grid-column>
+      <kendo-grid-column title="Week" [width]="150">
+        <ng-template kendoGridCellTemplate let-dataItem>{{ dataItem.weekStartDate | date:'mediumDate' }}</ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Hours" [width]="100">
+        <ng-template kendoGridCellTemplate let-dataItem><span class="font-mono">{{ dataItem.hoursLogged }}h</span></ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Activity Tags">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <div class="flex flex-wrap gap-1">
+            <span *ngFor="let tag of dataItem.tags" class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border border-border">{{ tag }}</span>
+          </div>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="status" title="Status" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.status"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
+</app-layout>

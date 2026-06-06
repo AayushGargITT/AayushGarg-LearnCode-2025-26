@@ -20,7 +20,6 @@ const NAV: Record<Role, { to: string; label: string; icon: string }[]> = {
     { to: '/manager/allocate', label: 'Allocate Resource', icon: 'auto_awesome' },
     { to: '/manager/projects', label: 'My Projects', icon: 'work' },
     { to: '/manager/timesheets', label: 'Timesheets', icon: 'schedule' },
-    { to: '/manager/ai', label: 'AI Assistant', icon: 'auto_awesome' },
   ],
   [Role.EMPLOYEE]: [
     { to: '/employee/timesheets/submit', label: 'Submit Timesheet', icon: 'post_add' },

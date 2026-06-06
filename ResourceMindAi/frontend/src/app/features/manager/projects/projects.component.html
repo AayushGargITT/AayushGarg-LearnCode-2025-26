@@ -1,36 +1,76 @@
 <app-layout role="manager" title="My Projects">
-      <app-page-header title="My Projects" subtitle="Track health and milestones of your assigned projects"></app-page-header>
-      
-      <div class="grid lg:grid-cols-2 gap-6">
-        <div *ngFor="let p of projects" class="rounded-lg border border-border bg-card overflow-hidden">
-          <div class="p-5 border-b border-border">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="font-semibold text-lg">{{ p.name }}</h3>
-              <app-status-badge [status]="p.status"></app-status-badge>
-            </div>
-            <p class="text-sm text-muted-foreground">{{ p.desc }}</p>
-            <div class="mt-4 flex items-center gap-4 text-sm">
-              <app-health-dot [health]="p.health"></app-health-dot>
-              <div class="flex items-center text-muted-foreground">
-                <span class="material-symbols-outlined h-3.5 w-3.5 mr-1.5" style="font-size: 16px; vertical-align: middle;">group</span> {{ p.teamSize }} Team Members
-              </div>
-            </div>
-          </div>
-          <div class="p-5 bg-muted/20">
-            <div class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Upcoming Milestones</div>
-            <div class="space-y-3">
-              <div *ngFor="let m of p.milestones" class="flex items-center justify-between text-sm">
-                <div class="flex items-center gap-2">
-                  <div class="h-1.5 w-1.5 rounded-full" [ngClass]="m.done ? 'bg-emerald-500' : 'bg-border'"></div>
-                  <span [ngClass]="{'line-through text-muted-foreground': m.done}">{{ m.title }}</span>
-                </div>
-                <span class="text-xs font-mono text-muted-foreground">{{ m.date }}</span>
-              </div>
-            </div>
-            <button class="mt-4 w-full inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
-              View AI Risk Summary
-            </button>
-          </div>
-        </div>
+  <app-page-header title="My Projects" subtitle="Track health, milestones, and risk for your projects"></app-page-header>
+
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div class="surface kendo-grid-shell">
+    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading projects...</div>
+    <div *ngIf="!pageState.isLoading() && projects().length === 0" class="hint-panel">No projects found.</div>
+
+    <kendo-grid *ngIf="!pageState.isLoading() && projects().length > 0" [data]="projects()" [height]="420" [resizable]="true">
+      <kendo-grid-column field="name" title="Project Name">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <div class="font-medium cursor-pointer" (dblclick)="openProject(dataItem)">{{ dataItem.name }}</div>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="End Date" [width]="150">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <span (dblclick)="openProject(dataItem)">{{ dataItem.endDate | date:'mediumDate' }}</span>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="status" title="Status" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.status"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Health" [width]="140">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-health-dot [health]="dataItem.healthStatus"></app-health-dot>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="teamSize" title="Team" [width]="100"></kendo-grid-column>
+    </kendo-grid>
+  </div>
+
+  <div *ngIf="isDetailLoading()" class="hint-panel mt-4">Loading project detail...</div>
+
+  <kendo-dialog *ngIf="selectedProject()" [title]="selectedProject()!.name" [width]="760" (close)="closeProject()">
+    <div class="form-stack">
+      <div class="grid grid-cols-3 gap-4 text-sm">
+        <div><span class="text-muted-foreground">Health</span><div><app-health-dot [health]="selectedProject()!.healthStatus"></app-health-dot></div></div>
+        <div><span class="text-muted-foreground">Status</span><div><app-status-badge [status]="selectedProject()!.status"></app-status-badge></div></div>
+        <div><span class="text-muted-foreground">Team</span><div class="font-medium">{{ selectedProject()!.teamSize }}</div></div>
       </div>
-    </app-layout>
+
+      <section>
+        <h3 class="text-sm font-semibold mb-2">Risk Summary</h3>
+        <div class="hint-panel">
+          <div *ngFor="let risk of selectedProject()!.riskSummary">- {{ risk }}</div>
+        </div>
+      </section>
+
+      <section>
+        <h3 class="text-sm font-semibold mb-2">Milestones</h3>
+        <div *ngFor="let milestone of selectedProject()!.milestones" class="flex items-center justify-between py-2 border-b border-border/50">
+          <div>
+            <div class="font-medium">{{ milestone.title }}</div>
+            <div class="text-xs text-muted-foreground">{{ milestone.dueDate | date:'mediumDate' }}</div>
+          </div>
+          <app-status-badge [status]="milestone.status"></app-status-badge>
+        </div>
+      </section>
+
+      <section>
+        <h3 class="text-sm font-semibold mb-2">Allocated Resources</h3>
+        <div *ngIf="selectedProject()!.allocatedResources.length === 0" class="hint-panel">No active allocations.</div>
+        <div *ngFor="let allocation of selectedProject()!.allocatedResources" class="flex items-center justify-between py-2 border-b border-border/50">
+          <div>
+            <div class="font-medium">{{ allocation.employeeName }}</div>
+            <div class="text-xs text-muted-foreground">{{ allocation.fromDate | date:'mediumDate' }} - {{ allocation.toDate | date:'mediumDate' }}</div>
+          </div>
+          <span class="font-mono text-xs">{{ allocation.utilisationPercent }}%</span>
+        </div>
+      </section>
+    </div>
+  </kendo-dialog>
+</app-layout>

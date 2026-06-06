@@ -9,17 +9,17 @@ import { CommonModule } from '@angular/common';
   styleUrl: './health-dot.component.css'
 })
 export class HealthDotComponent {
-  @Input() health: 'ON_TRACK' | 'NEEDS_ATTENTION' | 'AT_RISK' = 'ON_TRACK';
+  @Input() health: string = 'ON_TRACK';
 
   getColorClass(): string {
-    return this.health === 'ON_TRACK' ? 'bg-emerald-500'
-      : this.health === 'NEEDS_ATTENTION' ? 'bg-amber-500'
+    return this.health === 'ON_TRACK' || this.health === 'Green' ? 'bg-emerald-500'
+      : this.health === 'NEEDS_ATTENTION' || this.health === 'Amber' ? 'bg-amber-500'
       : 'bg-rose-500';
   }
 
   getLabel(): string {
-    return this.health === 'ON_TRACK' ? 'On track'
-      : this.health === 'NEEDS_ATTENTION' ? 'Needs attention'
+    return this.health === 'ON_TRACK' || this.health === 'Green' ? 'On track'
+      : this.health === 'NEEDS_ATTENTION' || this.health === 'Amber' ? 'Needs attention'
       : 'At risk';
   }
 }

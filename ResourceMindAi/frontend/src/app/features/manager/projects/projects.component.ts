@@ -1,41 +1,74 @@
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, inject, signal } from '@angular/core';
+import { DialogModule } from '@progress/kendo-angular-dialog';
+import { GridModule } from '@progress/kendo-angular-grid';
+import { ManagerProject, ManagerProjectDetail } from '../../../core/models/manager.model';
+import { ManagerService } from '../../../core/services/manager.service';
 import { AppLayoutComponent } from '../../../shared/components/app-layout/app-layout.component';
+import { HealthDotComponent } from '../../../shared/components/health-dot/health-dot.component';
+import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
-import { HealthDotComponent } from '../../../shared/components/health-dot/health-dot.component';
+import { PageStateService } from '../../../shared/services/page-state.service';
 
 @Component({
   selector: 'app-manager-projects',
   standalone: true,
-  imports: [CommonModule, AppLayoutComponent, PageHeaderComponent, StatusBadgeComponent, HealthDotComponent],
+  imports: [
+    CommonModule,
+    DialogModule,
+    GridModule,
+    AppLayoutComponent,
+    PageHeaderComponent,
+    StatusBadgeComponent,
+    HealthDotComponent,
+    PageFeedbackComponent
+  ],
   templateUrl: './projects.component.html',
-  styleUrl: './projects.component.css'
+  styleUrl: './projects.component.css',
+  providers: [PageStateService]
 })
 export class ManagerProjectsComponent {
-  projects: any[] = [
-    {
-      name: "Atlas Payments",
-      desc: "Core payment gateway integration with Stripe and PayPal.",
-      status: "ACTIVE",
-      health: "ON_TRACK",
-      teamSize: 4,
-      milestones: [
-        { title: "Requirements Sign-off", date: "Feb 15", done: true },
-        { title: "Alpha Release", date: "Jun 30", done: false },
-        { title: "Beta Release", date: "Sep 30", done: false },
-      ]
-    },
-    {
-      name: "Cobalt Insights",
-      desc: "Data analytics and reporting platform for enterprise clients.",
-      status: "ON_HOLD",
-      health: "AT_RISK",
-      teamSize: 2,
-      milestones: [
-        { title: "Data Pipeline", date: "Jan 30", done: true },
-        { title: "Dashboard MVP", date: "Mar 15", done: false },
-      ]
-    }
-  ];
+  private readonly managerService = inject(ManagerService);
+  readonly pageState = inject(PageStateService);
+
+  readonly projects = signal<ManagerProject[]>([]);
+  readonly selectedProject = signal<ManagerProjectDetail | null>(null);
+  readonly isDetailLoading = signal(false);
+
+  constructor() {
+    this.loadProjects();
+  }
+
+  loadProjects(): void {
+    this.pageState.startLoading();
+    this.managerService.getProjects().subscribe({
+      next: projects => {
+        this.projects.set(projects);
+        this.pageState.stopLoading();
+      },
+      error: err => {
+        this.pageState.stopLoading();
+        this.pageState.setError(err.error?.message ?? 'Unable to load projects.');
+      }
+    });
+  }
+
+  openProject(project: ManagerProject): void {
+    this.isDetailLoading.set(true);
+    this.managerService.getProjectDetail(project.id).subscribe({
+      next: detail => {
+        this.selectedProject.set(detail);
+        this.isDetailLoading.set(false);
+      },
+      error: err => {
+        this.isDetailLoading.set(false);
+        this.pageState.setError(err.error?.message ?? 'Unable to load project detail.');
+      }
+    });
+  }
+
+  closeProject(): void {
+    this.selectedProject.set(null);
+  }
 }
