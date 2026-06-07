@@ -1,32 +1,55 @@
 <app-layout role="employee" title="My Allocations">
-      <app-page-header title="My Allocations" subtitle="Projects you are currently assigned to"></app-page-header>
-      
-      <div class="grid lg:grid-cols-2 gap-6">
-        <div *ngFor="let a of allocations" class="rounded-lg border border-border bg-card p-5">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="font-semibold text-lg text-indigo-400">{{ a.project }}</h3>
-              <div class="text-sm text-muted-foreground mt-1">Manager: {{ a.manager }}</div>
-            </div>
-            <app-status-badge status="Active"></app-status-badge>
-          </div>
-          
-          <div class="space-y-4">
-            <div>
-              <div class="flex items-center justify-between text-sm mb-1.5">
-                <span class="text-muted-foreground">Utilisation</span>
-                <span class="font-mono">{{ a.util }}%</span>
-              </div>
-              <div class="h-1.5 w-full bg-muted overflow-hidden rounded-full">
-                <div class="h-full bg-indigo-500 transition-all" [style.width.%]="a.util"></div>
-              </div>
-            </div>
-            
-            <div class="flex items-center justify-between text-sm pt-4 border-t border-border/50">
-              <span class="text-muted-foreground">Timeline</span>
-              <span class="font-mono">{{ a.timeline }}</span>
-            </div>
-          </div>
+  <app-page-header title="My Allocations" subtitle="Projects assigned to you"></app-page-header>
+
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div class="surface p-5 mb-5">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <div class="text-sm text-muted-foreground">Current Utilisation</div>
+        <div class="text-2xl font-semibold font-mono">{{ totalCurrentUtilisation() }}%</div>
+      </div>
+      <div class="w-48 max-w-full h-2 rounded-full bg-muted overflow-hidden">
+        <div
+          class="h-full bg-indigo-500"
+          [style.width.%]="totalCurrentUtilisation() > 100 ? 100 : totalCurrentUtilisation()">
         </div>
       </div>
-    </app-layout>
+    </div>
+  </div>
+
+  <div class="surface kendo-grid-shell">
+    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading allocations...</div>
+    <div *ngIf="!pageState.isLoading() && allocations().length === 0" class="hint-panel">
+      No allocations found.
+    </div>
+
+    <kendo-grid
+      *ngIf="!pageState.isLoading() && allocations().length > 0"
+      [data]="allocations()"
+      [height]="420"
+      [resizable]="true">
+      <kendo-grid-column field="projectName" title="Project" class="font-medium text-indigo-400"></kendo-grid-column>
+      <kendo-grid-column title="Allocation" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <span class="font-mono">{{ dataItem.utilisationPercent }}%</span>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Start Date" [width]="150">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          {{ dataItem.fromDate | date:'dd-MM-yyyy':'UTC' }}
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="End Date" [width]="150">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          {{ dataItem.toDate | date:'dd-MM-yyyy':'UTC' }}
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Status" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.status"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
+</app-layout>

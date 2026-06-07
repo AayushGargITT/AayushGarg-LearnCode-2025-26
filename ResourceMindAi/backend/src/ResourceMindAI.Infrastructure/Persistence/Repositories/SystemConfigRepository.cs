@@ -1,13 +1,22 @@
-﻿using System;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using ResourceMindAI.Application.Abstractions.Repositories;
-using ResourceMindAI.Domain.Entities;
 
 namespace ResourceMindAI.Infrastructure.Persistence.Repositories;
+
 public class SystemConfigRepository : ISystemConfigRepository
 {
-    public Task GetByIdAsync(Guid id)
+    private readonly AppDbContext _dbContext;
+
+    public SystemConfigRepository(AppDbContext dbContext)
     {
-        throw new NotImplementedException();
+        _dbContext = dbContext;
+    }
+
+    public Task<decimal?> GetMaxWeeklyHoursAsync()
+    {
+        return _dbContext.SystemConfigs
+            .AsNoTracking()
+            .Select(config => (decimal?)config.MaxWeeklyHours)
+            .FirstOrDefaultAsync();
     }
 }

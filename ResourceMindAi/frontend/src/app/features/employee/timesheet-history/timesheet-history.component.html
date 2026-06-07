@@ -1,14 +1,85 @@
 <app-layout role="employee" title="Timesheet History">
-      <app-page-header title="Timesheet History" subtitle="Your past submissions"></app-page-header>
-      
-      <div class="surface kendo-grid-shell">
-        <kendo-grid [data]="rows" [height]="330" [resizable]="true">
-          <kendo-grid-column field="week" title="Week Starting" class="font-mono text-xs"></kendo-grid-column>
-          <kendo-grid-column field="project" title="Project" class="font-medium text-indigo-400"></kendo-grid-column>
-          <kendo-grid-column field="hours" title="Hours" [width]="110" class="font-mono"></kendo-grid-column>
-          <kendo-grid-column field="status" title="Status" [width]="140">
-            <ng-template kendoGridCellTemplate let-dataItem><app-status-badge [status]="dataItem.status"></app-status-badge></ng-template>
-          </kendo-grid-column>
-        </kendo-grid>
+  <app-page-header title="Timesheet History" subtitle="Your submitted and missed weeks"></app-page-header>
+
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div class="surface kendo-grid-shell">
+    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading timesheet history...</div>
+    <div *ngIf="!pageState.isLoading() && rows().length === 0" class="hint-panel">
+      No timesheet history found.
+    </div>
+
+    <kendo-grid
+      *ngIf="!pageState.isLoading() && rows().length > 0"
+      [data]="rows()"
+      [height]="420"
+      [resizable]="true">
+      <kendo-grid-column title="Week Starting">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <span class="font-mono text-xs">{{ dataItem.weekStartDate | date:'dd-MM-yyyy':'UTC' }}</span>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Total Hours" [width]="140">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <span class="font-mono">{{ dataItem.totalHours }}h</span>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="status" title="Status" [width]="140">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.status"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Actions" [width]="120">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <button kendoButton fillMode="flat" (click)="openDetail(dataItem)">View</button>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
+
+  <div *ngIf="isDetailLoading()" class="hint-panel mt-4">Loading week details...</div>
+
+  <kendo-dialog
+    *ngIf="selectedWeek()"
+    title="Timesheet Details"
+    [width]="680"
+    [minWidth]="320"
+    (close)="closeDetail()">
+    <div class="space-y-5">
+      <div class="flex flex-wrap justify-between gap-3">
+        <div>
+          <div class="text-xs text-muted-foreground">Week Starting</div>
+          <div class="font-mono">{{ selectedWeek()!.weekStartDate | date:'dd-MM-yyyy':'UTC' }}</div>
+        </div>
+        <app-status-badge [status]="selectedWeek()!.status"></app-status-badge>
       </div>
-    </app-layout>
+
+      <div *ngIf="selectedWeek()!.entries.length === 0" class="hint-panel">
+        No project hours were submitted for this week.
+      </div>
+
+      <div *ngFor="let entry of selectedWeek()!.entries" class="border-b border-border pb-4">
+        <div class="flex justify-between gap-3">
+          <span class="font-medium">{{ entry.projectName }}</span>
+          <span class="font-mono">{{ entry.hours }}h</span>
+        </div>
+        <div class="flex flex-wrap gap-1 mt-2">
+          <span
+            *ngFor="let tag of entry.activityTags"
+            class="inline-flex rounded-md border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+            {{ tag }}
+          </span>
+        </div>
+      </div>
+
+      <div class="flex justify-between font-semibold">
+        <span>Total Hours</span>
+        <span class="font-mono">{{ selectedWeek()!.totalHours }}h</span>
+      </div>
+    </div>
+
+    <kendo-dialog-actions>
+      <button kendoButton (click)="closeDetail()">Close</button>
+    </kendo-dialog-actions>
+  </kendo-dialog>
+</app-layout>

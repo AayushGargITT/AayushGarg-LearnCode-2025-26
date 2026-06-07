@@ -1,36 +1,95 @@
 <app-layout role="employee" title="Submit Timesheet">
-      <app-page-header title="Log Hours" subtitle="Submit your timesheet for the current week"></app-page-header>
-      
-      <div class="max-w-2xl rounded-lg border border-border bg-card p-6">
-        <form [formGroup]="tsForm" (ngSubmit)="onSubmit()" class="space-y-6">
-          
-          <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-1.5">
-              <label class="text-sm font-medium">Week Starting</label>
-              <input type="date" formControlName="weekStart" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-sm font-medium">Project</label>
-              <select formControlName="project" class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="p1" class="bg-popover text-popover-foreground">Atlas Payments</option>
-              </select>
-            </div>
-          </div>
-          
-          <div class="space-y-1.5">
-            <label class="text-sm font-medium">Hours Logged</label>
-            <input type="number" formControlName="hours" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="40" />
-            <p class="text-[11px] text-muted-foreground">Standard week is 40 hours.</p>
-          </div>
-          
-          <div class="space-y-1.5">
-            <label class="text-sm font-medium">Activity Tags (comma separated)</label>
-            <input formControlName="tags" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="Backend API, Bug Fixes" />
-          </div>
-          
-          <button type="submit" [disabled]="tsForm.invalid" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white h-9 px-4 py-2 w-full disabled:opacity-50">
-            Submit Timesheet
-          </button>
-        </form>
+  <app-page-header title="Log Hours" subtitle="Submit weekly hours for your active allocations"></app-page-header>
+
+  <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6">
+    <div class="surface p-5">
+      <label class="block text-sm font-medium mb-2">Week Starting</label>
+      <div class="flex flex-wrap items-end gap-3">
+        <kendo-datepicker
+          formControlName="weekStartDate"
+          format="dd-MM-yyyy"
+          (valueChange)="loadWeek(true)">
+        </kendo-datepicker>
+        <span *ngIf="week()" class="text-sm text-muted-foreground">
+          Weekly limit: {{ week()!.maxWeeklyHours }} hours
+        </span>
       </div>
-    </app-layout>
+    </div>
+
+    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading active allocations...</div>
+    <div *ngIf="!pageState.isLoading() && week() && week()!.allocations.length === 0" class="hint-panel">
+      No project allocations are active during this week.
+    </div>
+
+    <div formArrayName="entries" class="space-y-4">
+      <div
+        *ngFor="let entry of entries.controls; let i = index"
+        [formGroupName]="i"
+        class="surface p-5">
+        <div class="flex flex-wrap justify-between gap-3 mb-4">
+          <div>
+            <h3 class="font-semibold">{{ week()!.allocations[i].projectName }}</h3>
+            <p class="text-sm text-muted-foreground">
+              {{ week()!.allocations[i].allocationPercent }}% allocated
+            </p>
+          </div>
+          <span class="font-mono text-sm">
+            Max {{ week()!.allocations[i].maxAllowedHours }}h
+          </span>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-[180px_1fr]">
+          <div>
+            <label class="block text-sm font-medium mb-2">Hours Worked</label>
+            <kendo-numerictextbox
+              formControlName="hours"
+              [min]="0"
+              [max]="week()!.allocations[i].maxAllowedHours"
+              [decimals]="2">
+            </kendo-numerictextbox>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Activity Tags</label>
+            <kendo-multiselect
+              formControlName="activityTags"
+              [data]="activityTags"
+              [autoClose]="false"
+              placeholder="Select activities">
+            </kendo-multiselect>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="week() && week()!.allocations.length > 0" class="surface p-5">
+      <h3 class="font-semibold mb-4">Submission Summary</h3>
+      <div class="space-y-3">
+        <div *ngFor="let entry of entries.controls; let i = index" class="flex justify-between gap-4 text-sm">
+          <div>
+            <div class="font-medium">{{ week()!.allocations[i].projectName }}</div>
+            <div class="text-muted-foreground">
+              {{ entry.get('activityTags')?.value?.join(', ') || 'No activity selected' }}
+            </div>
+          </div>
+          <span class="font-mono">{{ entry.get('hours')?.value || 0 }}h</span>
+        </div>
+        <div class="flex justify-between border-t border-border pt-3 font-semibold">
+          <span>Total</span>
+          <span class="font-mono">{{ totalHours() }} / {{ week()!.maxWeeklyHours }}h</span>
+        </div>
+      </div>
+
+      <button
+        kendoButton
+        themeColor="primary"
+        type="submit"
+        class="w-full mt-5"
+        [disabled]="form.invalid || pageState.isSubmitting()">
+        {{ pageState.isSubmitting() ? 'Submitting...' : 'Submit Timesheet' }}
+      </button>
+    </div>
+  </form>
+</app-layout>
