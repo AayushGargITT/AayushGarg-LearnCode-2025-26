@@ -10,7 +10,7 @@ import {
 } from '../models/project.model';
 
 @Injectable({ providedIn: 'root' })
-export class ProjectService {
+export class AdminProjectService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = 'https://localhost:44374/api/v1/project';
 
@@ -30,7 +30,14 @@ export class ProjectService {
     return this.http.post<Milestone>(`${this.apiUrl}/${projectId}/milestones`, request);
   }
 
-  updateMilestone(projectId: string, milestoneId: string, request: UpdateMilestoneRequest): Observable<Milestone> {
-    return this.http.put<Milestone>(`${this.apiUrl}/${projectId}/milestones/${milestoneId}`, request);
+  updateMilestone(
+    projectId: string,
+    milestoneId: string,
+    request: UpdateMilestoneRequest
+  ): Observable<Milestone> {
+    return this.http.put<Milestone>(
+      `${this.apiUrl}/${projectId}/milestones/${milestoneId}`,
+      request
+    );
   }
 }

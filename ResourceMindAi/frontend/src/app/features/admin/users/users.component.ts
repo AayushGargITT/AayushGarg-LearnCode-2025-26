@@ -7,7 +7,7 @@ import { AppLayoutComponent } from '../../../shared/components/app-layout/app-la
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { AddEmployeeRequest, CreateUserRequest, Role, User } from '../../../core/models/user.model';
-import { UserService } from '../../../core/services/user.service';
+import { AdminUserService } from '../../../core/services/admin-user.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
 import { RowActionItem, RowActionMenuComponent } from '../../../shared/components/row-action-menu/row-action-menu.component';
@@ -40,7 +40,7 @@ type UserActionItem = RowActionItem<UserAction>;
   providers: [PageStateService]
 })
 export class AdminUsersComponent {
-  private readonly userService = inject(UserService);
+  private readonly adminUserService = inject(AdminUserService);
   readonly pageState = inject(PageStateService);
 
   drawerOpen = signal(false);
@@ -68,7 +68,7 @@ export class AdminUsersComponent {
 
   loadUsers() {
     this.pageState.startLoading();
-    this.userService.getAllUsers().subscribe({
+    this.adminUserService.getAllUsers().subscribe({
       next: (users) => {
         this.rows.set(users);
         this.pageState.stopLoading();
@@ -86,7 +86,7 @@ export class AdminUsersComponent {
 
     this.isCreating.set(true);
 
-    this.userService.createUser(request).subscribe({
+    this.adminUserService.createUser(request).subscribe({
       next: () => {
         this.isCreating.set(false);
         this.closeDrawer();
@@ -147,7 +147,7 @@ export class AdminUsersComponent {
     }
 
     this.pageState.startAction(user.id);
-    this.userService.resetPassword(user.id).subscribe({
+    this.adminUserService.resetPassword(user.id).subscribe({
       next: () => {
         this.pageState.stopAction();
         this.closeResetPasswordDialog();
@@ -163,7 +163,7 @@ export class AdminUsersComponent {
 
   toggleStatus(user: User): void {
     this.pageState.startAction(user.id);
-    this.userService.toggleStatus(user.id).subscribe({
+    this.adminUserService.toggleStatus(user.id).subscribe({
       next: () => {
         this.pageState.stopAction();
         this.pageState.setSuccess(user.isActive ? 'User deactivated successfully.' : 'User activated successfully.');
@@ -196,7 +196,7 @@ export class AdminUsersComponent {
     this.employeeError.set(null);
 
     this.isAddingEmployee.set(true);
-    this.userService.addEmployee(user.id, request).subscribe({
+    this.adminUserService.addEmployee(user.id, request).subscribe({
       next: () => {
         this.closeEmployeeDialog();
         this.pageState.setSuccess('Employee profile created successfully.');

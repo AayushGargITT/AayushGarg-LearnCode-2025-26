@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { GridModule } from '@progress/kendo-angular-grid';
 import { Allocation } from '../../../core/models/allocation.model';
-import { AllocationService } from '../../../core/services/allocation.service';
+import { AdminAllocationService } from '../../../core/services/admin-allocation.service';
 import { AppLayoutComponent } from '../../../shared/components/app-layout/app-layout.component';
 import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -25,7 +25,7 @@ import { PageStateService } from '../../../shared/services/page-state.service';
   providers: [PageStateService]
 })
 export class AdminAllocationsComponent {
-  private readonly allocationService = inject(AllocationService);
+  private readonly adminAllocationService = inject(AdminAllocationService);
   readonly pageState = inject(PageStateService);
 
   readonly rows = signal<Allocation[]>([]);
@@ -37,7 +37,7 @@ export class AdminAllocationsComponent {
   loadAllocations(): void {
     this.pageState.startLoading();
 
-    this.allocationService.getAllAllocations().subscribe({
+    this.adminAllocationService.getAllAllocations().subscribe({
       next: allocations => {
         this.rows.set(allocations);
         this.pageState.stopLoading();

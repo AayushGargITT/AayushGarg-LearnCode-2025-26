@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { AddEmployeeRequest, CreateUserRequest, User } from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
-export class UserService {
+export class AdminUserService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = 'https://localhost:44374/api/v1/user';
 

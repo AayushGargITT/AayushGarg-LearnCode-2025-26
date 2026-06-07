@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { Allocation } from '../models/allocation.model';
 
 @Injectable({ providedIn: 'root' })
-export class AllocationService {
+export class AdminAllocationService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = 'https://localhost:44374/api/v1/allocation';
 

@@ -10,8 +10,8 @@ import {
   UpdateMilestoneRequest
 } from '../../../core/models/project.model';
 import { User } from '../../../core/models/user.model';
-import { ProjectService } from '../../../core/services/project.service';
-import { UserService } from '../../../core/services/user.service';
+import { AdminProjectService } from '../../../core/services/admin-project.service';
+import { AdminUserService } from '../../../core/services/admin-user.service';
 import { AppLayoutComponent } from '../../../shared/components/app-layout/app-layout.component';
 import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -44,8 +44,8 @@ type ProjectActionItem = RowActionItem<ProjectAction>;
   providers: [PageStateService]
 })
 export class AdminProjectsComponent {
-  private readonly projectService = inject(ProjectService);
-  private readonly userService = inject(UserService);
+  private readonly adminProjectService = inject(AdminProjectService);
+  private readonly adminUserService = inject(AdminUserService);
   readonly pageState = inject(PageStateService);
 
   readonly rows = signal<Project[]>([]);
@@ -66,7 +66,7 @@ export class AdminProjectsComponent {
 
   loadProjects(): void {
     this.pageState.startLoading();
-    this.projectService.getAllProjects().subscribe({
+    this.adminProjectService.getAllProjects().subscribe({
       next: projects => {
         this.rows.set(projects);
         this.pageState.stopLoading();
@@ -95,7 +95,7 @@ export class AdminProjectsComponent {
     this.createError.set(null);
     this.isCreating.set(true);
 
-    this.projectService.createProject(request).subscribe({
+    this.adminProjectService.createProject(request).subscribe({
       next: () => {
         this.closeCreateDialog();
         this.pageState.setSuccess('Project created successfully.');
@@ -135,7 +135,7 @@ export class AdminProjectsComponent {
     this.milestoneError.set(null);
     this.isMilestoneSaving.set(true);
 
-    this.projectService.addMilestone(project.id, request).subscribe({
+    this.adminProjectService.addMilestone(project.id, request).subscribe({
       next: () => {
         this.pageState.setSuccess('Milestone added successfully.');
         this.loadMilestones(project.id);
@@ -157,7 +157,7 @@ export class AdminProjectsComponent {
     this.milestoneError.set(null);
     this.isMilestoneSaving.set(true);
 
-    this.projectService.updateMilestone(project.id, event.milestoneId, event.request).subscribe({
+    this.adminProjectService.updateMilestone(project.id, event.milestoneId, event.request).subscribe({
       next: () => {
         this.pageState.setSuccess('Milestone updated successfully.');
         this.loadMilestones(project.id);
@@ -171,7 +171,7 @@ export class AdminProjectsComponent {
   }
 
   private loadManagers(): void {
-    this.userService.getActiveManagers().subscribe({
+    this.adminUserService.getActiveManagers().subscribe({
       next: managers => this.managers.set(managers),
       error: () => this.managers.set([])
     });
@@ -186,7 +186,7 @@ export class AdminProjectsComponent {
   private loadMilestones(projectId: string): void {
     this.isMilestoneLoading.set(true);
 
-    this.projectService.getProjectMilestones(projectId).subscribe({
+    this.adminProjectService.getProjectMilestones(projectId).subscribe({
       next: milestones => {
         this.milestones.set(milestones);
         this.isMilestoneLoading.set(false);
