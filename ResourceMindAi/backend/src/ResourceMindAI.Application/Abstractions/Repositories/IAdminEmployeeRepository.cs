@@ -12,4 +12,5 @@ public interface IAdminEmployeeRepository
     Task<Skill?> GetSkillByNameAsync(Guid employeeId, string skillName);
     Task<Skill> AddSkillAsync(Skill skill);
     Task<Skill> UpdateSkillAsync(Skill skill);
+    Task<Employee> UpdateAsync(Employee employee);
 }

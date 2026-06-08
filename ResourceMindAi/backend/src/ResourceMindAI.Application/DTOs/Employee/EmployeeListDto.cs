@@ -13,4 +13,6 @@ public class EmployeeListDto
     public string Department { get; set; } = null!;
     public string Designation { get; set; } = null!;
     public bool IsActive { get; set; }
+    public Guid? ManagerId { get; set; }
+    public string? ManagerName { get; set; }
 }

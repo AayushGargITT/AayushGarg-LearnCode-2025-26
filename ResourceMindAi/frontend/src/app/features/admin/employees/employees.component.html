@@ -64,13 +64,18 @@
 
       <kendo-grid-column field="department" title="Department" class="text-muted-foreground"></kendo-grid-column>
       <kendo-grid-column field="designation" title="Designation" class="text-muted-foreground"></kendo-grid-column>
+      <kendo-grid-column title="Manager" class="text-muted-foreground">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          {{ dataItem.managerName || 'Unassigned' }}
+        </ng-template>
+      </kendo-grid-column>
 
       <kendo-grid-column title="Actions" [width]="110" class="text-right">
         <ng-template kendoGridCellTemplate let-dataItem>
           <app-row-action-menu
             *ngIf="actionsFor(dataItem).length > 0"
             [actions]="actionsFor(dataItem)"
-            [disabled]="isSkillLoading() || isSkillSaving()"
+            [disabled]="isSkillLoading() || isSkillSaving() || isManagerLoading() || isManagerSaving()"
             (actionSelected)="onEmployeeAction(dataItem, $event)">
           </app-row-action-menu>
         </ng-template>
@@ -88,4 +93,15 @@
     (skillAdded)="addSkill($event)"
     (proficiencyUpdated)="updateSkillProficiency($event)">
   </app-employee-skills-dialog>
+
+  <app-assign-manager-dialog
+    *ngIf="selectedManagerEmployee()"
+    [employee]="selectedManagerEmployee()"
+    [managers]="activeManagers()"
+    [isLoading]="isManagerLoading()"
+    [isSaving]="isManagerSaving()"
+    [error]="managerError()"
+    (cancelled)="closeAssignManager()"
+    (submitted)="assignManager($event)">
+  </app-assign-manager-dialog>
 </app-layout>

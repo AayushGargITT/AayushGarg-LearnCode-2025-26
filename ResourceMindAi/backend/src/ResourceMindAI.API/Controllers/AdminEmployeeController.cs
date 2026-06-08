@@ -99,4 +99,22 @@ public class AdminEmployeeController : ControllerBase
             skill.Id);
         return Ok(skill);
     }
+
+    [HttpPatch("{employeeId:guid}/manager")]
+    public async Task<ActionResult<EmployeeListDto>> AssignManager(
+        Guid employeeId,
+        AssignEmployeeManagerDto request)
+    {
+        _logger.LogInformation(
+            "Admin assign manager request received for employee {EmployeeId}",
+            employeeId);
+
+        var employee = await _adminEmployeeService.AssignManagerAsync(employeeId, request);
+
+        _logger.LogInformation(
+            "Admin assign manager request completed for employee {EmployeeId}",
+            employee.Id);
+
+        return Ok(employee);
+    }
 }

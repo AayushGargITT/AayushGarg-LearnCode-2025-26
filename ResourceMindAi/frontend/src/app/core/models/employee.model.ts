@@ -38,6 +38,12 @@ export interface Employee {
   designation: string;
   allocationStatus: EmployeeStatus | string;
   isActive: boolean;
+  managerId?: string | null;
+  managerName?: string | null;
+}
+
+export interface AssignEmployeeManagerRequest {
+  managerId: string;
 }
 
 export interface CreateEmployeeSkillRequest {

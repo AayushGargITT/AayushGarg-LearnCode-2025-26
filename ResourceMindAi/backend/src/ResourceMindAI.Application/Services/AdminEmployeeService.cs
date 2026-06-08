@@ -4,6 +4,7 @@ using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Application.DTOs.Employee;
 using ResourceMindAI.Domain.Entities;
+using ResourceMindAI.Domain.Enums;
 using ResourceMindAI.Domain.Exceptions;
 
 namespace ResourceMindAI.Application.Services;
@@ -11,13 +12,16 @@ namespace ResourceMindAI.Application.Services;
 public class AdminEmployeeService : IAdminEmployeeService
 {
     private readonly IAdminEmployeeRepository _adminEmployeeRepository;
+    private readonly IUserRepository _userRepository;
     private readonly ILogger<AdminEmployeeService> _logger;
 
     public AdminEmployeeService(
         IAdminEmployeeRepository adminEmployeeRepository,
+        IUserRepository userRepository,
         ILogger<AdminEmployeeService> logger)
     {
         _adminEmployeeRepository = adminEmployeeRepository;
+        _userRepository = userRepository;
         _logger = logger;
     }
 
@@ -27,18 +31,7 @@ public class AdminEmployeeService : IAdminEmployeeService
         var employees = await _adminEmployeeRepository.GetAllAsync();
         _logger.LogInformation("Loaded {EmployeeCount} employees from repository", employees.Count);
 
-        return employees.Select(x => new EmployeeListDto
-        {
-            Id = x.Id,
-            UserId = x.User.Id,
-            FullName = x.User.FullName,
-            Email = x.User.Email,
-            Role = x.User.Role,
-            AllocationStatus = x.Allocations.Any(allocation => allocation.IsActive) ? "Allocated" : "Bench",
-            Department = x.Department,
-            Designation = x.Designation,
-            IsActive = x.IsActive,
-        }).ToList();
+        return employees.Select(MapEmployee).ToList();
     }
 
     public async Task<UserProfileDto> GetByIdAsync(Guid userId)
@@ -120,6 +113,51 @@ public class AdminEmployeeService : IAdminEmployeeService
         return MapSkill(updatedSkill);
     }
 
+    public async Task<EmployeeListDto> AssignManagerAsync(
+        Guid employeeId,
+        AssignEmployeeManagerDto request)
+    {
+        var employee = await _adminEmployeeRepository.GetByEmployeeIdAsync(employeeId);
+        if (employee is null)
+        {
+            throw new EntityNotFoundException("Employee", employeeId);
+        }
+
+        if (employee.User.Role != Role.Employee)
+        {
+            throw new ValidationException("Manager can be assigned only to employees with Employee role.");
+        }
+
+        if (!employee.IsActive || !employee.User.IsActive)
+        {
+            throw new ValidationException("Manager can be assigned only to an active employee.");
+        }
+
+        if (employee.ManagerId.HasValue)
+        {
+            throw new ConflictException("This employee already has a manager assigned.");
+        }
+
+        var manager = await _userRepository.GetByIdAsync(request.ManagerId!.Value);
+        if (manager is null)
+        {
+            throw new EntityNotFoundException("Manager", request.ManagerId.Value);
+        }
+
+        if (manager.Role != Role.Manager || !manager.IsActive)
+        {
+            throw new ValidationException("Selected manager must be an active manager.");
+        }
+
+        employee.ManagerId = manager.Id;
+        employee.Manager = manager;
+
+        var updatedEmployee = await _adminEmployeeRepository.UpdateAsync(employee);
+        updatedEmployee.Manager = manager;
+
+        return MapEmployee(updatedEmployee);
+    }
+
     private async Task EnsureEmployeeExistsAsync(Guid employeeId)
     {
         var employee = await _adminEmployeeRepository.GetByEmployeeIdAsync(employeeId);
@@ -139,6 +177,26 @@ public class AdminEmployeeService : IAdminEmployeeService
             Category = skill.Category,
             Proficiency = skill.Proficiency,
             AddedAt = skill.AddedAt,
+        };
+    }
+
+    private static EmployeeListDto MapEmployee(Employee employee)
+    {
+        return new EmployeeListDto
+        {
+            Id = employee.Id,
+            UserId = employee.User.Id,
+            FullName = employee.User.FullName,
+            Email = employee.User.Email,
+            Role = employee.User.Role,
+            AllocationStatus = employee.Allocations.Any(allocation => allocation.IsActive)
+                ? "Allocated"
+                : "Bench",
+            Department = employee.Department,
+            Designation = employee.Designation,
+            IsActive = employee.IsActive,
+            ManagerId = employee.ManagerId,
+            ManagerName = employee.Manager?.FullName,
         };
     }
 }

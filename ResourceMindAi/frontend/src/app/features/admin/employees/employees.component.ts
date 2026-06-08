@@ -4,23 +4,26 @@ import { RouterModule } from '@angular/router';
 import { GridModule } from '@progress/kendo-angular-grid';
 import { InputsModule } from '@progress/kendo-angular-inputs';
 import {
+  AssignEmployeeManagerRequest,
   CreateEmployeeSkillRequest,
   Employee,
   EmployeeSkill,
   EmployeeStatus,
   UpdateEmployeeSkillProficiencyRequest
 } from '../../../core/models/employee.model';
-import { Role } from '../../../core/models/user.model';
+import { Role, User } from '../../../core/models/user.model';
 import { AdminEmployeeService } from '../../../core/services/admin-employee.service';
+import { AdminUserService } from '../../../core/services/admin-user.service';
 import { AppLayoutComponent } from '../../../shared/components/app-layout/app-layout.component';
 import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { RowActionItem, RowActionMenuComponent } from '../../../shared/components/row-action-menu/row-action-menu.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { PageStateService } from '../../../shared/services/page-state.service';
+import { AssignManagerDialogComponent } from './components/assign-manager-dialog/assign-manager-dialog.component';
 import { EmployeeSkillsDialogComponent } from './components/employee-skills-dialog/employee-skills-dialog.component';
 
-type EmployeeAction = 'manageSkills';
+type EmployeeAction = 'manageSkills' | 'assignManager';
 type EmployeeActionItem = RowActionItem<EmployeeAction>;
 
 @Component({
@@ -36,6 +39,7 @@ type EmployeeActionItem = RowActionItem<EmployeeAction>;
     StatusBadgeComponent,
     PageFeedbackComponent,
     RowActionMenuComponent,
+    AssignManagerDialogComponent,
     EmployeeSkillsDialogComponent
   ],
   templateUrl: './employees.component.html',
@@ -44,6 +48,7 @@ type EmployeeActionItem = RowActionItem<EmployeeAction>;
 })
 export class AdminEmployeesComponent {
   private readonly adminEmployeeService = inject(AdminEmployeeService);
+  private readonly adminUserService = inject(AdminUserService);
   readonly pageState = inject(PageStateService);
 
   readonly filter = signal<string>('All');
@@ -54,6 +59,11 @@ export class AdminEmployeesComponent {
   readonly isSkillLoading = signal(false);
   readonly isSkillSaving = signal(false);
   readonly skillError = signal<string | null>(null);
+  readonly selectedManagerEmployee = signal<Employee | null>(null);
+  readonly activeManagers = signal<User[]>([]);
+  readonly isManagerLoading = signal(false);
+  readonly isManagerSaving = signal(false);
+  readonly managerError = signal<string | null>(null);
 
   readonly filteredRows = computed(() => {
     const filter = this.filter();
@@ -106,17 +116,34 @@ export class AdminEmployeesComponent {
     return employee.role === Role.EMPLOYEE;
   }
 
+  canAssignManager(employee: Employee): boolean {
+    return employee.role === Role.EMPLOYEE
+      && employee.isActive
+      && !employee.managerId;
+  }
+
   actionsFor(employee: Employee): EmployeeActionItem[] {
-    if (!this.canManageSkills(employee)) {
-      return [];
+    const actions: EmployeeActionItem[] = [];
+
+    if (this.canManageSkills(employee)) {
+      actions.push({ text: 'Manage Skills', action: 'manageSkills' });
     }
 
-    return [{ text: 'Manage Skills', action: 'manageSkills' }];
+    if (this.canAssignManager(employee)) {
+      actions.push({ text: 'Assign Manager', action: 'assignManager' });
+    }
+
+    return actions;
   }
 
   onEmployeeAction(employee: Employee, item: EmployeeActionItem): void {
     if (item.action === 'manageSkills') {
       this.openSkills(employee);
+      return;
+    }
+
+    if (item.action === 'assignManager') {
+      this.openAssignManager(employee);
     }
   }
 
@@ -180,6 +207,46 @@ export class AdminEmployeesComponent {
     });
   }
 
+  openAssignManager(employee: Employee): void {
+    if (!this.canAssignManager(employee)) {
+      return;
+    }
+
+    this.selectedManagerEmployee.set(employee);
+    this.managerError.set(null);
+    this.loadManagers();
+  }
+
+  closeAssignManager(): void {
+    this.selectedManagerEmployee.set(null);
+    this.activeManagers.set([]);
+    this.managerError.set(null);
+    this.isManagerLoading.set(false);
+    this.isManagerSaving.set(false);
+  }
+
+  assignManager(request: AssignEmployeeManagerRequest): void {
+    const employee = this.selectedManagerEmployee();
+    if (!employee) {
+      return;
+    }
+
+    this.managerError.set(null);
+    this.isManagerSaving.set(true);
+
+    this.adminEmployeeService.assignManager(employee.id, request).subscribe({
+      next: () => {
+        this.closeAssignManager();
+        this.pageState.setSuccess('Manager assigned successfully.');
+        this.loadEmployees();
+      },
+      error: err => {
+        this.isManagerSaving.set(false);
+        this.managerError.set(err.error?.message ?? 'Unable to assign manager.');
+      }
+    });
+  }
+
   private loadSkills(employeeId: string): void {
     this.isSkillLoading.set(true);
 
@@ -194,6 +261,22 @@ export class AdminEmployeesComponent {
         this.isSkillLoading.set(false);
         this.isSkillSaving.set(false);
         this.skillError.set(err.error?.message ?? 'Unable to load employee skills.');
+      }
+    });
+  }
+
+  private loadManagers(): void {
+    this.isManagerLoading.set(true);
+
+    this.adminUserService.getActiveManagers().subscribe({
+      next: managers => {
+        this.activeManagers.set(managers);
+        this.isManagerLoading.set(false);
+      },
+      error: err => {
+        this.activeManagers.set([]);
+        this.isManagerLoading.set(false);
+        this.managerError.set(err.error?.message ?? 'Unable to load managers.');
       }
     });
   }

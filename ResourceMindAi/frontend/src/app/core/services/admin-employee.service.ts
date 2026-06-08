@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import {
+  AssignEmployeeManagerRequest,
   CreateEmployeeSkillRequest,
   Employee,
   EmployeeDetailDTO,
@@ -50,5 +51,9 @@ export class AdminEmployeeService {
       `${this.apiUrl}/${employeeId}/skills/${skillId}/proficiency`,
       request
     );
+  }
+
+  assignManager(employeeId: string, request: AssignEmployeeManagerRequest): Observable<Employee> {
+    return this.http.patch<Employee>(`${this.apiUrl}/${employeeId}/manager`, request);
   }
 }

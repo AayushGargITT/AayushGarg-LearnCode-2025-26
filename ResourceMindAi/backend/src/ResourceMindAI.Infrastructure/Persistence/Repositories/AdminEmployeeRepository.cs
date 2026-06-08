@@ -24,6 +24,7 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
 
         var employees = await _dbContext.Employees
             .Include(x => x.User)
+            .Include(x => x.Manager)
             .Include(x => x.Allocations)
             .OrderBy(x => x.User.FullName)
             .ToListAsync();
@@ -54,6 +55,7 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
 
         var employee = await _dbContext.Employees
             .Include(x => x.User)
+            .Include(x => x.Manager)
             .FirstOrDefaultAsync(x => x.Id == employeeId);
 
         _logger.LogDebug(
@@ -102,5 +104,12 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         _dbContext.Skills.Update(skill);
         await _dbContext.SaveChangesAsync();
         return skill;
+    }
+
+    public async Task<Employee> UpdateAsync(Employee employee)
+    {
+        _dbContext.Employees.Update(employee);
+        await _dbContext.SaveChangesAsync();
+        return employee;
     }
 }
