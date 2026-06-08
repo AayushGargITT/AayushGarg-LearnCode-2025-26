@@ -15,22 +15,23 @@
   <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
     <div class="space-y-1.5">
       <label for="u" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Username</label>
-      <input id="u" formControlName="username" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" placeholder="asha.rao" />
+      <input id="u" formControlName="username" [disabled]="isSubmitting()" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" placeholder="asha.rao" />
     </div>
 
     <div class="space-y-1.5">
       <label for="p" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Password</label>
       <div class="relative">
-        <input id="p" formControlName="password" [type]="show() ? 'text' : 'password'" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" placeholder="Password" />
-        <button type="button" (click)="toggleShow()" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground outline-none">
+        <input id="p" formControlName="password" [disabled]="isSubmitting()" [type]="show() ? 'text' : 'password'" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" placeholder="Password" />
+        <button type="button" (click)="toggleShow()" [disabled]="isSubmitting()" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground outline-none disabled:opacity-50">
           <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;" *ngIf="show()">visibility_off</span>
           <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;" *ngIf="!show()">visibility</span>
         </button>
       </div>
     </div>
 
-    <button type="submit" [disabled]="loginForm.invalid" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 w-full bg-indigo-600 hover:bg-indigo-500 text-white h-9 px-4 py-2">
-      Sign In
+    <button type="submit" [disabled]="loginForm.invalid || isSubmitting()" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 w-full bg-indigo-600 hover:bg-indigo-500 text-white h-9 px-4 py-2">
+      <span *ngIf="isSubmitting()" class="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+      {{ isSubmitting() ? 'Signing in...' : 'Sign In' }}
     </button>
   </form>
 </app-auth-shell>

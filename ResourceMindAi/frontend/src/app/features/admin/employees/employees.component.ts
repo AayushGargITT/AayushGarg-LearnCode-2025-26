@@ -122,6 +122,18 @@ export class AdminEmployeesComponent {
       && !employee.managerId;
   }
 
+  managerDisplay(employee: Employee): string {
+    if (employee.role === Role.MANAGER) {
+      return 'Self';
+    }
+
+    if (employee.role !== Role.EMPLOYEE) {
+      return 'Not applicable';
+    }
+
+    return employee.managerName || 'Unassigned';
+  }
+
   actionsFor(employee: Employee): EmployeeActionItem[] {
     const actions: EmployeeActionItem[] = [];
 

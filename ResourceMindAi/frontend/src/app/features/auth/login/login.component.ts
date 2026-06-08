@@ -16,6 +16,7 @@ export class LoginComponent {
   show = signal(false);
   state = signal<'idle' | 'error' | 'deactivated'>('idle');
   errorMessage = signal<string | null>(null);
+  isSubmitting = signal(false);
 
   authService = inject(AuthService);
   router = inject(Router);
@@ -35,17 +36,22 @@ export class LoginComponent {
   }
 
   onSubmit() {
-    if (this.loginForm.invalid) return;
+    if (this.loginForm.invalid || this.isSubmitting()) return;
     
     const { username, password } = this.loginForm.value;
-  if(!username || !password) return;
+    if (!username || !password) return;
 
+    this.isSubmitting.set(true);
+    this.state.set('idle');
+    this.errorMessage.set(null);
     this.authService.login(username, password).subscribe({
       next: (res) => {
+        this.isSubmitting.set(false);
         if(res.user.forcePasswordChange) this.router.navigate(['/change-password'])
         else this.router.navigate([this.authService.defaultRouteForRole(res.user.role)]);
       },
       error: (err)=>{
+        this.isSubmitting.set(false);
         this.state.set(err.status === 403 ? 'deactivated' : 'error')
         this.errorMessage.set(err.error?.message)
       }

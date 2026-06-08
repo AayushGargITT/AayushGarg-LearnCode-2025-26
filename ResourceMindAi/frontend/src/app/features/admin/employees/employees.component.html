@@ -66,7 +66,7 @@
       <kendo-grid-column field="designation" title="Designation" class="text-muted-foreground"></kendo-grid-column>
       <kendo-grid-column title="Manager" class="text-muted-foreground">
         <ng-template kendoGridCellTemplate let-dataItem>
-          {{ dataItem.managerName || 'Unassigned' }}
+          {{ managerDisplay(dataItem) }}
         </ng-template>
       </kendo-grid-column>
 
