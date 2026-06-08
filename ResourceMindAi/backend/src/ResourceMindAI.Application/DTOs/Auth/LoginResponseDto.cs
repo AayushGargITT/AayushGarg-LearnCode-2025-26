@@ -5,6 +5,7 @@ namespace ResourceMindAI.Application.DTOs.Auth;
 public class LoginResponseDto
 {
     public UserProfileDto User { get; set; } = null!;
+    public string? Token { get; set; }
 }
 
 public class UserProfileDto

@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddJwtCookieAuthentication(
+    public static IServiceCollection AddJwtAuthentication(
         this IServiceCollection services,
         IConfiguration configuration)
     {
@@ -53,15 +53,6 @@ public static class ServiceCollectionExtensions
                     RoleClaimType = ClaimTypes.Role
                 };
 
-                options.Events = new JwtBearerEvents
-                {
-                    OnMessageReceived = context =>
-                    {
-                        var cookieName = jwtSection["CookieName"] ?? "ResourceMindAuth";
-                        context.Token = context.Request.Cookies[cookieName];
-                        return Task.CompletedTask;
-                    }
-                };
             });
 
         services.AddAuthorization();

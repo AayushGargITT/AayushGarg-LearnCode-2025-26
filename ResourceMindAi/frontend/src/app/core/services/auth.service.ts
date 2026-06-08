@@ -4,18 +4,24 @@ import { Observable, tap } from 'rxjs';
 import { Role, User } from '../models/user.model';
 import { Router } from '@angular/router';
 
+interface LoginResponse {
+  user: User;
+  token: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly apiUrl = 'https://localhost:44374/api/v1';
-  private readonly storageKey = 'resourceMindUser';
+  private readonly userStorageKey = 'resourceMindUser';
+  private readonly tokenStorageKey = 'resourceMindToken';
 
   currentUser = signal<User | null>(this.loadUser());
 
-  login(username: string, password: string): Observable<{ user: User }> {
-    return this.http.post<{ user: User }>(`${this.apiUrl}/auth/login`, { username, password }).pipe(
-      tap((res) => this.setCurrentUser(res.user))
+  login(username: string, password: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/auth/login`, { username, password }).pipe(
+      tap(response => this.setSession(response.user, response.token))
     );
   }
 
@@ -36,14 +42,19 @@ export class AuthService {
   }
 
   logout(): void {
-    this.http.post<void>(`${this.apiUrl}/auth/logout`, {}).subscribe();
-    sessionStorage.removeItem(this.storageKey);
-    this.router.navigate(['/login'])
+    this.currentUser.set(null);
+    sessionStorage.removeItem(this.userStorageKey);
+    sessionStorage.removeItem(this.tokenStorageKey);
+    this.router.navigate(['/login']);
   }
 
   setCurrentUser(user: User): void {
     this.currentUser.set(user);
-    sessionStorage.setItem(this.storageKey, JSON.stringify(user));
+    sessionStorage.setItem(this.userStorageKey, JSON.stringify(user));
+  }
+
+  hasToken(): boolean {
+    return !!sessionStorage.getItem(this.tokenStorageKey);
   }
 
   defaultRouteForRole(role: Role | string): string {
@@ -54,7 +65,7 @@ export class AuthService {
   }
 
   private loadUser(): User | null {
-    const raw = sessionStorage.getItem(this.storageKey);
+    const raw = sessionStorage.getItem(this.userStorageKey);
     if (!raw) {
       return null;
     }
@@ -62,8 +73,13 @@ export class AuthService {
     try {
       return JSON.parse(raw) as User;
     } catch {
-      sessionStorage.removeItem(this.storageKey);
+      sessionStorage.removeItem(this.userStorageKey);
       return null;
     }
+  }
+
+  private setSession(user: User, token: string): void {
+    sessionStorage.setItem(this.tokenStorageKey, token);
+    this.setCurrentUser(user);
   }
 }

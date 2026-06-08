@@ -13,21 +13,15 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly IJwtService _jwtService;
-    private readonly IConfiguration _configuration;
-    private readonly IWebHostEnvironment _environment;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IAuthService authService,
         IJwtService jwtService,
-        IConfiguration configuration,
-        IWebHostEnvironment environment,
         ILogger<AuthController> logger)
     {
         _authService = authService;
         _jwtService = jwtService;
-        _configuration = configuration;
-        _environment = environment;
         _logger = logger;
     }
 
@@ -39,14 +33,17 @@ public class AuthController : ControllerBase
 
         var profile = await _authService.LoginAsync(request);
         var token = _jwtService.GenerateToken(profile.Id, profile.Username, profile.Role.ToString());
-        AppendAuthCookie(token);
 
         _logger.LogInformation(
             "Login request completed successfully for user {UserId} with role {Role}",
             profile.Id,
             profile.Role);
 
-        return Ok(new LoginResponseDto { User = profile });
+        return Ok(new LoginResponseDto
+        {
+            User = profile,
+            Token = token
+        });
     }
 
     [HttpPost("change-password")]
@@ -60,40 +57,6 @@ public class AuthController : ControllerBase
 
         _logger.LogInformation("Change password request completed for user {UserId}", profile.Id);
         return Ok(new LoginResponseDto { User = profile });
-    }
-
-    [HttpPost("logout")]
-    public IActionResult Logout()
-    {
-        Response.Cookies.Delete(GetCookieName(), GetAuthCookieOptions());
-        return NoContent();
-    }
-
-    private void AppendAuthCookie(string token)
-    {
-        Response.Cookies.Append(GetCookieName(), token, GetAuthCookieOptions());
-    }
-
-    private CookieOptions GetAuthCookieOptions()
-    {
-        var jwtSection = _configuration.GetSection("Jwt");
-        var expirationMinutes = int.TryParse(jwtSection["ExpirationMinutes"], out var configuredMinutes)
-            ? configuredMinutes
-            : 60;
-
-        return new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = !_environment.IsDevelopment() || Request.IsHttps,
-            SameSite = SameSiteMode.None,
-            Expires = DateTimeOffset.UtcNow.AddMinutes(expirationMinutes),
-            Path = "/"
-        };
-    }
-
-    private string GetCookieName()
-    {
-        return _configuration["Jwt:CookieName"] ?? "ResourceMindAuth";
     }
 
     private Guid GetCurrentUserId()

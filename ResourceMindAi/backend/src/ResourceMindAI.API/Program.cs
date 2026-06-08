@@ -53,13 +53,12 @@ try
         options.AddPolicy("Frontend", policy =>
             policy.WithOrigins("http://localhost:4200")
                 .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials());
+                .AllowAnyMethod());
     });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
     builder.Services.AddApiServices();
-    builder.Services.AddJwtCookieAuthentication(builder.Configuration);
+    builder.Services.AddJwtAuthentication(builder.Configuration);
     builder.Services.AddInfrastructure(builder.Configuration);
 
     // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
