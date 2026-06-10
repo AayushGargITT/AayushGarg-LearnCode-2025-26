@@ -6,6 +6,8 @@ import {
   CreateProjectRequest,
   Milestone,
   Project,
+  ProjectManagerUpdateResult,
+  UpdateProjectManagerRequest,
   UpdateMilestoneRequest
 } from '../models/project.model';
 
@@ -37,6 +39,16 @@ export class AdminProjectService {
   ): Observable<Milestone> {
     return this.http.put<Milestone>(
       `${this.apiUrl}/${projectId}/milestones/${milestoneId}`,
+      request
+    );
+  }
+
+  updateManager(
+    projectId: string,
+    request: UpdateProjectManagerRequest
+  ): Observable<ProjectManagerUpdateResult> {
+    return this.http.patch<ProjectManagerUpdateResult>(
+      `${this.apiUrl}/${projectId}/manager`,
       request
     );
   }

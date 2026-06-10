@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { ButtonsModule } from '@progress/kendo-angular-buttons';
 import { GridModule } from '@progress/kendo-angular-grid';
 import {
@@ -7,6 +7,8 @@ import {
   CreateProjectRequest,
   Milestone,
   Project,
+  ProjectManagerUpdateValidation,
+  UpdateProjectManagerRequest,
   UpdateMilestoneRequest
 } from '../../../core/models/project.model';
 import { User } from '../../../core/models/user.model';
@@ -20,8 +22,10 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 import { PageStateService } from '../../../shared/services/page-state.service';
 import { CreateProjectDialogComponent } from './components/create-project-dialog/create-project-dialog.component';
 import { MilestonesDialogComponent } from './components/milestones-dialog/milestones-dialog.component';
+import { ProjectManagerConflictDialogComponent } from './components/project-manager-conflict-dialog/project-manager-conflict-dialog.component';
+import { UpdateProjectManagerDialogComponent } from './components/update-project-manager-dialog/update-project-manager-dialog.component';
 
-type ProjectAction = 'manageMilestones';
+type ProjectAction = 'manageMilestones' | 'updateManager';
 type ProjectActionItem = RowActionItem<ProjectAction>;
 
 @Component({
@@ -37,7 +41,9 @@ type ProjectActionItem = RowActionItem<ProjectAction>;
     PageFeedbackComponent,
     RowActionMenuComponent,
     CreateProjectDialogComponent,
-    MilestonesDialogComponent
+    MilestonesDialogComponent,
+    UpdateProjectManagerDialogComponent,
+    ProjectManagerConflictDialogComponent
   ],
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.css',
@@ -58,6 +64,15 @@ export class AdminProjectsComponent {
   readonly isMilestoneLoading = signal(false);
   readonly isMilestoneSaving = signal(false);
   readonly milestoneError = signal<string | null>(null);
+  readonly managerProject = signal<Project | null>(null);
+  readonly isManagerSaving = signal(false);
+  readonly managerError = signal<string | null>(null);
+  readonly managerConflicts = signal<ProjectManagerUpdateValidation | null>(null);
+
+  readonly availableProjectManagers = computed(() => {
+    const currentManagerId = this.managerProject()?.managerId;
+    return this.managers().filter(manager => manager.id !== currentManagerId);
+  });
 
   constructor() {
     this.loadProjects();
@@ -109,12 +124,20 @@ export class AdminProjectsComponent {
   }
 
   actionsFor(): ProjectActionItem[] {
-    return [{ text: 'Manage Milestones', action: 'manageMilestones' }];
+    return [
+      { text: 'Manage Milestones', action: 'manageMilestones' },
+      { text: 'Update Manager', action: 'updateManager' }
+    ];
   }
 
   onProjectAction(project: Project, item: ProjectActionItem): void {
     if (item.action === 'manageMilestones') {
       this.openMilestones(project);
+      return;
+    }
+
+    if (item.action === 'updateManager') {
+      this.openManagerDialog(project);
     }
   }
 
@@ -168,6 +191,52 @@ export class AdminProjectsComponent {
         this.milestoneError.set(err.error?.message ?? 'Unable to update milestone.');
       }
     });
+  }
+
+  openManagerDialog(project: Project): void {
+    this.managerProject.set(project);
+    this.managerError.set(null);
+    this.managerConflicts.set(null);
+  }
+
+  closeManagerDialog(): void {
+    this.managerProject.set(null);
+    this.managerError.set(null);
+    this.isManagerSaving.set(false);
+  }
+
+  updateManager(request: UpdateProjectManagerRequest): void {
+    const project = this.managerProject();
+    if (!project) {
+      return;
+    }
+
+    this.managerError.set(null);
+    this.isManagerSaving.set(true);
+
+    this.adminProjectService.updateManager(project.id, request).subscribe({
+      next: result => {
+        this.closeManagerDialog();
+        this.pageState.setSuccess(result.message);
+        this.loadProjects();
+      },
+      error: err => {
+        this.isManagerSaving.set(false);
+
+        const details = err.error?.details as ProjectManagerUpdateValidation | undefined;
+        if (details?.conflicts?.length) {
+          this.closeManagerDialog();
+          this.managerConflicts.set(details);
+          return;
+        }
+
+        this.managerError.set(err.error?.message ?? 'Unable to update project manager.');
+      }
+    });
+  }
+
+  closeManagerConflicts(): void {
+    this.managerConflicts.set(null);
   }
 
   private loadManagers(): void {

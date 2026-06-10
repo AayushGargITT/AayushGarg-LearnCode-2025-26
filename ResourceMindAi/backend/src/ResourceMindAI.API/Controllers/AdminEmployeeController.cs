@@ -100,21 +100,21 @@ public class AdminEmployeeController : ControllerBase
         return Ok(skill);
     }
 
-    [HttpPatch("{employeeId:guid}/manager")]
-    public async Task<ActionResult<EmployeeListDto>> AssignManager(
+    [HttpGet("{employeeId:guid}/manager-update-preview")]
+    public async Task<ActionResult<EmployeeManagerUpdatePreviewDto>> GetManagerUpdatePreview(
         Guid employeeId,
-        AssignEmployeeManagerDto request)
+        [FromQuery] Guid newManagerId)
     {
-        _logger.LogInformation(
-            "Admin assign manager request received for employee {EmployeeId}",
-            employeeId);
+        return Ok(await _adminEmployeeService.GetManagerUpdatePreviewAsync(
+            employeeId,
+            newManagerId));
+    }
 
-        var employee = await _adminEmployeeService.AssignManagerAsync(employeeId, request);
-
-        _logger.LogInformation(
-            "Admin assign manager request completed for employee {EmployeeId}",
-            employee.Id);
-
-        return Ok(employee);
+    [HttpPatch("{employeeId:guid}/manager")]
+    public async Task<ActionResult<EmployeeManagerUpdateResultDto>> UpdateManager(
+        Guid employeeId,
+        UpdateEmployeeManagerDto request)
+    {
+        return Ok(await _adminEmployeeService.UpdateManagerAsync(employeeId, request));
     }
 }

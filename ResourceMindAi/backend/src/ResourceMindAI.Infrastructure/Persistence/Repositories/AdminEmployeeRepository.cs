@@ -66,6 +66,16 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         return employee;
     }
 
+    public Task<Employee?> GetForManagerUpdateAsync(Guid employeeId)
+    {
+        return _dbContext.Employees
+            .Include(employee => employee.User)
+            .Include(employee => employee.Manager)
+            .Include(employee => employee.Allocations.Where(allocation => allocation.IsActive))
+                .ThenInclude(allocation => allocation.Project)
+            .FirstOrDefaultAsync(employee => employee.Id == employeeId);
+    }
+
     public async Task<IReadOnlyList<Skill>> GetSkillsAsync(Guid employeeId)
     {
         _logger.LogDebug("Querying skills for employee {EmployeeId}", employeeId);
@@ -106,10 +116,13 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         return skill;
     }
 
-    public async Task<Employee> UpdateAsync(Employee employee)
+    public async Task SaveManagerUpdateAsync(Employee employee)
     {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
         _dbContext.Employees.Update(employee);
         await _dbContext.SaveChangesAsync();
-        return employee;
+
+        await transaction.CommitAsync();
     }
 }

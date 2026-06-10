@@ -95,13 +95,23 @@
   </app-employee-skills-dialog>
 
   <app-assign-manager-dialog
-    *ngIf="selectedManagerEmployee()"
+    *ngIf="selectedManagerEmployee() && !managerUpdatePreview()"
     [employee]="selectedManagerEmployee()"
-    [managers]="activeManagers()"
+    [managers]="availableManagers()"
     [isLoading]="isManagerLoading()"
     [isSaving]="isManagerSaving()"
     [error]="managerError()"
-    (cancelled)="closeAssignManager()"
-    (submitted)="assignManager($event)">
+    (cancelled)="closeManagerDialog()"
+    (submitted)="prepareManagerUpdate($event)">
   </app-assign-manager-dialog>
+
+  <app-employee-manager-confirm-dialog
+    *ngIf="managerUpdatePreview()"
+    [employee]="selectedManagerEmployee()"
+    [preview]="managerUpdatePreview()"
+    [isSaving]="isManagerSaving()"
+    [error]="managerError()"
+    (cancelled)="closeManagerDialog()"
+    (confirmed)="confirmManagerUpdate()">
+  </app-employee-manager-confirm-dialog>
 </app-layout>

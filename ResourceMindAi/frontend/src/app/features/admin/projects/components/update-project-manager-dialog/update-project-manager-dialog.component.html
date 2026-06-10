@@ -1,19 +1,17 @@
-<kendo-dialog [title]="employee?.managerId ? 'Update Manager' : 'Assign Manager'" [width]="480" (close)="cancel()">
+<kendo-dialog title="Update Project Manager" [width]="500" (close)="cancelled.emit()">
   <p class="text-sm text-muted-foreground mb-4">
-    Select a new active manager for {{ employee?.fullName }}.
+    Select a new active manager for {{ project?.name }}.
   </p>
 
   <app-page-feedback type="error" [message]="error"></app-page-feedback>
 
-  <div *ngIf="isLoading" class="hint-panel">Loading managers...</div>
-
-  <form *ngIf="!isLoading" [formGroup]="form" class="form-stack">
+  <form [formGroup]="form" class="form-stack">
     <div *ngIf="managers.length === 0" class="hint-panel">
-      No active managers are available.
+      No other active managers are available.
     </div>
 
     <div *ngIf="managers.length > 0" class="field-stack">
-      <label class="text-sm font-medium">Manager</label>
+      <label class="text-sm font-medium">New Manager</label>
       <kendo-dropdownlist
         [data]="managers"
         textField="fullName"
@@ -28,13 +26,13 @@
   </form>
 
   <kendo-dialog-actions>
-    <button kendoButton (click)="cancel()" [disabled]="isSaving">Cancel</button>
+    <button kendoButton (click)="cancelled.emit()" [disabled]="isSaving">Cancel</button>
     <button
       kendoButton
       themeColor="primary"
       (click)="submit()"
-      [disabled]="isSaving || isLoading || managers.length === 0">
-      {{ isSaving ? 'Checking...' : 'Continue' }}
+      [disabled]="isSaving || managers.length === 0">
+      {{ isSaving ? 'Updating...' : 'Update Manager' }}
     </button>
   </kendo-dialog-actions>
 </kendo-dialog>

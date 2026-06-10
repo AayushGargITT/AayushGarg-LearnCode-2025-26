@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Domain.Entities;
+using ResourceMindAI.Domain.Enums;
 
 namespace ResourceMindAI.Infrastructure.Persistence.Repositories;
 
@@ -33,6 +34,34 @@ public class ProjectRepository : IProjectRepository
         return await _dbContext.Projects
             .Include(x => x.Manager)
             .FirstOrDefaultAsync(x => x.Id == id);
+    }
+
+    public Task<Project?> GetForManagerUpdateAsync(Guid id)
+    {
+        return _dbContext.Projects
+            .Include(project => project.Manager)
+            .Include(project => project.Allocations.Where(allocation => allocation.IsActive))
+                .ThenInclude(allocation => allocation.Employee)
+                    .ThenInclude(employee => employee.User)
+            .FirstOrDefaultAsync(project => project.Id == id);
+    }
+
+    public async Task<IReadOnlyList<Allocation>> GetActiveAllocationsForEmployeesUnderManagerAsync(
+        IReadOnlyCollection<Guid> employeeIds,
+        Guid managerId)
+    {
+        return await _dbContext.Allocations
+            .AsNoTracking()
+            .Include(allocation => allocation.Project)
+            .Include(allocation => allocation.Employee)
+                .ThenInclude(employee => employee.User)
+            .Where(allocation =>
+                allocation.IsActive
+                && employeeIds.Contains(allocation.EmployeeId)
+                && allocation.Project.ManagerId == managerId
+                && (allocation.Project.Status == ProjectStatus.Active
+                    || allocation.Project.Status == ProjectStatus.Planned))
+            .ToListAsync();
     }
 
     public async Task<Project> CreateAsync(Project project)
@@ -68,5 +97,18 @@ public class ProjectRepository : IProjectRepository
         _dbContext.Milestones.Update(milestone);
         await _dbContext.SaveChangesAsync();
         return milestone;
+    }
+
+    public async Task SaveManagerUpdateAsync(
+        Project project,
+        IReadOnlyCollection<Employee> employees)
+    {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+        _dbContext.Projects.Update(project);
+        _dbContext.Employees.UpdateRange(employees);
+        await _dbContext.SaveChangesAsync();
+
+        await transaction.CommitAsync();
     }
 }

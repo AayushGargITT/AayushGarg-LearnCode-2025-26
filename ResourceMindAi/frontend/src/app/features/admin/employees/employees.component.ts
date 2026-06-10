@@ -4,11 +4,12 @@ import { RouterModule } from '@angular/router';
 import { GridModule } from '@progress/kendo-angular-grid';
 import { InputsModule } from '@progress/kendo-angular-inputs';
 import {
-  AssignEmployeeManagerRequest,
   CreateEmployeeSkillRequest,
   Employee,
+  EmployeeManagerUpdatePreview,
   EmployeeSkill,
   EmployeeStatus,
+  UpdateEmployeeManagerRequest,
   UpdateEmployeeSkillProficiencyRequest
 } from '../../../core/models/employee.model';
 import { Role, User } from '../../../core/models/user.model';
@@ -21,9 +22,10 @@ import { RowActionItem, RowActionMenuComponent } from '../../../shared/component
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { PageStateService } from '../../../shared/services/page-state.service';
 import { AssignManagerDialogComponent } from './components/assign-manager-dialog/assign-manager-dialog.component';
+import { EmployeeManagerConfirmDialogComponent } from './components/employee-manager-confirm-dialog/employee-manager-confirm-dialog.component';
 import { EmployeeSkillsDialogComponent } from './components/employee-skills-dialog/employee-skills-dialog.component';
 
-type EmployeeAction = 'manageSkills' | 'assignManager';
+type EmployeeAction = 'manageSkills' | 'updateManager';
 type EmployeeActionItem = RowActionItem<EmployeeAction>;
 
 @Component({
@@ -40,6 +42,7 @@ type EmployeeActionItem = RowActionItem<EmployeeAction>;
     PageFeedbackComponent,
     RowActionMenuComponent,
     AssignManagerDialogComponent,
+    EmployeeManagerConfirmDialogComponent,
     EmployeeSkillsDialogComponent
   ],
   templateUrl: './employees.component.html',
@@ -64,6 +67,13 @@ export class AdminEmployeesComponent {
   readonly isManagerLoading = signal(false);
   readonly isManagerSaving = signal(false);
   readonly managerError = signal<string | null>(null);
+  readonly managerUpdatePreview = signal<EmployeeManagerUpdatePreview | null>(null);
+  readonly pendingManagerUpdate = signal<UpdateEmployeeManagerRequest | null>(null);
+
+  readonly availableManagers = computed(() => {
+    const currentManagerId = this.selectedManagerEmployee()?.managerId;
+    return this.activeManagers().filter(manager => manager.id !== currentManagerId);
+  });
 
   readonly filteredRows = computed(() => {
     const filter = this.filter();
@@ -116,10 +126,9 @@ export class AdminEmployeesComponent {
     return employee.role === Role.EMPLOYEE;
   }
 
-  canAssignManager(employee: Employee): boolean {
+  canUpdateManager(employee: Employee): boolean {
     return employee.role === Role.EMPLOYEE
-      && employee.isActive
-      && !employee.managerId;
+      && employee.isActive;
   }
 
   managerDisplay(employee: Employee): string {
@@ -141,8 +150,11 @@ export class AdminEmployeesComponent {
       actions.push({ text: 'Manage Skills', action: 'manageSkills' });
     }
 
-    if (this.canAssignManager(employee)) {
-      actions.push({ text: 'Assign Manager', action: 'assignManager' });
+    if (this.canUpdateManager(employee)) {
+      actions.push({
+        text: employee.managerId ? 'Update Manager' : 'Assign Manager',
+        action: 'updateManager'
+      });
     }
 
     return actions;
@@ -154,8 +166,8 @@ export class AdminEmployeesComponent {
       return;
     }
 
-    if (item.action === 'assignManager') {
-      this.openAssignManager(employee);
+    if (item.action === 'updateManager') {
+      this.openManagerDialog(employee);
     }
   }
 
@@ -219,25 +231,29 @@ export class AdminEmployeesComponent {
     });
   }
 
-  openAssignManager(employee: Employee): void {
-    if (!this.canAssignManager(employee)) {
+  openManagerDialog(employee: Employee): void {
+    if (!this.canUpdateManager(employee)) {
       return;
     }
 
     this.selectedManagerEmployee.set(employee);
     this.managerError.set(null);
+    this.managerUpdatePreview.set(null);
+    this.pendingManagerUpdate.set(null);
     this.loadManagers();
   }
 
-  closeAssignManager(): void {
+  closeManagerDialog(): void {
     this.selectedManagerEmployee.set(null);
     this.activeManagers.set([]);
     this.managerError.set(null);
     this.isManagerLoading.set(false);
     this.isManagerSaving.set(false);
+    this.managerUpdatePreview.set(null);
+    this.pendingManagerUpdate.set(null);
   }
 
-  assignManager(request: AssignEmployeeManagerRequest): void {
+  prepareManagerUpdate(request: UpdateEmployeeManagerRequest): void {
     const employee = this.selectedManagerEmployee();
     if (!employee) {
       return;
@@ -246,15 +262,38 @@ export class AdminEmployeesComponent {
     this.managerError.set(null);
     this.isManagerSaving.set(true);
 
-    this.adminEmployeeService.assignManager(employee.id, request).subscribe({
-      next: () => {
-        this.closeAssignManager();
-        this.pageState.setSuccess('Manager assigned successfully.');
+    this.adminEmployeeService
+      .getManagerUpdatePreview(employee.id, request.newManagerId)
+      .subscribe({
+      next: preview => {
+        this.isManagerSaving.set(false);
+        this.pendingManagerUpdate.set(request);
+        this.managerUpdatePreview.set(preview);
+      },
+      error: err => {
+        this.isManagerSaving.set(false);
+        this.managerError.set(err.error?.message ?? 'Unable to prepare manager update.');
+      }
+    });
+  }
+
+  confirmManagerUpdate(): void {
+    const employee = this.selectedManagerEmployee();
+    const request = this.pendingManagerUpdate();
+    if (!employee || !request) {
+      return;
+    }
+
+    this.isManagerSaving.set(true);
+    this.adminEmployeeService.updateManager(employee.id, request).subscribe({
+      next: result => {
+        this.closeManagerDialog();
+        this.pageState.setSuccess(result.message);
         this.loadEmployees();
       },
       error: err => {
         this.isManagerSaving.set(false);
-        this.managerError.set(err.error?.message ?? 'Unable to assign manager.');
+        this.managerError.set(err.error?.message ?? 'Unable to update manager.');
       }
     });
   }

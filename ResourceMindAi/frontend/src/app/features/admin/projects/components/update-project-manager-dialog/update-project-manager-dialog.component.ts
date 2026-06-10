@@ -4,12 +4,12 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonsModule } from '@progress/kendo-angular-buttons';
 import { DialogModule } from '@progress/kendo-angular-dialog';
 import { DropDownsModule } from '@progress/kendo-angular-dropdowns';
-import { Employee, UpdateEmployeeManagerRequest } from '../../../../../core/models/employee.model';
+import { Project, UpdateProjectManagerRequest } from '../../../../../core/models/project.model';
 import { User } from '../../../../../core/models/user.model';
 import { PageFeedbackComponent } from '../../../../../shared/components/page-feedback/page-feedback.component';
 
 @Component({
-  selector: 'app-assign-manager-dialog',
+  selector: 'app-update-project-manager-dialog',
   standalone: true,
   imports: [
     CommonModule,
@@ -19,41 +19,35 @@ import { PageFeedbackComponent } from '../../../../../shared/components/page-fee
     DropDownsModule,
     PageFeedbackComponent
   ],
-  templateUrl: './assign-manager-dialog.component.html'
+  templateUrl: './update-project-manager-dialog.component.html'
 })
-export class AssignManagerDialogComponent implements OnChanges {
+export class UpdateProjectManagerDialogComponent implements OnChanges {
   private readonly formBuilder = inject(FormBuilder);
 
-  @Input() employee: Employee | null = null;
+  @Input() project: Project | null = null;
   @Input() managers: User[] = [];
-  @Input() isLoading = false;
   @Input() isSaving = false;
   @Input() error: string | null = null;
 
   @Output() cancelled = new EventEmitter<void>();
-  @Output() submitted = new EventEmitter<UpdateEmployeeManagerRequest>();
+  @Output() submitted = new EventEmitter<UpdateProjectManagerRequest>();
 
   readonly form = this.formBuilder.group({
     newManagerId: ['', Validators.required]
   });
 
   ngOnChanges(): void {
-    if (this.employee) {
+    if (this.project) {
       this.form.reset({ newManagerId: '' });
     }
   }
 
-  cancel(): void {
-    this.form.reset({ newManagerId: '' });
-    this.cancelled.emit();
-  }
-
   submit(): void {
-    if (this.form.invalid || this.isSaving || this.isLoading) {
+    if (this.form.invalid || this.isSaving) {
       this.form.markAllAsTouched();
       return;
     }
 
-    this.submitted.emit(this.form.getRawValue() as UpdateEmployeeManagerRequest);
+    this.submitted.emit(this.form.getRawValue() as UpdateProjectManagerRequest);
   }
 }

@@ -1,6 +1,7 @@
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Project;
+using ResourceMindAI.Application.Exceptions;
 using ResourceMindAI.Domain.Entities;
 using ResourceMindAI.Domain.Enums;
 using ResourceMindAI.Domain.Exceptions;
@@ -104,12 +105,140 @@ public class ProjectService : IProjectService
         return MapMilestone(updatedMilestone);
     }
 
+    public async Task<ProjectManagerUpdateResultDto> UpdateManagerAsync(
+        Guid projectId,
+        UpdateProjectManagerDto request)
+    {
+        var project = await _projectRepository.GetForManagerUpdateAsync(projectId);
+        if (project is null)
+        {
+            throw new EntityNotFoundException("Project", projectId);
+        }
+
+        var newManager = await GetValidManagerAsync(request.NewManagerId!.Value);
+        if (project.ManagerId == newManager.Id)
+        {
+            throw new ValidationException("Select a different manager.");
+        }
+
+        var activeEmployees = project.Allocations
+            .Where(allocation =>
+                allocation.IsActive
+                && allocation.Employee.IsActive
+                && allocation.Employee.User.IsActive)
+            .Select(allocation => allocation.Employee)
+            .DistinctBy(employee => employee.Id)
+            .ToList();
+
+        await EnsureNoManagerUpdateConflictsAsync(project, activeEmployees);
+
+        project.ManagerId = newManager.Id;
+        project.Manager = newManager;
+        project.UpdatedAt = DateTime.UtcNow;
+
+        foreach (var employee in activeEmployees)
+        {
+            employee.ManagerId = newManager.Id;
+            employee.Manager = newManager;
+        }
+
+        await _projectRepository.SaveManagerUpdateAsync(project, activeEmployees);
+
+        var employeeNames = activeEmployees
+            .Select(employee => employee.User.FullName)
+            .OrderBy(name => name)
+            .ToList();
+
+        return new ProjectManagerUpdateResultDto
+        {
+            Project = MapProject(project),
+            UpdatedEmployees = employeeNames,
+            Message = employeeNames.Count > 0
+                ? $"Project manager updated successfully. {employeeNames.Count} employee manager assignment(s) were updated."
+                : "Project manager updated successfully."
+        };
+    }
+
     private async Task EnsureProjectExistsAsync(Guid projectId)
     {
         var project = await _projectRepository.GetByIdAsync(projectId);
         if (project is null)
         {
             throw new EntityNotFoundException("Project", projectId);
+        }
+    }
+
+    private async Task<User> GetValidManagerAsync(Guid managerId)
+    {
+        var manager = await _userRepository.GetByIdAsync(managerId);
+        if (manager is null)
+        {
+            throw new EntityNotFoundException("Manager", managerId);
+        }
+
+        if (manager.Role != Role.Manager || !manager.IsActive)
+        {
+            throw new ValidationException("Selected manager must be an active manager.");
+        }
+
+        return manager;
+    }
+
+    private async Task EnsureNoManagerUpdateConflictsAsync(
+        Project project,
+        IReadOnlyCollection<Employee> activeEmployees)
+    {
+        if (activeEmployees.Count == 0)
+        {
+            return;
+        }
+
+        var employeeIds = activeEmployees.Select(employee => employee.Id).ToList();
+        var allocations = await _projectRepository
+            .GetActiveAllocationsForEmployeesUnderManagerAsync(
+                employeeIds,
+                project.ManagerId);
+
+        var conflicts = allocations
+            .GroupBy(allocation => new
+            {
+                allocation.EmployeeId,
+                allocation.Employee.User.FullName
+            })
+            .Select(group => new
+            {
+                group.Key.FullName,
+                OtherProjects = group
+                    .Select(allocation => new
+                    {
+                        allocation.ProjectId,
+                        allocation.Project.Name
+                    })
+                    .DistinctBy(item => item.ProjectId)
+                    .Where(item => item.ProjectId != project.Id)
+                    .OrderBy(item => item.Name)
+                    .ToList()
+            })
+            .Where(item => item.OtherProjects.Count > 0)
+            .Select(item => new ProjectManagerConflictDto
+            {
+                EmployeeName = item.FullName,
+                ProjectNames = new[] { project.Name }
+                    .Concat(item.OtherProjects.Select(projectItem => projectItem.Name))
+                    .Distinct()
+                    .OrderBy(name => name)
+                    .ToList()
+            })
+            .OrderBy(conflict => conflict.EmployeeName)
+            .ToList();
+
+        if (conflicts.Count > 0)
+        {
+            throw new ProjectManagerUpdateBlockedException(
+                new ProjectManagerUpdateValidationDto
+                {
+                    Conflicts = conflicts
+                });
         }
     }
 

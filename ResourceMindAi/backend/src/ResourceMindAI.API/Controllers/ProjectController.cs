@@ -82,4 +82,13 @@ public class ProjectController : ControllerBase
         _logger.LogInformation("Update milestone request completed for milestone {MilestoneId}", milestone.Id);
         return Ok(milestone);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPatch("{projectId:guid}/manager")]
+    public async Task<ActionResult<ProjectManagerUpdateResultDto>> UpdateManager(
+        Guid projectId,
+        UpdateProjectManagerDto request)
+    {
+        return Ok(await _projectService.UpdateManagerAsync(projectId, request));
+    }
 }

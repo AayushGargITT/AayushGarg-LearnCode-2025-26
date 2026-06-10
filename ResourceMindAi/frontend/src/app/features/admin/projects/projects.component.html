@@ -38,7 +38,7 @@
         <ng-template kendoGridCellTemplate let-dataItem>
           <app-row-action-menu
             [actions]="actionsFor()"
-            [disabled]="isMilestoneLoading() || isMilestoneSaving()"
+            [disabled]="isMilestoneLoading() || isMilestoneSaving() || isManagerSaving()"
             (actionSelected)="onProjectAction(dataItem, $event)">
           </app-row-action-menu>
         </ng-template>
@@ -65,4 +65,20 @@
     (milestoneAdded)="addMilestone($event)"
     (milestoneUpdated)="updateMilestone($event)">
   </app-milestones-dialog>
+
+  <app-update-project-manager-dialog
+    *ngIf="managerProject()"
+    [project]="managerProject()"
+    [managers]="availableProjectManagers()"
+    [isSaving]="isManagerSaving()"
+    [error]="managerError()"
+    (cancelled)="closeManagerDialog()"
+    (submitted)="updateManager($event)">
+  </app-update-project-manager-dialog>
+
+  <app-project-manager-conflict-dialog
+    *ngIf="managerConflicts()"
+    [details]="managerConflicts()"
+    (closed)="closeManagerConflicts()">
+  </app-project-manager-conflict-dialog>
 </app-layout>

@@ -10,5 +10,10 @@ public interface IAdminEmployeeService
     Task<IReadOnlyList<EmployeeSkillDto>> GetSkillsAsync(Guid employeeId);
     Task<EmployeeSkillDto> AddSkillAsync(Guid employeeId, CreateEmployeeSkillDto request);
     Task<EmployeeSkillDto> UpdateSkillProficiencyAsync(Guid employeeId, Guid skillId, UpdateEmployeeSkillProficiencyDto request);
-    Task<EmployeeListDto> AssignManagerAsync(Guid employeeId, AssignEmployeeManagerDto request);
+    Task<EmployeeManagerUpdatePreviewDto> GetManagerUpdatePreviewAsync(
+        Guid employeeId,
+        Guid newManagerId);
+    Task<EmployeeManagerUpdateResultDto> UpdateManagerAsync(
+        Guid employeeId,
+        UpdateEmployeeManagerDto request);
 }

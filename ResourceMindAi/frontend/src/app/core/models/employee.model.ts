@@ -42,8 +42,21 @@ export interface Employee {
   managerName?: string | null;
 }
 
-export interface AssignEmployeeManagerRequest {
-  managerId: string;
+export interface UpdateEmployeeManagerRequest {
+  newManagerId: string;
+}
+
+export interface EmployeeManagerUpdatePreview {
+  employeeId: string;
+  currentManagerId: string | null;
+  newManagerId: string;
+  activeProjects: string[];
+}
+
+export interface EmployeeManagerUpdateResult {
+  employee: Employee;
+  endedProjects: string[];
+  message: string;
 }
 
 export interface CreateEmployeeSkillRequest {

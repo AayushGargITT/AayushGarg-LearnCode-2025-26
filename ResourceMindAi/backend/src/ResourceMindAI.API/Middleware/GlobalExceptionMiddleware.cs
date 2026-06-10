@@ -72,7 +72,14 @@ public class GlobalExceptionMiddleware
             Status = statusCode,
             Message = exception.Message,
             Errors = (exception as ValidationException)?.Errors,
-            Details = (exception as ManagerDeactivationBlockedException)?.Details,
+            Details = exception switch
+            {
+                ManagerDeactivationBlockedException managerException
+                    => (object)managerException.Details,
+                ProjectManagerUpdateBlockedException projectException
+                    => (object)projectException.Details,
+                _ => null
+            },
             StackTrace = _env.IsDevelopment() ? exception.StackTrace : null,
             TraceId = Activity.Current?.Id ?? context.TraceIdentifier
         };

@@ -1,0 +1,17 @@
+<kendo-dialog title="Project Manager Update Not Possible" [width]="560" (close)="closed.emit()">
+  <p class="text-sm text-muted-foreground mb-4">
+    Some employees are allocated to multiple active projects under the current manager.
+    Resolve these allocations manually before changing the project manager.
+  </p>
+
+  <div *ngFor="let conflict of details?.conflicts" class="border-b border-border py-3 last:border-0">
+    <div class="font-medium text-sm">{{ conflict.employeeName }}</div>
+    <div class="text-sm text-muted-foreground mt-1">
+      {{ conflict.projectNames.join(', ') }}
+    </div>
+  </div>
+
+  <kendo-dialog-actions>
+    <button kendoButton themeColor="primary" (click)="closed.emit()">Close</button>
+  </kendo-dialog-actions>
+</kendo-dialog>

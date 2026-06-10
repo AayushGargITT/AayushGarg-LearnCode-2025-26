@@ -113,49 +113,59 @@ public class AdminEmployeeService : IAdminEmployeeService
         return MapSkill(updatedSkill);
     }
 
-    public async Task<EmployeeListDto> AssignManagerAsync(
+    public async Task<EmployeeManagerUpdatePreviewDto> GetManagerUpdatePreviewAsync(
         Guid employeeId,
-        AssignEmployeeManagerDto request)
+        Guid newManagerId)
     {
-        var employee = await _adminEmployeeRepository.GetByEmployeeIdAsync(employeeId);
-        if (employee is null)
+        var employee = await GetValidEmployeeForManagerUpdateAsync(employeeId);
+        await GetValidNewManagerAsync(newManagerId, employee.ManagerId);
+
+        return new EmployeeManagerUpdatePreviewDto
         {
-            throw new EntityNotFoundException("Employee", employeeId);
+            EmployeeId = employee.Id,
+            CurrentManagerId = employee.ManagerId,
+            NewManagerId = newManagerId,
+            ActiveProjects = GetActiveProjectNames(employee)
+        };
+    }
+
+    public async Task<EmployeeManagerUpdateResultDto> UpdateManagerAsync(
+        Guid employeeId,
+        UpdateEmployeeManagerDto request)
+    {
+        var employee = await GetValidEmployeeForManagerUpdateAsync(employeeId);
+        var newManager = await GetValidNewManagerAsync(
+            request.NewManagerId!.Value,
+            employee.ManagerId);
+        var activeAllocations = employee.Allocations
+            .Where(allocation => allocation.IsActive)
+            .ToList();
+        var endedProjects = activeAllocations
+            .Select(allocation => allocation.Project.Name)
+            .Distinct()
+            .OrderBy(name => name)
+            .ToList();
+        var today = DateTime.UtcNow.Date;
+
+        foreach (var allocation in activeAllocations)
+        {
+            allocation.IsActive = false;
+            allocation.ToDate = today;
         }
 
-        if (employee.User.Role != Role.Employee)
+        employee.ManagerId = newManager.Id;
+        employee.Manager = newManager;
+
+        await _adminEmployeeRepository.SaveManagerUpdateAsync(employee);
+
+        return new EmployeeManagerUpdateResultDto
         {
-            throw new ValidationException("Manager can be assigned only to employees with Employee role.");
-        }
-
-        if (!employee.IsActive || !employee.User.IsActive)
-        {
-            throw new ValidationException("Manager can be assigned only to an active employee.");
-        }
-
-        if (employee.ManagerId.HasValue)
-        {
-            throw new ConflictException("This employee already has a manager assigned.");
-        }
-
-        var manager = await _userRepository.GetByIdAsync(request.ManagerId!.Value);
-        if (manager is null)
-        {
-            throw new EntityNotFoundException("Manager", request.ManagerId.Value);
-        }
-
-        if (manager.Role != Role.Manager || !manager.IsActive)
-        {
-            throw new ValidationException("Selected manager must be an active manager.");
-        }
-
-        employee.ManagerId = manager.Id;
-        employee.Manager = manager;
-
-        var updatedEmployee = await _adminEmployeeRepository.UpdateAsync(employee);
-        updatedEmployee.Manager = manager;
-
-        return MapEmployee(updatedEmployee);
+            Employee = MapEmployee(employee),
+            EndedProjects = endedProjects,
+            Message = endedProjects.Count > 0
+                ? $"Manager updated successfully. {endedProjects.Count} active allocation(s) were ended as of today."
+                : "Manager updated successfully."
+        };
     }
 
     private async Task EnsureEmployeeExistsAsync(Guid employeeId)
@@ -165,6 +175,58 @@ public class AdminEmployeeService : IAdminEmployeeService
         {
             throw new EntityNotFoundException("Employee", employeeId);
         }
+    }
+
+    private async Task<Employee> GetValidEmployeeForManagerUpdateAsync(Guid employeeId)
+    {
+        var employee = await _adminEmployeeRepository.GetForManagerUpdateAsync(employeeId);
+        if (employee is null)
+        {
+            throw new EntityNotFoundException("Employee", employeeId);
+        }
+
+        if (employee.User.Role != Role.Employee)
+        {
+            throw new ValidationException("Manager can be updated only for users with Employee role.");
+        }
+
+        if (!employee.IsActive || !employee.User.IsActive)
+        {
+            throw new ValidationException("Manager can be updated only for an active employee.");
+        }
+
+        return employee;
+    }
+
+    private async Task<User> GetValidNewManagerAsync(Guid newManagerId, Guid? currentManagerId)
+    {
+        if (currentManagerId == newManagerId)
+        {
+            throw new ValidationException("Select a different manager.");
+        }
+
+        var manager = await _userRepository.GetByIdAsync(newManagerId);
+        if (manager is null)
+        {
+            throw new EntityNotFoundException("Manager", newManagerId);
+        }
+
+        if (manager.Role != Role.Manager || !manager.IsActive)
+        {
+            throw new ValidationException("Selected manager must be an active manager.");
+        }
+
+        return manager;
+    }
+
+    private static IReadOnlyList<string> GetActiveProjectNames(Employee employee)
+    {
+        return employee.Allocations
+            .Where(allocation => allocation.IsActive)
+            .Select(allocation => allocation.Project.Name)
+            .Distinct()
+            .OrderBy(name => name)
+            .ToList();
     }
 
     private static EmployeeSkillDto MapSkill(Skill skill)

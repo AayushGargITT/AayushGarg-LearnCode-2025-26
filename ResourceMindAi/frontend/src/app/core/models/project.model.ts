@@ -66,3 +66,22 @@ export interface ProjectDetailDTO extends Project {
   milestones: Milestone[];
   allocations: any[];
 }
+
+export interface UpdateProjectManagerRequest {
+  newManagerId: string;
+}
+
+export interface ProjectManagerConflict {
+  employeeName: string;
+  projectNames: string[];
+}
+
+export interface ProjectManagerUpdateValidation {
+  conflicts: ProjectManagerConflict[];
+}
+
+export interface ProjectManagerUpdateResult {
+  project: Project;
+  updatedEmployees: string[];
+  message: string;
+}

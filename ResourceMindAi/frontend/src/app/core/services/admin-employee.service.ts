@@ -2,11 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import {
-  AssignEmployeeManagerRequest,
   CreateEmployeeSkillRequest,
   Employee,
   EmployeeDetailDTO,
+  EmployeeManagerUpdatePreview,
+  EmployeeManagerUpdateResult,
   EmployeeSkill,
+  UpdateEmployeeManagerRequest,
   UpdateEmployeeSkillProficiencyRequest
 } from '../models/employee.model';
 
@@ -53,7 +55,23 @@ export class AdminEmployeeService {
     );
   }
 
-  assignManager(employeeId: string, request: AssignEmployeeManagerRequest): Observable<Employee> {
-    return this.http.patch<Employee>(`${this.apiUrl}/${employeeId}/manager`, request);
+  getManagerUpdatePreview(
+    employeeId: string,
+    newManagerId: string
+  ): Observable<EmployeeManagerUpdatePreview> {
+    return this.http.get<EmployeeManagerUpdatePreview>(
+      `${this.apiUrl}/${employeeId}/manager-update-preview`,
+      { params: { newManagerId } }
+    );
+  }
+
+  updateManager(
+    employeeId: string,
+    request: UpdateEmployeeManagerRequest
+  ): Observable<EmployeeManagerUpdateResult> {
+    return this.http.patch<EmployeeManagerUpdateResult>(
+      `${this.apiUrl}/${employeeId}/manager`,
+      request
+    );
   }
 }
