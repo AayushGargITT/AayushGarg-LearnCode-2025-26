@@ -1,201 +1,247 @@
-# ResourceMindAI — System Design
+# ResourceMindAI
 
-> **Project & Resource Management (PRM) Tool**
-> Console-based client-server application with REST APIs and LLM-powered AI features.
+ResourceMindAI is a web-based project and resource management application for
+Admin, Manager, and Employee users. It combines deterministic business rules
+with Gemini-assisted resource matching and project risk summaries.
 
----
+The solution uses:
 
-## Table of Contents
+- Angular with Kendo UI components and Signals
+- ASP.NET Core Web API
+- Entity Framework Core with SQL Server
+- JWT bearer authentication
+- Gemini structured JSON responses
+- Global exception handling and role-based authorization
 
-1. [Class Diagrams](#class-diagrams)
-   - [Domain Model — Core Entities](#domain-model--core-entities)
-   - [Service Layer](#service-layer)
-   - [Controller / API Layer](#controller--api-layer)
-   - [AI Module](#ai-module)
-2. [Sequence Diagrams](#sequence-diagrams)
-   - [Authentication Flows](#authentication-flows)
-   - [Admin Flows](#admin-flows)
-   - [Manager Flows](#manager-flows)
-   - [Employee Flows](#employee-flows)
-   - [Background Scheduler](#background-scheduler)
-   - [AI Flows](#ai-flows)
+## Contents
 
----
+1. [Architecture](#architecture)
+2. [Authentication and authorization](#authentication-and-authorization)
+3. [Class diagrams](#class-diagrams)
+4. [Use case diagrams](#use-case-diagrams)
+5. [Sequence diagrams](#sequence-diagrams)
+6. [Entity relationship diagram](#entity-relationship-diagram)
+7. [Current API surface](#current-api-surface)
+8. [Business rules](#business-rules)
 
-## Class Diagrams
+## Architecture
 
-### Domain Model — Core Entities
+The existing layered structure is retained. Controllers are thin, application
+services own validation and business rules, repositories own database queries,
+and infrastructure contains EF Core and external integrations.
 
-These are the primary data entities persisted in the database. Relationships enforce the business rules defined in the BRD.
+```mermaid
+flowchart LR
+    Browser["Angular Application<br/>Kendo UI + Signals"]
+    Guard["Route Guards"]
+    Interceptor["JWT Interceptor"]
+    API["ASP.NET Core Controllers"]
+    Middleware["Authentication, Authorization<br/>Global Exception Middleware"]
+    Services["Application Services"]
+    Repositories["Repository Interfaces"]
+    EF["EF Core Repositories"]
+    DB[("SQL Server")]
+    LLM["ILlmClient"]
+    Gemini["Gemini API"]
+
+    Browser --> Guard
+    Browser --> Interceptor
+    Interceptor --> API
+    API --> Middleware
+    Middleware --> Services
+    Services --> Repositories
+    Repositories --> EF
+    EF --> DB
+    Services --> LLM
+    LLM --> Gemini
+```
+
+### Frontend modules
+
+```mermaid
+flowchart TB
+    App["Angular Application"]
+    Auth["Auth Module<br/>Login, Change Password"]
+    Admin["Admin Module"]
+    Manager["Manager Module"]
+    Employee["Employee Module"]
+    Shared["Shared Components<br/>Page Feedback, Dialogs,<br/>Action Menus, Status Badges"]
+    Core["Core<br/>Models, Services, Guard, Interceptor"]
+
+    App --> Auth
+    App --> Admin
+    App --> Manager
+    App --> Employee
+    Admin --> Shared
+    Manager --> Shared
+    Employee --> Shared
+    Auth --> Core
+    Admin --> Core
+    Manager --> Core
+    Employee --> Core
+```
+
+| Role | Active frontend routes |
+| --- | --- |
+| Admin | Dashboard, Users, Employees, Employee Detail, Projects, Milestones, Allocations, Configuration |
+| Manager | Resource Dashboard, Allocate Resource, My Projects, Timesheets |
+| Employee | My Allocations, Submit Timesheet, Timesheet History |
+
+## Authentication and authorization
+
+- Login returns a JWT and user profile.
+- The Angular application stores the JWT in `sessionStorage`.
+- The HTTP interceptor adds `Authorization: Bearer <token>` to API requests.
+- Each browser tab has independent session storage, which supports testing
+  different roles in separate tabs.
+- Angular route guards provide navigation control.
+- ASP.NET Core role authorization is the authoritative security boundary.
+- JWT validation verifies issuer, audience, signature, expiration, and active
+  user state.
+- New users receive an initial password equal to their username and must change
+  it after first login.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as Angular Login
+    participant Auth as AuthController
+    participant Service as AuthService
+    participant Repo as UserRepository
+    participant JWT as JwtService
+
+    User->>UI: Submit username and password
+    UI->>Auth: POST /api/v1/auth/login
+    Auth->>Service: LoginAsync
+    Service->>Repo: Find user by username
+    Repo-->>Service: User and employee profile
+    Service->>Service: Verify password and active state
+    Service-->>Auth: User profile
+    Auth->>JWT: Generate signed token
+    JWT-->>Auth: JWT
+    Auth-->>UI: User profile and token
+    UI->>UI: Store token and profile in sessionStorage
+
+    alt Password change required
+        UI->>UI: Navigate to /change-password
+    else Password already changed
+        UI->>UI: Navigate to role dashboard
+    end
+```
+
+## Class diagrams
+
+### Domain model
+
+All primary keys and foreign keys use `Guid`.
 
 ```mermaid
 classDiagram
     direction LR
 
     class User {
-        +int id
-        +string fullName
-        +string email
-        +string username
-        +string passwordHash
-        +Role role
-        +bool isActive
-        +bool forcePasswordChange
-        +DateTime createdAt
-        +DateTime updatedAt
-    }
-
-    class Role {
-        <<enumeration>>
-        ADMIN
-        MANAGER
-        EMPLOYEE
+        +Guid Id
+        +string FullName
+        +string Email
+        +string Username
+        +string PasswordHash
+        +Role Role
+        +bool IsActive
+        +bool ForcePasswordChange
+        +DateTime CreatedAt
+        +DateTime? UpdatedAt
     }
 
     class Employee {
-        +int id
-        +int userId
-        +string fullName
-        +string email
-        +string department
-        +string designation
-        +EmployeeStatus status
-        +bool isActive
-        +DateTime createdAt
-        +DateTime updatedAt
-    }
-
-    class EmployeeStatus {
-        <<enumeration>>
-        BENCH
-        ALLOCATED
+        +Guid Id
+        +Guid UserId
+        +Guid? ManagerId
+        +string Department
+        +string Designation
+        +EmployeeStatus Status
+        +bool IsActive
+        +DateTime CreatedAt
     }
 
     class Skill {
-        +int id
-        +int employeeId
-        +string skillName
-        +SkillCategory category
-        +ProficiencyLevel proficiency
-        +DateTime addedAt
-    }
-
-    class SkillCategory {
-        <<enumeration>>
-        BACKEND
-        FRONTEND
-        DEVOPS
-        QA
-        OTHER
-    }
-
-    class ProficiencyLevel {
-        <<enumeration>>
-        BEGINNER
-        INTERMEDIATE
-        ADVANCED
+        +Guid Id
+        +Guid EmployeeId
+        +string SkillName
+        +SkillCategory Category
+        +ProficiencyLevel Proficiency
+        +DateTime AddedAt
     }
 
     class Project {
-        +int id
-        +string name
-        +string description
-        +DateTime startDate
-        +DateTime endDate
-        +ProjectStatus status
-        +int managerId
-        +DateTime createdAt
-        +DateTime updatedAt
-    }
-
-    class ProjectStatus {
-        <<enumeration>>
-        PLANNED
-        ACTIVE
-        ON_HOLD
-        COMPLETED
+        +Guid Id
+        +Guid ManagerId
+        +string Name
+        +string Description
+        +DateTime StartDate
+        +DateTime? EndDate
+        +ProjectStatus Status
+        +HealthStatus HealthStatus
+        +string? RiskFlagsJson
+        +DateTime CreatedAt
+        +DateTime? UpdatedAt
     }
 
     class Milestone {
-        +int id
-        +int projectId
-        +string title
-        +DateTime dueDate
-        +MilestoneStatus status
-    }
-
-    class MilestoneStatus {
-        <<enumeration>>
-        NOT_STARTED
-        IN_PROGRESS
-        DONE
+        +Guid Id
+        +Guid ProjectId
+        +string Title
+        +DateTime DueDate
+        +MilestoneStatus Status
     }
 
     class Allocation {
-        +int id
-        +int employeeId
-        +int projectId
-        +int utilisationPercent
-        +DateTime fromDate
-        +DateTime toDate
-        +bool isActive
-        +DateTime createdAt
+        +Guid Id
+        +Guid EmployeeId
+        +Guid ProjectId
+        +decimal UtilisationPercent
+        +DateTime FromDate
+        +DateTime ToDate
+        +bool IsActive
+        +DateTime CreatedAt
     }
 
     class Timesheet {
-        +int id
-        +int employeeId
-        +int projectId
-        +DateTime weekStartDate
-        +decimal hoursLogged
-        +TimesheetStatus status
-        +DateTime submittedAt
-    }
-
-    class TimesheetStatus {
-        <<enumeration>>
-        SUBMITTED
-        MISSED
+        +Guid Id
+        +Guid EmployeeId
+        +Guid ProjectId
+        +DateTime WeekStartDate
+        +decimal HoursLogged
+        +TimesheetStatus Status
+        +DateTime SubmittedAt
     }
 
     class ActivityTag {
-        +int id
-        +int timesheetId
-        +string tagName
+        +Guid Id
+        +Guid TimesheetId
+        +string TagName
     }
 
     class SystemConfig {
-        +int id
-        +string llmProvider
-        +string llmApiKey
-        +int schedulerIntervalHours
-        +int maxWeeklyHours
+        +Guid Id
+        +string LlmProvider
+        +string? LlmApiKey
+        +int SchedulerIntervalHours
+        +decimal MaxWeeklyHours
     }
 
-    User "1" -- "0..1" Employee : has profile
-    User "1" -- "*" Project : manages
-    Employee "1" -- "*" Skill : possesses
-    Employee "1" -- "*" Allocation : allocated to
-    Employee "1" -- "*" Timesheet : submits
-    Project "1" -- "*" Milestone : contains
-    Project "1" -- "*" Allocation : staffed by
-    Project "1" -- "*" Timesheet : logged against
-    Timesheet "1" -- "*" ActivityTag : tagged with
-
-    User ..> Role
-    Employee ..> EmployeeStatus
-    Skill ..> SkillCategory
-    Skill ..> ProficiencyLevel
-    Project ..> ProjectStatus
-    Milestone ..> MilestoneStatus
-    Timesheet ..> TimesheetStatus
+    User "1" --> "0..1" Employee : profile
+    User "1" --> "0..*" Employee : manages
+    User "1" --> "0..*" Project : owns
+    Employee "1" --> "0..*" Skill : has
+    Employee "1" --> "0..*" Allocation : receives
+    Employee "1" --> "0..*" Timesheet : submits
+    Project "1" --> "0..*" Milestone : contains
+    Project "1" --> "0..*" Allocation : includes
+    Project "1" --> "0..*" Timesheet : records
+    Timesheet "1" --> "0..*" ActivityTag : contains
 ```
 
----
-
-### Service Layer
-
-The service layer encapsulates all business logic. Each service maps to a functional area of the BRD.
+### Application and infrastructure services
 
 ```mermaid
 classDiagram
@@ -203,1245 +249,762 @@ classDiagram
 
     class IAuthService {
         <<interface>>
-        +login(username, password) AuthResponse
-        +signUp(signUpRequest) User
-        +changePassword(userId, newPassword) void
-        +validateToken(token) TokenPayload
+        +LoginAsync(LoginDto)
+        +ChangePasswordAsync(ChangePasswordDto)
     }
 
     class IUserService {
         <<interface>>
-        +createUser(createUserRequest) User
-        +getAllUsers() List~User~
-        +getUserById(id) User
-        +getUserByUsername(username) User
-        +resetPassword(userId, tempPassword) void
-        +deactivateUser(userId) void
-        +reactivateUser(userId) void
+        +GetAllAsync()
+        +GetActiveManagersAsync()
+        +CreateAsync(CreateUserDto)
+        +ResetPasswordAsync(userId)
+        +DeactivateAsync(userId)
+        +ReactivateAsync(userId)
+        +AddEmployeeAsync(userId, request)
     }
 
-    class IEmployeeService {
+    class IAdminEmployeeService {
         <<interface>>
-        +addEmployee(addEmployeeRequest) Employee
-        +getAllEmployees(filter?) List~Employee~
-        +getEmployeeById(id) Employee
-        +updateEmployee(id, updateRequest) Employee
-        +deactivateEmployee(id) void
-        +getEmployeeDetails(id) EmployeeDetailDTO
-    }
-
-    class ISkillService {
-        <<interface>>
-        +getSkillsByEmployee(employeeId) List~Skill~
-        +addSkill(employeeId, skillRequest) Skill
-        +updateProficiency(skillId, level) Skill
-        +removeSkill(skillId) void
+        +GetAllAsync()
+        +GetSkillsAsync(employeeId)
+        +AddSkillAsync(employeeId, request)
+        +UpdateSkillProficiencyAsync(employeeId, skillId, request)
+        +GetManagerUpdatePreviewAsync(employeeId, managerId)
+        +UpdateManagerAsync(employeeId, request)
     }
 
     class IProjectService {
         <<interface>>
-        +createProject(projectRequest) Project
-        +getAllProjects() List~Project~
-        +getProjectsByManager(managerId) List~Project~
-        +updateProject(id, updateRequest) Project
-        +getProjectDetail(id) ProjectDetailDTO
+        +GetAllAsync()
+        +CreateAsync(request)
+        +GetMilestonesAsync(projectId)
+        +AddMilestoneAsync(projectId, request)
+        +UpdateMilestoneAsync(projectId, milestoneId, request)
+        +UpdateManagerAsync(projectId, request)
     }
 
-    class IMilestoneService {
+    class IManagerService {
         <<interface>>
-        +getMilestonesByProject(projectId) List~Milestone~
-        +addMilestone(projectId, milestoneRequest) Milestone
-        +updateMilestoneStatus(milestoneId, status) Milestone
-    }
-
-    class IAllocationService {
-        <<interface>>
-        +allocateResource(allocationRequest) Allocation
-        +getAllAllocations(filter?) List~AllocationDTO~
-        +getActiveByEmployee(employeeId) List~Allocation~
-        +getActiveByProject(projectId) List~Allocation~
-        +endAllocation(allocationId) Allocation
-        +validateUtilisation(employeeId, percent, from, to) bool
+        +GetResourceDashboardAsync(managerId)
+        +GetProjectsAsync(managerId)
+        +FindResourcesAsync(managerId, request)
+        +AllocateAsync(managerId, request)
+        +EndAllocationAsync(managerId, allocationId)
+        +GenerateProjectRiskSummaryAsync(managerId, projectId)
     }
 
     class ITimesheetService {
         <<interface>>
-        +submitTimesheet(timesheetRequest) Timesheet
-        +getTimesheetsByEmployee(employeeId, weekStart?) List~Timesheet~
-        +getTimesheetsByProject(projectId, weekStart?) List~Timesheet~
-        +getTeamTimesheets(managerId, weekStart) List~TimesheetDTO~
-        +getTimesheetHistory(employeeId) List~Timesheet~
+        +GetAllocationsAsync(userId)
+        +GetWeekAsync(userId, week)
+        +SubmitAsync(userId, request)
+        +GetHistoryAsync(userId)
+        +GetWeekDetailAsync(userId, week)
     }
 
-    class ISchedulerService {
+    class ILlmClient {
         <<interface>>
-        +runUtilisationUpdate() void
-        +runHealthFlagging() void
-        +computeProjectHealth(projectId) HealthStatus
+        +ExtractResourceIntentAsync(requirement)
+        +ExplainResourceMatchesAsync(request)
+        +GenerateProjectRiskSummaryAsync(facts)
     }
 
-    class IAIService {
-        <<interface>>
-        +skillMatch(requirement, projectId) List~SkillMatchResult~
-        +generateRiskSummary(projectId) string
+    class GeminiClient
+    class PromptBuilder
+    class Repositories {
+        IUserRepository
+        IAdminEmployeeRepository
+        IProjectRepository
+        IManagerRepository
+        IAllocationRepository
+        ITimesheetRepository
+        ISystemConfigRepository
     }
 
-    class ISystemConfigService {
-        <<interface>>
-        +getConfig() SystemConfig
-        +updateLLMApiKey(key) void
-        +updateLLMProvider(provider) void
-        +updateSchedulerInterval(hours) void
-        +updateMaxWeeklyHours(hours) void
-    }
-
-    IAllocationService ..> IEmployeeService : validates capacity
-    IAllocationService ..> IProjectService : validates project status
-    IAIService ..> IEmployeeService : fetches candidates
-    IAIService ..> IAllocationService : checks availability
-    IAIService ..> ITimesheetService : reads activity tags
-    IAIService ..> IMilestoneService : reads milestone data
-    IAIService ..> ISystemConfigService : reads LLM config
-    ISchedulerService ..> IAllocationService : recomputes utilisation
-    ISchedulerService ..> IMilestoneService : checks overdue milestones
-    ISchedulerService ..> ITimesheetService : detects missed timesheets
+    IAuthService --> Repositories
+    IUserService --> Repositories
+    IAdminEmployeeService --> Repositories
+    IProjectService --> Repositories
+    IManagerService --> Repositories
+    ITimesheetService --> Repositories
+    IManagerService --> ILlmClient
+    ILlmClient <|.. GeminiClient
+    GeminiClient --> PromptBuilder
 ```
 
----
-
-### Controller / API Layer
-
-REST API controllers that expose endpoints consumed by the console client.
+### Controller and authorization map
 
 ```mermaid
 classDiagram
-    direction TB
+    direction LR
 
     class AuthController {
-        +POST /api/auth/login
-        +POST /api/auth/signup
-        +POST /api/auth/change-password
+        +POST login
+        +POST change-password
     }
-
     class UserController {
-        +POST /api/users
-        +GET /api/users
-        +GET /api/users/:id
-        +PUT /api/users/:id/reset-password
-        +PUT /api/users/:id/deactivate
-        +PUT /api/users/:id/reactivate
+        +GET users
+        +POST user
+        +PATCH deactivate
+        +PATCH reactivate
+        +POST reset-password
     }
-
-    class EmployeeController {
-        +POST /api/employees
-        +GET /api/employees
-        +GET /api/employees/:id
-        +PUT /api/employees/:id
-        +PUT /api/employees/:id/deactivate
-        +GET /api/employees/:id/details
+    class AdminEmployeeController {
+        +GET employees
+        +GET skills
+        +POST skill
+        +PATCH proficiency
+        +GET manager-update-preview
+        +PATCH manager
     }
-
-    class SkillController {
-        +GET /api/employees/:id/skills
-        +POST /api/employees/:id/skills
-        +PUT /api/skills/:id
-        +DELETE /api/skills/:id
-    }
-
     class ProjectController {
-        +POST /api/projects
-        +GET /api/projects
-        +GET /api/projects/manager/:managerId
-        +PUT /api/projects/:id
-        +GET /api/projects/:id/details
+        +GET projects
+        +POST project
+        +GET milestones
+        +POST milestone
+        +PUT milestone
+        +PATCH manager
     }
-
-    class MilestoneController {
-        +GET /api/projects/:id/milestones
-        +POST /api/projects/:id/milestones
-        +PUT /api/milestones/:id/status
+    class ManagerController {
+        +GET resources
+        +POST resources-find
+        +GET projects
+        +POST risk-summary
+        +POST allocation
+        +PATCH end-allocation
+        +GET timesheets
     }
-
-    class AllocationController {
-        +POST /api/allocations
-        +GET /api/allocations
-        +GET /api/allocations/employee/:id
-        +GET /api/allocations/project/:id
-        +PUT /api/allocations/:id/end
-        +POST /api/allocations/validate
-    }
-
-    class TimesheetController {
-        +POST /api/timesheets
-        +GET /api/timesheets/employee/:id
-        +GET /api/timesheets/project/:id
-        +GET /api/timesheets/team/:managerId
-        +GET /api/timesheets/history/:employeeId
-    }
-
-    class AIController {
-        +POST /api/ai/skill-match
-        +POST /api/ai/risk-summary
-    }
-
-    class SystemConfigController {
-        +GET /api/config
-        +PUT /api/config/llm-key
-        +PUT /api/config/llm-provider
-        +PUT /api/config/scheduler-interval
-        +PUT /api/config/max-weekly-hours
+    class EmployeeController {
+        +GET allocations
+        +GET timesheet-week
+        +POST timesheet
+        +GET timesheets
     }
 
     AuthController --> IAuthService
     UserController --> IUserService
-    EmployeeController --> IEmployeeService
-    SkillController --> ISkillService
+    AdminEmployeeController --> IAdminEmployeeService
     ProjectController --> IProjectService
-    MilestoneController --> IMilestoneService
-    AllocationController --> IAllocationService
-    TimesheetController --> ITimesheetService
-    AIController --> IAIService
-    SystemConfigController --> ISystemConfigService
+    ManagerController --> IManagerService
+    EmployeeController --> ITimesheetService
 ```
 
----
+## Use case diagrams
 
-### AI Module
+Mermaid does not define a native UML use-case syntax, so the following diagrams
+use flowcharts to represent actors and supported use cases.
 
-Internal architecture of the AI subsystem — how data flows from raw system data to LLM-generated responses.
+### Role use cases
 
 ```mermaid
-classDiagram
-    direction TB
+flowchart LR
+    Admin([Admin])
+    Manager([Manager])
+    Employee([Employee])
 
-    class AIService {
-        -ILLMClient llmClient
-        -IEmployeeService employeeService
-        -IAllocationService allocationService
-        -ITimesheetService timesheetService
-        -IMilestoneService milestoneService
-        -ISystemConfigService configService
-        +skillMatch(requirement, projectId) List~SkillMatchResult~
-        +generateRiskSummary(projectId) string
-        -buildSkillMatchPrompt(requirement, candidates) string
-        -buildRiskPrompt(projectData) string
-        -parseSkillMatchResponse(llmResponse) List~SkillMatchResult~
-        -filterCandidatesByAvailability(employees, requirement) List~Employee~
-        -extractHoursFromNaturalLanguage(text) int?
-    }
+    subgraph AdminCases[Admin Use Cases]
+        A1[View dashboard]
+        A2[Create and manage users]
+        A3[Deactivate or reactivate users]
+        A4[Manage employee skills]
+        A5[Assign or update employee manager]
+        A6[Create projects and milestones]
+        A7[Update project manager]
+        A8[View all allocations]
+    end
 
-    class ILLMClient {
-        <<interface>>
-        +sendPrompt(prompt) string
-        +setApiKey(key) void
-        +setProvider(provider) void
-    }
+    subgraph ManagerCases[Manager Use Cases]
+        M1[View own team resources]
+        M2[Find resources with AI]
+        M3[Allocate team resource]
+        M4[End own project allocation]
+        M5[View owned projects]
+        M6[Generate AI risk summary]
+        M7[View submitted team timesheets]
+    end
 
-    class GeminiClient {
-        -string apiKey
-        -string endpoint
-        +sendPrompt(prompt) string
-        +setApiKey(key) void
-        +setProvider(provider) void
-    }
+    subgraph EmployeeCases[Employee Use Cases]
+        E1[View own allocations]
+        E2[Load allocated projects for week]
+        E3[Submit weekly timesheet]
+        E4[View submitted and missed weeks]
+        E5[View timesheet details]
+    end
 
-    class GroqClient {
-        -string apiKey
-        -string endpoint
-        +sendPrompt(prompt) string
-        +setApiKey(key) void
-        +setProvider(provider) void
-    }
+    Admin --> A1
+    Admin --> A2
+    Admin --> A3
+    Admin --> A4
+    Admin --> A5
+    Admin --> A6
+    Admin --> A7
+    Admin --> A8
 
-    class SkillMatchResult {
-        +int employeeId
-        +string employeeName
-        +string reason
-        +int freeHoursPerWeek
-        +int suggestedAllocationPercent
-        +List~string~ matchingSkills
-        +List~string~ recentActivityTags
-    }
+    Manager --> M1
+    Manager --> M2
+    Manager --> M3
+    Manager --> M4
+    Manager --> M5
+    Manager --> M6
+    Manager --> M7
 
-    class PromptBuilder {
-        +buildSkillMatchPrompt(requirement, candidates) string
-        +buildRiskSummaryPrompt(milestones, allocations, timesheets) string
-        +buildPartialHoursPrompt(requirement, candidates, hours) string
-    }
-
-    ILLMClient <|.. GeminiClient
-    ILLMClient <|.. GroqClient
-    AIService --> ILLMClient : uses
-    AIService --> PromptBuilder : delegates prompt creation
-    AIService ..> SkillMatchResult : produces
+    Employee --> E1
+    Employee --> E2
+    Employee --> E3
+    Employee --> E4
+    Employee --> E5
 ```
 
----
+### Manager visibility boundary
 
-## Sequence Diagrams
+```mermaid
+flowchart LR
+    Manager([Logged-in Manager])
+    OwnedProjects[Projects where Project.ManagerId equals manager user ID]
+    TeamEmployees[Active Employee-role profiles where Employee.ManagerId equals manager user ID]
+    Allowed[Resources, allocations, project detail, timesheets, AI candidate facts]
+    CompanyData[Other managers' projects and employees]
 
-### Authentication Flows
+    Manager --> OwnedProjects
+    Manager --> TeamEmployees
+    OwnedProjects --> Allowed
+    TeamEmployees --> Allowed
+    CompanyData -. blocked by backend queries .-> Manager
+```
 
-#### Login — Standard Flow
+## Sequence diagrams
+
+### Admin creates a user
+
+Managers receive an employee profile automatically. Employee-role users can be
+mapped to an employee profile through the Admin flow.
 
 ```mermaid
 sequenceDiagram
-    actor U as User (Console)
-    participant C as Console Client
-    participant S as Auth API Server
-    participant DB as Database
+    actor Admin
+    participant UI as Admin Users UI
+    participant API as UserController
+    participant Service as UserService
+    participant Repo as UserRepository
+    participant DB as SQL Server
 
-    U->>C: Select "1. Login"
-    C->>U: Prompt username & password
-    U->>C: Enter credentials
+    Admin->>UI: Submit full name, email, username, role
+    UI->>API: POST /api/v1/user
+    API->>Service: CreateAsync
+    Service->>Repo: Check username and email uniqueness
 
-    C->>S: POST /api/auth/login {username, password}
-    S->>DB: SELECT user WHERE username = ?
-    DB-->>S: User record
-
-    alt Invalid credentials
-        S-->>C: 401 Unauthorized
-        C->>U: ❌ Invalid username or password
-    else Account deactivated
-        S-->>C: 403 Forbidden
-        C->>U: ❌ Account is deactivated
-    else Valid credentials
-        S->>S: Verify password hash
-        S->>S: Generate auth token
-        S-->>C: 200 OK {token, user, forcePasswordChange}
-
-        alt forcePasswordChange = true
-            C->>U: Show "CHANGE PASSWORD" screen
-            U->>C: Enter new password + confirm
-            C->>S: POST /api/auth/change-password {userId, newPassword}
-            S->>DB: UPDATE user SET passwordHash, forcePasswordChange = false
-            DB-->>S: Updated
-            S-->>C: 200 OK
-            C->>U: ✅ Password updated. Welcome!
+    alt Duplicate user
+        Repo-->>Service: Existing record
+        Service-->>UI: 409 conflict
+    else Valid user
+        Service->>Service: Password = username, hash password
+        Service->>Service: Set active and forcePasswordChange
+        alt Role is Manager
+            Service->>Repo: Create user and manager employee profile transactionally
+        else Admin or Employee
+            Service->>Repo: Create user
         end
-
-        C->>C: Route to role-based menu
-        C->>U: Show Admin/Manager/Employee menu
+        Repo->>DB: Save records
+        DB-->>Repo: Saved
+        Service-->>UI: Created user profile
+        UI->>UI: Refresh complete user list
     end
 ```
 
-#### Sign Up — Self-Registration
+### Deactivate and reactivate user
 
 ```mermaid
 sequenceDiagram
-    actor U as User (Console)
-    participant C as Console Client
-    participant S as Auth API Server
-    participant DB as Database
+    actor Admin
+    participant UI as Admin Users UI
+    participant API as UserController
+    participant Service as UserService
+    participant Repo as UserRepository
 
-    U->>C: Select "2. Sign Up"
-    C->>U: Show Sign Up form
+    Admin->>UI: Select Deactivate
+    UI->>API: PATCH /api/v1/user/{id}/deactivate
+    API->>Service: DeactivateAsync
 
-    U->>C: Enter fullName, email, username, password, role
-    Note right of U: Role restricted to Manager or Employee
+    alt Admin user
+        Service->>Service: Set User.IsActive = false
+    else Employee user
+        Service->>Service: Deactivate user and employee profile
+        Service->>Service: End active allocations today
+        Service->>Service: Clear Employee.ManagerId
+    else Manager user
+        Service->>Repo: Find active/planned projects and active subordinates
+        alt Manager still owns work or employees
+            Service-->>UI: Validation details with project and employee names
+        else No dependencies
+            Service->>Service: Deactivate user and linked profile
+        end
+    end
 
-    C->>C: Client-side validation (non-empty fields)
-    C->>S: POST /api/auth/signup {fullName, email, username, password, role}
+    Service->>Repo: Save status change
+    Repo-->>UI: Result
 
-    S->>S: Validate email format
-    S->>S: Validate password strength (8+ chars, 1 uppercase, 1 number)
-    S->>DB: Check username uniqueness
-    DB-->>S: Exists / Not exists
+    opt Admin later selects Reactivate
+        UI->>API: PATCH /api/v1/user/{id}/reactivate
+        API->>Service: ReactivateAsync
+        Service->>Service: Reactivate user and linked profile only
+        Note over Service: Allocations and manager assignment are not restored
+    end
+```
+
+### Update employee manager
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant UI as Manage Employees
+    participant API as AdminEmployeeController
+    participant Service as AdminEmployeeService
+    participant Repo as AdminEmployeeRepository
+    participant DB as SQL Server
+
+    Admin->>UI: Select new active manager
+    UI->>API: GET manager-update-preview?newManagerId
+    API->>Service: GetManagerUpdatePreviewAsync
+    Service->>Repo: Load active employee and active allocations
+    Repo-->>Service: Employee and project names
+    Service-->>UI: Active project list
+    UI->>Admin: Confirm allocations will end today
+
+    alt Cancel
+        Admin->>UI: Cancel
+        Note over UI,DB: No data changes
+    else Confirm
+        UI->>API: PATCH /api/v1/admin/employees/{id}/manager
+        API->>Service: UpdateManagerAsync
+        Service->>Service: Validate active Employee and active Manager role
+        Service->>Service: End all active allocations today
+        Service->>Service: Set Employee.ManagerId
+        Service->>Repo: Save transaction
+        Repo->>DB: Update employee and allocations
+        DB-->>UI: Success details
+        UI->>UI: Refresh complete employee list
+    end
+```
+
+### Update project manager
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant UI as Manage Projects
+    participant API as ProjectController
+    participant Service as ProjectService
+    participant Repo as ProjectRepository
+    participant DB as SQL Server
+
+    Admin->>UI: Select new active manager
+    UI->>API: PATCH /api/v1/project/{id}/manager
+    API->>Service: UpdateManagerAsync
+    Service->>Repo: Load project and active allocated employees
+    Service->>Repo: Find other active projects under current manager
+
+    alt Employee has another active project under current manager
+        Service-->>UI: Conflict details with employees and projects
+        UI->>Admin: Show update-not-possible dialog
+    else No conflicts
+        Service->>Service: Update Project.ManagerId
+        Service->>Service: Update allocated Employee.ManagerId values
+        Service->>Repo: Save transaction
+        Repo->>DB: Update project and employees
+        DB-->>UI: Success
+        UI->>UI: Refresh project list
+    end
+```
+
+### AI-assisted resource search
+
+Resource eligibility remains deterministic. Gemini extracts intent and explains
+only the candidates already approved by backend rules.
+
+```mermaid
+sequenceDiagram
+    actor Manager
+    participant UI as Allocate Resource UI
+    participant API as ManagerController
+    participant Service as ManagerService
+    participant Repo as ManagerRepository
+    participant LLM as GeminiClient
+
+    Manager->>UI: Select project and enter requirement
+    UI->>API: POST /api/v1/manager/resources/find
+    API->>Service: FindResourcesAsync
+    Service->>Repo: Validate manager owns project
+    Service->>LLM: AI call 1 - extract structured intent
+    LLM-->>Service: Role, skills, utilization, dates, constraints
+    Service->>Service: Normalize skills and validate dates
+    Service->>Repo: Load active employees assigned to manager
+
+    loop Each team employee
+        Service->>Repo: Calculate overlapping allocation percentage
+        Service->>Service: Apply role, exact skill, exclusion, and availability filters
+        Service->>Service: Calculate backend score and reasons
+    end
+
+    Service->>Service: Keep top ten backend candidates
+    Service->>LLM: AI call 2 - explain supplied candidate IDs only
+
+    alt Explanation succeeds and IDs are valid
+        LLM-->>Service: Complete ranking, strengths, concerns, reasons
+        Service->>Service: Map explanations to known employee IDs
+    else Explanation fails or response is invalid
+        Service->>Service: Keep backend ranking and fallback reasons
+    end
+
+    Service-->>UI: Intent and ranked matches
+    UI->>Manager: Show availability, score, reasons, strengths, concerns
+```
+
+### Manager allocates or ends a resource allocation
+
+```mermaid
+sequenceDiagram
+    actor Manager
+    participant UI as Allocate Resource UI
+    participant API as ManagerController
+    participant Service as ManagerService
+    participant Repo as ManagerRepository
+
+    Manager->>UI: Confirm project, employee, utilization, dates
+    UI->>API: POST /api/v1/manager/allocations
+    API->>Service: AllocateAsync
+    Service->>Repo: Validate owned project
+    Service->>Repo: Validate employee belongs to manager
+    Service->>Service: Validate project is Active or Planned
+    Service->>Repo: Sum overlapping allocations
+
+    alt Total utilization exceeds 100 percent
+        Service-->>UI: Validation error
+    else Allocation is feasible
+        Service->>Repo: Insert allocation
+        Repo-->>UI: Created allocation
+    end
+
+    opt Manager ends an allocation
+        UI->>API: PATCH /api/v1/manager/allocations/{id}/end
+        API->>Service: EndAllocationAsync
+        Service->>Repo: Verify allocation belongs to owned project
+        Service->>Service: Set ToDate to today and IsActive to false
+        Service->>Repo: Save
+    end
+```
+
+### On-demand AI project risk summary
+
+Opening project detail never calls Gemini. It reads the last valid JSON saved in
+`Project.RiskFlagsJson`.
+
+```mermaid
+sequenceDiagram
+    actor Manager
+    participant UI as My Projects UI
+    participant API as ManagerController
+    participant Service as ManagerService
+    participant Repo as ManagerRepository
+    participant LLM as GeminiClient
+    participant DB as SQL Server
+
+    Manager->>UI: Open project detail
+    UI->>API: GET /api/v1/manager/projects/{id}
+    API->>Service: GetProjectDetailAsync
+    Service->>Repo: Load owned project graph
+    Repo-->>Service: Project and saved RiskFlagsJson
+    Service-->>UI: Project detail and saved summary
+
+    Manager->>UI: Click Get Risk Summary
+    UI->>API: POST /api/v1/manager/projects/{id}/risk-summary
+    API->>Service: GenerateProjectRiskSummaryAsync
+    Service->>Repo: Validate ownership and load factual project graph
+    Service->>Service: Build milestones, allocations, expected hours,<br/>submitted and missed week facts
+    Service->>LLM: Generate strict risk summary JSON
+
+    alt Valid AI JSON
+        LLM-->>Service: Health, summary, risk points, actions
+        Service->>Service: Validate allowed values and required content
+        Service->>Repo: Save JSON to Project.RiskFlagsJson
+        Repo->>DB: Update project
+        Service-->>UI: Latest risk summary
+        UI->>API: Refresh project detail
+    else AI failure and saved summary exists
+        Service-->>UI: Previous valid saved summary
+    else AI failure and no saved summary
+        Service-->>UI: External service error
+    end
+```
+
+### Employee submits a weekly timesheet
+
+```mermaid
+sequenceDiagram
+    actor Employee
+    participant UI as Submit Timesheet UI
+    participant API as EmployeeController
+    participant Service as TimesheetService
+    participant Repo as TimesheetRepository
+
+    Employee->>UI: Select week start
+    UI->>API: GET /api/v1/employee/timesheets/week
+    API->>Service: GetWeekAsync
+    Service->>Repo: Load allocations overlapping the week
+    Service-->>UI: Projects, allocation percentages, maximum hours
+    Employee->>UI: Enter project hours and activity tags
+    UI->>API: POST /api/v1/employee/timesheets
+    API->>Service: SubmitAsync
+    Service->>Service: Validate Monday and non-future week
+    Service->>Repo: Check duplicate weekly submission
+    Service->>Service: Validate total and per-project hour limits
+    Service->>Service: Validate allocation and activity tags
 
     alt Validation fails
-        S-->>C: 400 Bad Request {errors}
-        C->>U: ❌ Show validation errors
-    else Validation passes
-        S->>S: Hash password
-        S->>DB: INSERT INTO users (forcePasswordChange = false)
-        DB-->>S: Created user
-        S-->>C: 201 Created
-        C->>U: ✅ Account created. Please log in.
-        C->>C: Return to Login screen
-    end
-```
-
----
-
-### Admin Flows
-
-#### Create User Account (Admin)
-
-```mermaid
-sequenceDiagram
-    actor A as Admin (Console)
-    participant C as Console Client
-    participant S as User API Server
-    participant DB as Database
-
-    A->>C: Manage Users → Create User Account
-    C->>A: Show Create User form
-
-    A->>C: Enter fullName, email, username, tempPassword, role
-    Note right of A: All three roles available (Admin, Manager, Employee)
-
-    C->>S: POST /api/users {fullName, email, username, tempPassword, role}
-    Note right of S: Auth token in header
-
-    S->>S: Validate all fields
-    S->>DB: Check username & email uniqueness
-    DB-->>S: Unique check result
-
-    alt Duplicate found
-        S-->>C: 409 Conflict {error: "Username already exists"}
-        C->>A: ❌ Username already exists
+        Service-->>UI: Structured validation error
     else Valid
-        S->>S: Hash temporary password
-        S->>DB: INSERT INTO users (forcePasswordChange = true)
-        DB-->>S: Created user
-        S-->>C: 201 Created {userId}
-        C->>A: ✅ Account created. User must change password on first login.
+        Service->>Repo: Save submitted project entries and activity tags
+        Repo-->>UI: No content
+        UI->>UI: Show success and reload data
     end
 ```
 
-#### Add Employee & Link to User
-
-```mermaid
-sequenceDiagram
-    actor A as Admin (Console)
-    participant C as Console Client
-    participant S as Employee API Server
-    participant DB as Database
-
-    A->>C: Manage Employees → Add Employee
-    C->>A: Show Add Employee form
-
-    A->>C: Enter userId, fullName, email, department, designation
-
-    C->>S: POST /api/employees {userId, fullName, email, department, designation}
-
-    S->>DB: Validate userId exists and role is EMPLOYEE or MANAGER
-    DB-->>S: User record
-
-    alt User not found or invalid role
-        S-->>C: 400 Bad Request
-        C->>A: ❌ Invalid User ID
-    else Already has employee profile
-        S-->>C: 409 Conflict
-        C->>A: ❌ Employee profile already exists for this user
-    else Valid
-        S->>DB: INSERT INTO employees (status = BENCH, isActive = true)
-        DB-->>S: Created employee
-        S-->>C: 201 Created {employeeId}
-        C->>A: ✅ Employee added with status BENCH
-    end
-```
-
-#### Deactivate Employee
-
-```mermaid
-sequenceDiagram
-    actor A as Admin (Console)
-    participant C as Console Client
-    participant S as API Server
-    participant DB as Database
-
-    A->>C: Manage Employees → Deactivate Employee
-    C->>A: Prompt for Employee ID
-    A->>C: Enter Employee ID (e.g., 101)
-
-    C->>S: GET /api/employees/101/details
-    S->>DB: Fetch employee + active allocations
-    DB-->>S: Employee detail with allocations
-
-    S-->>C: 200 OK {employee, activeAllocations}
-    C->>A: Show employee info + allocation warnings
-
-    A->>C: Confirm [Y] Yes, Deactivate
-
-    C->>S: PUT /api/employees/101/deactivate
-
-    S->>DB: UPDATE employee SET isActive = false
-    S->>DB: UPDATE allocations SET toDate = today WHERE employeeId = 101 AND isActive = true
-    S->>DB: UPDATE user SET isActive = false WHERE id = employee.userId
-    DB-->>S: All updated
-
-    S-->>C: 200 OK
-    C->>A: ✅ Employee deactivated
-```
-
-#### Manage Employee Skills
-
-```mermaid
-sequenceDiagram
-    actor A as Admin (Console)
-    participant C as Console Client
-    participant S as Skill API Server
-    participant DB as Database
-
-    A->>C: Manage Employees → Manage Employee Skills
-    C->>A: Prompt for Employee ID
-    A->>C: Enter Employee ID
-
-    C->>S: GET /api/employees/{id}/skills
-    S->>DB: SELECT skills WHERE employeeId = ?
-    DB-->>S: List of skills
-    S-->>C: 200 OK {skills}
-    C->>A: Display current skills list
-
-    alt Add Skill
-        A->>C: Select "1. Add Skill"
-        C->>A: Prompt skillName, category, proficiency
-        A->>C: Enter details
-        C->>S: POST /api/employees/{id}/skills {skillName, category, proficiency}
-        S->>DB: INSERT INTO skills
-        DB-->>S: Created
-        S-->>C: 201 Created
-        C->>A: ✅ Skill added
-    else Update Proficiency
-        A->>C: Select "2. Update Proficiency Level"
-        C->>A: Prompt skill number + new level
-        A->>C: Enter choices
-        C->>S: PUT /api/skills/{skillId} {proficiency}
-        S->>DB: UPDATE skills SET proficiency = ?
-        DB-->>S: Updated
-        S-->>C: 200 OK
-        C->>A: ✅ Proficiency updated
-    else Remove Skill
-        A->>C: Select "3. Remove Skill"
-        C->>A: Prompt skill number
-        A->>C: Enter choice
-        C->>S: DELETE /api/skills/{skillId}
-        S->>DB: DELETE FROM skills WHERE id = ?
-        DB-->>S: Deleted
-        S-->>C: 200 OK
-        C->>A: ✅ Skill removed
-    end
-```
-
-#### Create Project & Manage Milestones
-
-```mermaid
-sequenceDiagram
-    actor A as Admin (Console)
-    participant C as Console Client
-    participant S as Project API Server
-    participant DB as Database
-
-    A->>C: Manage Projects → Create Project
-    C->>A: Show Create Project form
-    A->>C: Enter name, description, startDate, endDate, status, managerId
-
-    C->>S: POST /api/projects {name, description, startDate, endDate, status, managerId}
-    S->>DB: Validate managerId exists with MANAGER role
-    DB-->>S: Manager exists
-    S->>DB: INSERT INTO projects
-    DB-->>S: Created project
-    S-->>C: 201 Created {projectId}
-    C->>A: ✅ Project created
-
-    Note over A,DB: --- Later: Add Milestones ---
-
-    A->>C: Manage Projects → Manage Milestones
-    C->>A: Prompt for Project ID
-    A->>C: Enter project ID
-
-    C->>S: GET /api/projects/{id}/milestones
-    S->>DB: SELECT milestones WHERE projectId = ?
-    DB-->>S: Milestone list
-    S-->>C: 200 OK {milestones}
-    C->>A: Display milestones table
-
-    A->>C: Select "1. Add Milestone"
-    C->>A: Prompt title, dueDate
-    A->>C: Enter details
-
-    C->>S: POST /api/projects/{id}/milestones {title, dueDate}
-    S->>DB: INSERT INTO milestones (status = NOT_STARTED)
-    DB-->>S: Created
-    S-->>C: 201 Created
-    C->>A: ✅ Milestone added
-```
-
----
-
-### Manager Flows
-
-#### Resource Dashboard — Drill Into Employee
-
-```mermaid
-sequenceDiagram
-    actor M as Manager (Console)
-    participant C as Console Client
-    participant S as API Server
-    participant DB as Database
-
-    M->>C: Select "1. Resource Dashboard"
-
-    C->>S: GET /api/employees?status=BENCH
-    S->>DB: SELECT employees WHERE status = BENCH AND isActive = true
-    DB-->>S: Bench employees with skills
-    S-->>C: 200 OK {benchEmployees}
-
-    C->>S: GET /api/employees?status=ALLOCATED
-    S->>DB: SELECT employees WHERE status = ALLOCATED AND isActive = true
-    DB-->>S: Allocated employees with utilisation
-    S-->>C: 200 OK {allocatedEmployees}
-
-    C->>M: Display Resource Dashboard (Bench + Active sections)
-
-    M->>C: Press [D] Drill into employee, enter ID 102
-
-    C->>S: GET /api/employees/102/details
-    S->>DB: Fetch employee profile, skills, active allocations
-    S->>DB: Fetch recent activity tags (last 4 weeks)
-    DB-->>S: Full employee detail
-    S-->>C: 200 OK {employeeDetail}
-
-    C->>M: Display employee drill-down view
-```
-
-#### Allocate Resource — AI-Assisted
-
-```mermaid
-sequenceDiagram
-    actor M as Manager (Console)
-    participant C as Console Client
-    participant S as API Server
-    participant AI as AI Service
-    participant LLM as LLM Provider (Gemini/Groq)
-    participant DB as Database
-
-    M->>C: Allocate Resource → "1. Find resource using AI"
-    C->>M: Prompt for project
-    M->>C: Enter project ID (201)
-
-    C->>M: Prompt: "Describe your requirement"
-    M->>C: "I need a backend developer with Java and microservices experience, available for at least 3 months from June"
-
-    C->>S: POST /api/ai/skill-match {projectId: 201, requirement: "..."}
-
-    S->>AI: skillMatch(requirement, projectId)
-    AI->>DB: Fetch all active employees with skills
-    DB-->>AI: Employee list with skills & allocations
-    AI->>AI: Filter by availability (exclude fully booked)
-    AI->>AI: Extract time requirements from natural language
-    AI->>AI: Build prompt with candidate summaries
-    AI->>LLM: Send prompt (requirement + filtered candidates)
-    LLM-->>AI: Ranked results with reasons
-    AI->>AI: Parse LLM response into structured results
-    AI-->>S: List<SkillMatchResult>
-
-    S-->>C: 200 OK {matches}
-    C->>M: Display AI-Matched Results table
-
-    M->>C: Select employee #1 (Anil Mehta)
-    C->>M: Prompt: utilisation %, fromDate, toDate
-    M->>C: Enter 50%, 01-Jun-2026, 30-Sep-2026
-
-    C->>S: POST /api/allocations/validate {employeeId, percent: 50, from, to}
-    S->>DB: Check overlapping allocations for employee
-    DB-->>S: Current total: 0%
-    S->>S: 0% + 50% = 50% ≤ 100% ✓
-    S-->>C: 200 OK {valid: true, totalAfter: 50}
-
-    C->>M: Show validation result, prompt [C] Confirm
-    M->>C: Confirm allocation
-
-    C->>S: POST /api/allocations {employeeId, projectId: 201, percent: 50, from, to}
-    S->>DB: INSERT INTO allocations
-    S->>DB: UPDATE employee status if previously BENCH → ALLOCATED
-    DB-->>S: Created
-    S-->>C: 201 Created
-    C->>M: ✅ Allocation saved. Anil Mehta → Alpha Portal (50%, Jun–Sep 2026)
-```
-
-#### Allocate Resource — Direct (Skip AI)
-
-```mermaid
-sequenceDiagram
-    actor M as Manager (Console)
-    participant C as Console Client
-    participant S as API Server
-    participant DB as Database
-
-    M->>C: Allocate Resource → "2. Allocate directly"
-    C->>M: Prompt for project and employee ID
-    M->>C: Project: 201, Employee ID: 103
-
-    C->>S: GET /api/employees/103/details
-    S->>DB: Fetch employee current utilisation
-    DB-->>S: Employee detail
-    S-->>C: 200 OK {employee, currentUtilisation: 0%}
-
-    C->>M: Show employee info, prompt allocation details
-    M->>C: Enter 50%, 01-Jun-2026, 30-Sep-2026
-
-    C->>S: POST /api/allocations/validate {employeeId: 103, percent: 50, from, to}
-    S->>DB: Check overlapping allocations
-    DB-->>S: 0% current
-    S-->>C: 200 OK {valid: true}
-
-    C->>M: Validation passed ✓, prompt [C] Confirm
-    M->>C: Confirm
-
-    C->>S: POST /api/allocations {employeeId: 103, projectId: 201, percent: 50, from, to}
-    S->>DB: INSERT allocation, UPDATE employee status
-    DB-->>S: Created
-    S-->>C: 201 Created
-    C->>M: ✅ Allocation confirmed
-```
-
-#### End an Existing Allocation
-
-```mermaid
-sequenceDiagram
-    actor M as Manager (Console)
-    participant C as Console Client
-    participant S as API Server
-    participant DB as Database
-
-    M->>C: Allocate Resource → "3. End an existing allocation"
-    C->>M: Prompt for project
-    M->>C: Enter project ID (201)
-
-    C->>S: GET /api/allocations/project/201
-    S->>DB: SELECT allocations WHERE projectId = 201 AND isActive = true
-    DB-->>S: Active allocations
-    S-->>C: 200 OK {allocations}
-    C->>M: Display active allocations table
-
-    M->>C: Select allocation #1 (Ravi Kumar)
-    C->>M: "End Ravi Kumar's allocation? Set end date to today?"
-
-    M->>C: Confirm [Y]
-
-    C->>S: PUT /api/allocations/{id}/end
-    S->>DB: UPDATE allocation SET toDate = today, isActive = false
-    S->>DB: Check if employee has other active allocations
-    DB-->>S: No other active allocations
-    S->>DB: UPDATE employee SET status = BENCH
-    DB-->>S: Updated
-    S-->>C: 200 OK
-    C->>M: ✅ Allocation ended. Employee status updated to BENCH.
-```
-
-#### My Projects — View Health & AI Risk Summary
-
-```mermaid
-sequenceDiagram
-    actor M as Manager (Console)
-    participant C as Console Client
-    participant S as API Server
-    participant AI as AI Service
-    participant LLM as LLM Provider
-    participant DB as Database
-
-    M->>C: Select "3. My Projects"
-
-    C->>S: GET /api/projects/manager/{managerId}
-    S->>DB: SELECT projects WHERE managerId = ?
-    S->>DB: Compute health status per project
-    DB-->>S: Projects with health indicators
-    S-->>C: 200 OK {projects with health}
-    C->>M: Display projects list (🔴 AT RISK, 🟢 ON TRACK, 🟡 ATTENTION)
-
-    M->>C: Select project #1 (Alpha Portal)
-
-    C->>S: GET /api/projects/201/details
-    S->>DB: Fetch milestones, allocations, risk flags
-    DB-->>S: Full project detail
-    S-->>C: 200 OK {projectDetail}
-    C->>M: Display project detail (milestones, resources, risk flags)
-
-    M->>C: Press [A] Get AI Risk Summary
-
-    C->>S: POST /api/ai/risk-summary {projectId: 201}
-    S->>AI: generateRiskSummary(201)
-    AI->>DB: Fetch milestones (statuses, due dates)
-    AI->>DB: Fetch allocations (who, % utilisation)
-    AI->>DB: Fetch recent timesheets (hours logged vs expected)
-    DB-->>AI: Raw project data
-    AI->>AI: Build risk summary prompt
-    AI->>LLM: Send prompt with structured project data
-    LLM-->>AI: Plain-English risk paragraph
-    AI-->>S: Risk summary string
-
-    S-->>C: 200 OK {summary}
-    C->>M: Display AI Risk Summary paragraph
-    Note right of M: "The Backend API milestone is overdue by 5 days..."
-```
-
-#### View Team Timesheets (Manager)
-
-```mermaid
-sequenceDiagram
-    actor M as Manager (Console)
-    participant C as Console Client
-    participant S as API Server
-    participant DB as Database
-
-    M->>C: Select "4. Timesheets"
-    C->>M: Prompt: "Filter by week (DD-MM-YYYY) or Enter for current week"
-    M->>C: Enter "12-05-2026"
-
-    C->>S: GET /api/timesheets/team/{managerId}?week=12-05-2026
-    S->>DB: Get manager's projects
-    S->>DB: Get all allocations on those projects
-    S->>DB: Get timesheets for that week for those employees/projects
-    S->>S: Flag employees with no timesheet as MISSED
-    DB-->>S: Team timesheet data
-    S-->>C: 200 OK {timesheets with status}
-
-    C->>M: Display team timesheets table (SUBMITTED / MISSED ⚠)
-
-    M->>C: Press [V] View employee timesheet detail
-    C->>M: Prompt for employee ID
-    M->>C: Enter employee ID
-
-    C->>S: GET /api/timesheets/employee/{id}?week=12-05-2026
-    S->>DB: Fetch detailed timesheet with activity tags
-    DB-->>S: Timesheet detail
-    S-->>C: 200 OK {timesheetDetail}
-    C->>M: Display employee timesheet with activity tags
-```
-
----
-
-### Employee Flows
-
-#### Submit Weekly Timesheet
-
-```mermaid
-sequenceDiagram
-    actor E as Employee (Console)
-    participant C as Console Client
-    participant S as API Server
-    participant DB as Database
-
-    E->>C: Select "1. Submit Timesheet"
-    C->>E: Prompt: "Week starting (DD-MM-YYYY) or Enter for current week"
-    E->>C: Enter week start date
-
-    C->>S: GET /api/allocations/employee/{employeeId}
-    S->>DB: Fetch active allocations for this employee
-    DB-->>S: Active allocations
-    S-->>C: 200 OK {allocations}
-
-    C->>E: Display allocated projects for this week
-
-    loop For each allocated project
-        C->>E: "Hours worked on [Project Name]: "
-        E->>C: Enter hours (e.g., 18)
-        C->>E: "Activity tags (comma-separated): "
-        E->>C: Enter tags (e.g., "Backend API, Microservices, Bug Fixing")
-    end
-
-    C->>C: Validate total hours ≤ maxWeeklyHours (e.g., 40)
-
-    alt Total hours exceed limit
-        C->>E: ⚠ Total hours exceed weekly maximum
-    else Valid
-        C->>S: POST /api/timesheets {employeeId, weekStart, entries: [{projectId, hours, tags}]}
-        S->>DB: INSERT timesheets for each project
-        S->>DB: INSERT activity tags per timesheet
-        DB-->>S: Created
-        S-->>C: 201 Created
-        C->>E: ✅ Timesheet submitted for week of [date]
-    end
-```
-
-#### View Allocation History
-
-```mermaid
-sequenceDiagram
-    actor E as Employee (Console)
-    participant C as Console Client
-    participant S as API Server
-    participant DB as Database
-
-    E->>C: Select "2. My Allocations"
-
-    C->>S: GET /api/allocations/employee/{employeeId}
-    S->>DB: SELECT allocations WHERE employeeId = ? ORDER BY fromDate DESC
-    DB-->>S: All allocations (active and past)
-    S-->>C: 200 OK {allocations}
-
-    C->>E: Display allocation history table
-    Note right of E: Shows project name, %, from, to, active/ended status
-```
-
-#### View Timesheet History
-
-```mermaid
-sequenceDiagram
-    actor E as Employee (Console)
-    participant C as Console Client
-    participant S as API Server
-    participant DB as Database
-
-    E->>C: Select "3. Timesheet History"
-
-    C->>S: GET /api/timesheets/history/{employeeId}
-    S->>DB: SELECT timesheets WHERE employeeId = ? ORDER BY weekStart DESC
-    DB-->>S: Timesheet history with status
-    S-->>C: 200 OK {timesheets}
-
-    C->>E: Display timesheet history
-    Note right of E: Shows week, project, hours, status (SUBMITTED/MISSED)
-```
-
----
-
-### Background Scheduler
-
-#### Utilisation Update & Health Flagging
-
-```mermaid
-sequenceDiagram
-    participant SCH as Background Scheduler
-    participant SVC as Scheduler Service
-    participant DB as Database
-
-    Note over SCH: Runs every N hours (configurable in System Config)
-
-    SCH->>SVC: runUtilisationUpdate()
-
-    SVC->>DB: SELECT all active allocations
-    DB-->>SVC: Active allocation list
-
-    loop For each employee with allocations
-        SVC->>SVC: Sum overlapping allocation percentages
-        alt Total > 0%
-            SVC->>DB: UPDATE employee SET status = ALLOCATED
-        else Total = 0%
-            SVC->>DB: UPDATE employee SET status = BENCH
-        end
-    end
-
-    Note over SCH: --- Health Flagging Phase ---
-
-    SCH->>SVC: runHealthFlagging()
-
-    SVC->>DB: SELECT all active projects with milestones
-    DB-->>SVC: Projects + milestones
-
-    loop For each active project
-        SVC->>SVC: Check for overdue milestones (dueDate < today AND status ≠ DONE)
-        SVC->>DB: Get recent timesheets for project
-        DB-->>SVC: Timesheet data
-        SVC->>SVC: Compare logged hours vs expected hours
-        SVC->>SVC: Check for employees with MISSED timesheets
-
-        alt Overdue milestones OR significant hour shortfall
-            SVC->>SVC: Flag project as AT_RISK 🔴
-        else Minor concerns (approaching deadline, slight shortfall)
-            SVC->>SVC: Flag project as NEEDS_ATTENTION 🟡
-        else All milestones on track, hours normal
-            SVC->>SVC: Flag project as ON_TRACK 🟢
-        end
-
-        SVC->>DB: UPDATE project health status
-    end
-
-    SVC-->>SCH: Scheduler cycle complete
-```
-
----
-
-### AI Flows
-
-#### AI Skill Match — Full-Time Request
-
-```mermaid
-sequenceDiagram
-    participant S as API Server
-    participant AI as AI Service
-    participant DB as Database
-    participant PB as Prompt Builder
-    participant LLM as LLM Provider
-
-    S->>AI: skillMatch("Java + microservices developer, 3 months from June", projectId=201)
-
-    AI->>DB: SELECT employees with skills, allocations, status
-    DB-->>AI: All active employees
-
-    AI->>AI: Filter: exclude fully booked (utilisation = 100%)
-    AI->>AI: Filter: only employees available in requested period
-    Note right of AI: Candidates reduced from 10 → 4
-
-    AI->>DB: SELECT recent activity tags for candidates (last 4 weeks)
-    DB-->>AI: Activity tag data
-
-    AI->>PB: buildSkillMatchPrompt(requirement, candidates)
-    PB-->>AI: Formatted prompt string
-
-    Note right of PB: Prompt includes:<br/>- Manager's requirement text<br/>- Each candidate's skills, free %, department<br/>- Recent activity tags<br/>- Instructions to rank and explain
-
-    AI->>LLM: sendPrompt(formattedPrompt)
-    LLM-->>AI: JSON/structured response with rankings
-
-    AI->>AI: parseSkillMatchResponse(llmResponse)
-    AI-->>S: List<SkillMatchResult>
-```
-
-#### AI Skill Match — Part-Time / Limited Hours
-
-```mermaid
-sequenceDiagram
-    participant S as API Server
-    participant AI as AI Service
-    participant DB as Database
-    participant PB as Prompt Builder
-    participant LLM as LLM Provider
-
-    S->>AI: skillMatch("10 hrs/week for UI testing", projectId=201)
-
-    AI->>AI: extractHoursFromNaturalLanguage("10 hrs/week for UI testing")
-    Note right of AI: Extracted: 10 hours/week
-
-    AI->>DB: SELECT employees with skills, allocations
-    DB-->>AI: All active employees
-
-    AI->>AI: Calculate free hours per employee
-    Note right of AI: freeHours = (100% - currentUtil%) × maxWeeklyHours / 100
-
-    AI->>AI: Filter: only employees with ≥ 10 free hours/week
-    Note right of AI: e.g., Priya: 40 free hrs, Neha: 10 free hrs
-
-    alt No candidates qualify
-        AI-->>S: Empty list + message "No employees available"
-    else Candidates found
-        AI->>DB: SELECT recent activity tags for candidates
-        DB-->>AI: Activity data
-
-        AI->>PB: buildPartialHoursPrompt(requirement, candidates, 10)
-        PB-->>AI: Formatted prompt with hours context
-
-        AI->>LLM: sendPrompt(formattedPrompt)
-        LLM-->>AI: Ranked results with suggested allocation %
-
-        AI->>AI: Parse response, compute suggestedAllocationPercent
-        Note right of AI: 10 hrs / 40 maxWeekly × 100 = 25%
-
-        AI-->>S: List<SkillMatchResult> with suggested %
-    end
-```
-
-#### AI Risk Summary — Full Pipeline
-
-```mermaid
-sequenceDiagram
-    participant S as API Server
-    participant AI as AI Service
-    participant DB as Database
-    participant PB as Prompt Builder
-    participant LLM as LLM Provider
-
-    S->>AI: generateRiskSummary(projectId=201)
-
-    AI->>DB: SELECT project details (name, dates, status)
-    DB-->>AI: Project: Alpha Portal, ends 30-Jun-26, ACTIVE
-
-    AI->>DB: SELECT milestones for project 201
-    DB-->>AI: 4 milestones (1 DONE, 1 IN_PROGRESS overdue, 2 NOT_STARTED)
-
-    AI->>DB: SELECT allocations for project 201
-    DB-->>AI: 2 employees (Ravi 50%, Neha 50%)
-
-    AI->>DB: SELECT timesheets for project 201 (last 2-4 weeks)
-    DB-->>AI: Ravi: 4 hrs last week (expected ~20), Neha: 20 hrs ✓
-
-    AI->>AI: Compute factual summary
-    Note right of AI: Facts:<br/>- Backend API milestone 5 days overdue<br/>- Ravi logged 4/20 expected hours<br/>- Testing not started, due in 2 weeks<br/>- Go-live in 6 weeks
-
-    AI->>PB: buildRiskSummaryPrompt(milestones, allocations, timesheets)
-    PB-->>AI: Prompt with structured facts + instruction
-
-    AI->>LLM: sendPrompt(formattedPrompt)
-    LLM-->>AI: Plain-English risk paragraph
-
-    AI-->>S: "The Backend API milestone is at risk of delay..."
-```
-
----
-
-## Entity Relationship Summary
+## Entity relationship diagram
 
 ```mermaid
 erDiagram
     USER ||--o| EMPLOYEE : "has profile"
-    USER ||--o{ PROJECT : "manages (if Manager)"
-    EMPLOYEE ||--o{ SKILL : "possesses"
-    EMPLOYEE ||--o{ ALLOCATION : "is allocated"
+    USER ||--o{ EMPLOYEE : "manages"
+    USER ||--o{ PROJECT : "owns"
+    EMPLOYEE ||--o{ SKILL : "has"
+    EMPLOYEE ||--o{ ALLOCATION : "receives"
     EMPLOYEE ||--o{ TIMESHEET : "submits"
     PROJECT ||--o{ MILESTONE : "contains"
-    PROJECT ||--o{ ALLOCATION : "staffed by"
-    PROJECT ||--o{ TIMESHEET : "logged against"
-    TIMESHEET ||--o{ ACTIVITY_TAG : "tagged with"
+    PROJECT ||--o{ ALLOCATION : "staffs"
+    PROJECT ||--o{ TIMESHEET : "records"
+    TIMESHEET ||--o{ ACTIVITY_TAG : "contains"
 
     USER {
-        int id PK
-        string fullName
-        string email UK
-        string username UK
-        string passwordHash
-        enum role
-        bool isActive
-        bool forcePasswordChange
+        uniqueidentifier Id PK
+        string FullName
+        string Email UK
+        string Username UK
+        string PasswordHash
+        string Role
+        boolean IsActive
+        boolean ForcePasswordChange
+        datetime CreatedAt
+        datetime UpdatedAt
     }
 
     EMPLOYEE {
-        int id PK
-        int userId FK
-        string fullName
-        string email
-        string department
-        string designation
-        enum status
-        bool isActive
+        uniqueidentifier Id PK
+        uniqueidentifier UserId FK
+        uniqueidentifier ManagerId FK
+        string Department
+        string Designation
+        string Status
+        boolean IsActive
+        datetime CreatedAt
     }
 
     SKILL {
-        int id PK
-        int employeeId FK
-        string skillName
-        enum category
-        enum proficiency
+        uniqueidentifier Id PK
+        uniqueidentifier EmployeeId FK
+        string SkillName
+        string Category
+        string Proficiency
+        datetime AddedAt
     }
 
     PROJECT {
-        int id PK
-        string name
-        string description
-        date startDate
-        date endDate
-        enum status
-        int managerId FK
-        enum healthStatus
+        uniqueidentifier Id PK
+        uniqueidentifier ManagerId FK
+        string Name
+        string Description
+        datetime StartDate
+        datetime EndDate
+        string Status
+        string HealthStatus
+        string RiskFlagsJson
+        datetime CreatedAt
+        datetime UpdatedAt
     }
 
     MILESTONE {
-        int id PK
-        int projectId FK
-        string title
-        date dueDate
-        enum status
+        uniqueidentifier Id PK
+        uniqueidentifier ProjectId FK
+        string Title
+        datetime DueDate
+        string Status
     }
 
     ALLOCATION {
-        int id PK
-        int employeeId FK
-        int projectId FK
-        int utilisationPercent
-        date fromDate
-        date toDate
-        bool isActive
+        uniqueidentifier Id PK
+        uniqueidentifier EmployeeId FK
+        uniqueidentifier ProjectId FK
+        decimal UtilisationPercent
+        datetime FromDate
+        datetime ToDate
+        boolean IsActive
+        datetime CreatedAt
     }
 
     TIMESHEET {
-        int id PK
-        int employeeId FK
-        int projectId FK
-        date weekStartDate
-        decimal hoursLogged
-        enum status
+        uniqueidentifier Id PK
+        uniqueidentifier EmployeeId FK
+        uniqueidentifier ProjectId FK
+        datetime WeekStartDate
+        decimal HoursLogged
+        string Status
+        datetime SubmittedAt
     }
 
     ACTIVITY_TAG {
-        int id PK
-        int timesheetId FK
-        string tagName
+        uniqueidentifier Id PK
+        uniqueidentifier TimesheetId FK
+        string TagName
     }
 
     SYSTEM_CONFIG {
-        int id PK
-        string llmProvider
-        string llmApiKey
-        int schedulerIntervalHours
-        int maxWeeklyHours
+        uniqueidentifier Id PK
+        string LlmProvider
+        string LlmApiKey
+        int SchedulerIntervalHours
+        decimal MaxWeeklyHours
     }
 ```
 
----
+### Current enum values
 
-## Console Navigation Flow
+| Enum | Values |
+| --- | --- |
+| Role | Admin, Manager, Employee |
+| EmployeeStatus | Active, Inactive, OnLeave |
+| SkillCategory | Technical, Soft, Management, Domain |
+| ProficiencyLevel | Beginner, Intermediate, Advanced, Expert |
+| ProjectStatus | Planned, Active, Completed, OnHold, Cancelled |
+| HealthStatus | Green, Amber, Red |
+| MilestoneStatus | Pending, InProgress, Completed, Overdue |
+| TimesheetStatus | Draft, Submitted, Approved, Rejected |
 
-High-level view of how screens connect and what each role can access.
+`Missed` is a calculated timesheet-history state. It is not persisted as a
+`TimesheetStatus` value.
 
-```mermaid
-flowchart TB
-    START["🚀 Application Start"]
-    LOGIN["Login Screen"]
-    SIGNUP["Sign Up Screen"]
-    CHGPWD["Change Password (forced)"]
+## Current API surface
 
-    START --> LOGIN
-    START --> SIGNUP
-    SIGNUP --> LOGIN
+All routes except login require JWT authentication.
 
-    LOGIN -->|"Admin"| ADMIN_MENU
-    LOGIN -->|"Manager"| MGR_MENU
-    LOGIN -->|"Employee"| EMP_MENU
-    LOGIN -->|"Force Change"| CHGPWD
-    CHGPWD --> LOGIN
+### Authentication
 
-    subgraph ADMIN["Admin Panel"]
-        ADMIN_MENU["Admin Menu"]
-        ME["Manage Employees"]
-        MP["Manage Projects"]
-        VA["View All Allocations"]
-        MU["Manage Users"]
-        SC["System Configuration"]
+| Method | Route | Access |
+| --- | --- | --- |
+| POST | `/api/v1/auth/login` | Anonymous |
+| POST | `/api/v1/auth/change-password` | Authenticated |
 
-        ADMIN_MENU --> ME
-        ADMIN_MENU --> MP
-        ADMIN_MENU --> VA
-        ADMIN_MENU --> MU
-        ADMIN_MENU --> SC
+### Admin users and employees
 
-        ME --> ME_ADD["Add Employee"]
-        ME --> ME_VIEW["View All Employees"]
-        ME --> ME_UPD["Update Employee"]
-        ME --> ME_DEACT["Deactivate Employee"]
-        ME --> ME_SKILL["Manage Skills"]
+| Method | Route | Access |
+| --- | --- | --- |
+| GET, POST | `/api/v1/user` | Admin |
+| GET | `/api/v1/user/active-managers` | Admin |
+| POST | `/api/v1/user/reset-password/{id}` | Admin |
+| PATCH | `/api/v1/user/{id}/deactivate` | Admin |
+| PATCH | `/api/v1/user/{id}/reactivate` | Admin |
+| POST | `/api/v1/user/add-employee/{id}` | Admin |
+| GET | `/api/v1/admin/employees` | Admin |
+| GET, POST | `/api/v1/admin/employees/{employeeId}/skills` | Admin |
+| PATCH | `/api/v1/admin/employees/{employeeId}/skills/{skillId}/proficiency` | Admin |
+| GET | `/api/v1/admin/employees/{employeeId}/manager-update-preview` | Admin |
+| PATCH | `/api/v1/admin/employees/{employeeId}/manager` | Admin |
 
-        MP --> MP_CREATE["Create Project"]
-        MP --> MP_VIEW["View All Projects"]
-        MP --> MP_UPD["Update Project"]
-        MP --> MP_MILE["Manage Milestones"]
+### Projects and allocations
 
-        MU --> MU_CREATE["Create User Account"]
-        MU --> MU_VIEW["View All Users"]
-        MU --> MU_RESET["Reset Password"]
-        MU --> MU_DEACT["Deactivate User"]
-    end
+| Method | Route | Access |
+| --- | --- | --- |
+| GET | `/api/v1/project` | Authenticated |
+| POST | `/api/v1/project` | Admin |
+| GET | `/api/v1/project/{projectId}/milestones` | Authenticated |
+| POST | `/api/v1/project/{projectId}/milestones` | Admin |
+| PUT | `/api/v1/project/{projectId}/milestones/{milestoneId}` | Admin |
+| PATCH | `/api/v1/project/{projectId}/manager` | Admin |
+| GET | `/api/v1/allocation` | Authenticated |
 
-    subgraph MANAGER["Manager Panel"]
-        MGR_MENU["Manager Menu"]
-        RD["Resource Dashboard"]
-        AR["Allocate Resource"]
-        MYPROJ["My Projects"]
-        TS["Timesheets"]
-        AIAST["AI Assistant"]
+### Manager
 
-        MGR_MENU --> RD
-        MGR_MENU --> AR
-        MGR_MENU --> MYPROJ
-        MGR_MENU --> TS
-        MGR_MENU --> AIAST
+| Method | Route | Access |
+| --- | --- | --- |
+| GET | `/api/v1/manager/resources` | Manager |
+| GET | `/api/v1/manager/resources/{employeeId}` | Manager |
+| POST | `/api/v1/manager/resources/find` | Manager |
+| GET | `/api/v1/manager/projects` | Manager |
+| GET | `/api/v1/manager/projects/{projectId}` | Manager |
+| POST | `/api/v1/manager/projects/{projectId}/risk-summary` | Manager |
+| POST | `/api/v1/manager/allocations` | Manager |
+| PATCH | `/api/v1/manager/allocations/{allocationId}/end` | Manager |
+| GET | `/api/v1/manager/timesheets` | Manager |
 
-        AR --> AR_AI["AI-Assisted Search"]
-        AR --> AR_DIR["Direct Allocation"]
-        AR --> AR_END["End Allocation"]
+### Employee self-service
 
-        AIAST --> AI_SKILL["Skill Match"]
-        AIAST --> AI_RISK["Risk Summary"]
-    end
+| Method | Route | Access |
+| --- | --- | --- |
+| GET | `/api/v1/employee/allocations` | Employee |
+| GET | `/api/v1/employee/timesheets/week` | Employee |
+| POST | `/api/v1/employee/timesheets` | Employee |
+| GET | `/api/v1/employee/timesheets` | Employee |
+| GET | `/api/v1/employee/timesheets/{weekStartDate}` | Employee |
 
-    subgraph EMPLOYEE["Employee Panel"]
-        EMP_MENU["Employee Menu"]
-        SUB_TS["Submit Timesheet"]
-        MY_ALLOC["My Allocations"]
-        TS_HIST["Timesheet History"]
+## Business rules
 
-        EMP_MENU --> SUB_TS
-        EMP_MENU --> MY_ALLOC
-        EMP_MENU --> TS_HIST
-    end
-```
+### User and employee lifecycle
+
+- Email and username must be unique.
+- A Manager user receives an employee profile during user creation.
+- Employee profiles are unique per user.
+- Deactivating an Employee ends active allocations, deactivates the linked
+  profile, and clears the manager assignment.
+- A Manager cannot be deactivated while active/planned projects or active
+  employees remain assigned.
+- Reactivation does not restore manager assignments or allocations.
+
+### Manager assignment
+
+- Only Admin can update employee and project managers.
+- The selected manager must be active and have the Manager role.
+- Updating an employee manager ends all active allocations as of today.
+- Updating a project manager is blocked when an allocated employee also belongs
+  to another active project under the current manager.
+- When a project manager update is allowed, the project and actively allocated
+  employees move to the new manager in one transaction.
+
+### Allocation
+
+- Managers can access only their own projects and assigned Employee-role team
+  members.
+- Projects must be Active or Planned before allocation.
+- `FromDate` must be before `ToDate`.
+- Overlapping allocations cannot exceed 100 percent utilization.
+- AI recommendations never bypass server-side allocation validation.
+
+### Timesheets
+
+- Employees can submit only for projects allocated during the selected week.
+- Week start must be Monday and cannot be in the future.
+- A weekly submission cannot be duplicated.
+- Project hours cannot exceed allocation percentage multiplied by configured
+  maximum weekly hours.
+- Total weekly hours cannot exceed configured maximum weekly hours, default 40.
+- Activity tags must come from the allowed catalog.
+- Missed weeks are calculated from historical allocation coverage.
+
+### AI safety boundaries
+
+- Gemini never receives raw EF Core entities.
+- Resource intent is normalized and validated before querying candidates.
+- Candidate eligibility and backend score are deterministic.
+- The second AI call can explain only supplied shortlisted employee IDs.
+- Invalid or unavailable explanation output falls back to backend reasons.
+- Project detail does not automatically call AI.
+- Risk summary generation occurs only after the manager clicks the action.
+- Invalid AI risk JSON never overwrites the last valid saved summary.
+- Saved risk summaries are stored in `Project.RiskFlagsJson`.
