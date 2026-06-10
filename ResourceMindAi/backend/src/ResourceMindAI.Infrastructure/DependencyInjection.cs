@@ -38,8 +38,6 @@ public static class DependencyInjection
             client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
             client.Timeout = TimeSpan.FromSeconds(30);
         });
-        services.AddSingleton<LlmClientFactory>();
-
         return services;
     }
 }

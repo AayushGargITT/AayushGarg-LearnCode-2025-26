@@ -10,6 +10,7 @@ import {
   ManagerAllocation,
   ManagerProject,
   ManagerResource,
+  ResourceMatch,
   ResourceMatchResponse
 } from '../../../core/models/manager.model';
 import { ManagerService } from '../../../core/services/manager.service';
@@ -116,7 +117,7 @@ export class ManagerAllocateComponent {
     this.submitAllocation(value);
   }
 
-  allocateMatch(employee: ManagerResource): void {
+  allocateMatch(match: ResourceMatch): void {
     const projectId = this.aiForm.controls.projectId.value;
     const intent = this.matches()?.intent;
     if (!projectId) {
@@ -124,7 +125,7 @@ export class ManagerAllocateComponent {
     }
 
     const utilisationPercent =
-      intent?.availabilityRequirement ?? Math.max(0, 100 - employee.allocationPercent);
+      intent?.availabilityRequirement ?? match.availablePercent;
 
     if (utilisationPercent <= 0) {
       this.pageState.setError('This employee has no remaining allocation capacity.');
@@ -133,7 +134,7 @@ export class ManagerAllocateComponent {
 
     this.submitAllocation({
       projectId,
-      employeeId: employee.id,
+      employeeId: match.employee.id,
       utilisationPercent,
       fromDate: intent?.fromDate ?? new Date(),
       toDate: intent?.toDate ?? null

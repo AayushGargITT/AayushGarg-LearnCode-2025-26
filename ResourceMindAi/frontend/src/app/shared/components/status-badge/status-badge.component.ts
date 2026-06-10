@@ -48,6 +48,9 @@ export class StatusBadgeComponent {
       Intermediate: "sky",
       Advanced: "emerald",
       Expert: "indigo",
+      LOW: "emerald",
+      MEDIUM: "amber",
+      HIGH: "rose",
     };
     return map[this.status] ?? "muted";
   }

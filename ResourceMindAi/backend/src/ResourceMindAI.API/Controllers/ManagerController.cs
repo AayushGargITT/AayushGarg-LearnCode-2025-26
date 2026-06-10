@@ -54,6 +54,14 @@ public class ManagerController : ControllerBase
         return Ok(project);
     }
 
+    [HttpPost("projects/{projectId:guid}/risk-summary")]
+    public async Task<ActionResult<ProjectRiskSummaryDto>> GenerateProjectRiskSummary(Guid projectId)
+    {
+        var managerId = GetCurrentUserId();
+        var summary = await _managerService.GenerateProjectRiskSummaryAsync(managerId, projectId);
+        return Ok(summary);
+    }
+
     [HttpGet("timesheets")]
     public async Task<ActionResult<IEnumerable<ManagerTimesheetDto>>> GetSubmittedTimesheets()
     {

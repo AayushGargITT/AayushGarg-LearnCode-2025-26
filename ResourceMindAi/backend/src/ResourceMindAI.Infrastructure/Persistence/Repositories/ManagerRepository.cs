@@ -52,6 +52,19 @@ public class ManagerRepository : IManagerRepository
             .FirstOrDefaultAsync(x => x.Id == projectId && x.ManagerId == managerId);
     }
 
+    public async Task<Project?> GetProjectForRiskSummaryAsync(Guid managerId, Guid projectId)
+    {
+        return await _dbContext.Projects
+            .Include(x => x.Milestones)
+            .Include(x => x.Allocations)
+                .ThenInclude(x => x.Employee)
+                    .ThenInclude(x => x.User)
+            .Include(x => x.Timesheets)
+                .ThenInclude(x => x.Employee)
+                    .ThenInclude(x => x.User)
+            .FirstOrDefaultAsync(x => x.Id == projectId && x.ManagerId == managerId);
+    }
+
     public async Task<IReadOnlyList<Timesheet>> GetSubmittedTimesheetsAsync(Guid managerId)
     {
         return await _dbContext.Timesheets
@@ -84,6 +97,7 @@ public class ManagerRepository : IManagerRepository
                 x.EmployeeId == employeeId
                 && x.IsActive
                 && x.FromDate <= toDate
+                && x.ToDate >= fromDate
                 && (!excludedAllocationId.HasValue || x.Id != excludedAllocationId.Value))
             .SumAsync(x => x.UtilisationPercent);
     }

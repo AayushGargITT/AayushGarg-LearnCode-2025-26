@@ -13,7 +13,7 @@ public class GeminiClient : ILlmClient
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
     private readonly HttpClient _httpClient;
@@ -30,9 +30,42 @@ public class GeminiClient : ILlmClient
         _logger = logger;
     }
 
-    public async Task<ResourceIntentDto> ExtractResourceIntentAsync(
+    public Task<ResourceIntentDto> ExtractResourceIntentAsync(
         string requirement,
         CancellationToken cancellationToken = default)
+    {
+        return GenerateAsync<ResourceIntentDto>(
+            PromptBuilder.BuildResourceIntentRequest(
+                requirement,
+                DateOnly.FromDateTime(DateTime.UtcNow)),
+            "resource intent extraction",
+            cancellationToken);
+    }
+
+    public Task<ResourceCandidateExplanationResponseDto> ExplainResourceMatchesAsync(
+        ResourceCandidateExplanationRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        return GenerateAsync<ResourceCandidateExplanationResponseDto>(
+            PromptBuilder.BuildResourceExplanationRequest(request),
+            "resource candidate explanation",
+            cancellationToken);
+    }
+
+    public Task<ProjectRiskSummaryDto> GenerateProjectRiskSummaryAsync(
+        ProjectRiskFactsDto facts,
+        CancellationToken cancellationToken = default)
+    {
+        return GenerateAsync<ProjectRiskSummaryDto>(
+            PromptBuilder.BuildProjectRiskRequest(facts),
+            "project risk summary",
+            cancellationToken);
+    }
+
+    private async Task<T> GenerateAsync<T>(
+        object request,
+        string operation,
+        CancellationToken cancellationToken)
     {
         var apiKey = _configuration["LLMProvider:Gemini"];
         if (string.IsNullOrWhiteSpace(apiKey))
@@ -47,7 +80,7 @@ public class GeminiClient : ILlmClient
         {
             using var response = await _httpClient.PostAsJsonAsync(
                 endpoint,
-                BuildRequest(requirement, DateOnly.FromDateTime(DateTime.UtcNow)),
+                request,
                 JsonOptions,
                 cancellationToken);
 
@@ -55,10 +88,11 @@ public class GeminiClient : ILlmClient
             {
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogError(
-                    "Gemini intent extraction failed with status {StatusCode}: {ResponseBody}",
+                    "Gemini {Operation} failed with status {StatusCode}: {ResponseBody}",
+                    operation,
                     response.StatusCode,
                     errorBody);
-                throw new ExternalServiceException("AI intent detection is temporarily unavailable.");
+                throw new ExternalServiceException($"AI {operation} is temporarily unavailable.");
             }
 
             var geminiResponse = await response.Content.ReadFromJsonAsync<GeminiResponse>(
@@ -70,11 +104,11 @@ public class GeminiClient : ILlmClient
 
             if (string.IsNullOrWhiteSpace(json))
             {
-                throw new ExternalServiceException("AI intent detection returned an empty response.");
+                throw new ExternalServiceException($"AI {operation} returned an empty response.");
             }
 
-            return JsonSerializer.Deserialize<ResourceIntentDto>(json, JsonOptions)
-                ?? throw new ExternalServiceException("AI intent detection returned an invalid response.");
+            return JsonSerializer.Deserialize<T>(json, JsonOptions)
+                ?? throw new ExternalServiceException($"AI {operation} returned an invalid response.");
         }
         catch (ExternalServiceException)
         {
@@ -82,80 +116,9 @@ public class GeminiClient : ILlmClient
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Gemini intent extraction failed");
-            throw new ExternalServiceException("AI intent detection is temporarily unavailable.", exception);
+            _logger.LogError(exception, "Gemini {Operation} failed", operation);
+            throw new ExternalServiceException($"AI {operation} is temporarily unavailable.", exception);
         }
-    }
-
-    private static object BuildRequest(string requirement, DateOnly currentDate)
-    {
-        var instruction =
-            $"""
-            Analyze the manager's resource requirement and extract only structured intent.
-            Today's date is {currentDate:yyyy-MM-dd}. Resolve relative dates using this date.
-            Do not recommend employees and do not add facts that are not present.
-            Always return only the intent JSON matching the supplied schema.
-            Do not return a dateRange property.
-            Split date ranges into fromDate and toDate in YYYY-MM-DD format.
-            availabilityRequirement must be an integer from 1 to 100 or null.
-            For phrases such as "50% utilization remaining", "50% available", or "50% utilization", return 50.
-            Never include words or a percent symbol in availabilityRequirement.
-            Use concise normalized values. Return empty arrays or null when information is absent.
-            """;
-
-        return new
-        {
-            systemInstruction = new
-            {
-                parts = new[] { new { text = instruction } }
-            },
-            contents = new[]
-            {
-                new
-                {
-                    role = "user",
-                    parts = new[] { new { text = requirement } }
-                }
-            },
-            generationConfig = new
-            {
-                temperature = 0.1,
-                responseMimeType = "application/json",
-                responseJsonSchema = new
-                {
-                    type = "object",
-                    properties = new
-                    {
-                        requiredRole = new { type = new[] { "string", "null" } },
-                        requiredSkills = new { type = "array", items = new { type = "string" } },
-                        experienceHint = new { type = new[] { "string", "null" } },
-                        availabilityRequirement = new
-                        {
-                            type = new[] { "integer", "null" },
-                            minimum = 1,
-                            maximum = 100
-                        },
-                        fromDate = new { type = new[] { "string", "null" }, format = "date" },
-                        toDate = new { type = new[] { "string", "null" }, format = "date" },
-                        prioritySignals = new { type = "array", items = new { type = "string" } },
-                        softConstraints = new { type = "array", items = new { type = "string" } },
-                        exclusionConstraints = new { type = "array", items = new { type = "string" } },
-                    },
-                    required = new[]
-                    {
-                        "requiredRole",
-                        "requiredSkills",
-                        "experienceHint",
-                        "availabilityRequirement",
-                        "fromDate",
-                        "toDate",
-                        "prioritySignals",
-                        "softConstraints",
-                        "exclusionConstraints",
-                    }
-                }
-            }
-        };
     }
 
     private sealed class GeminiResponse

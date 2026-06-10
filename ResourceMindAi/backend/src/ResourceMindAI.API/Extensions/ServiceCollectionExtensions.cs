@@ -19,7 +19,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IAllocationService, AllocationService>();
         services.AddScoped<ITimesheetService, TimesheetService>();
-        services.AddScoped<IAiService, AiService>();
         services.AddScoped<ISchedulerComputationService, SchedulerComputationService>();
 
         return services;

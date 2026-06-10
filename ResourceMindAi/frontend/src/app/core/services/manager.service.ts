@@ -7,6 +7,7 @@ import {
   ManagerAllocation,
   ManagerProject,
   ManagerProjectDetail,
+  ProjectRiskSummary,
   ManagerResource,
   ManagerResourceDashboard,
   ManagerTimesheet,
@@ -32,6 +33,13 @@ export class ManagerService {
 
   getProjectDetail(projectId: string): Observable<ManagerProjectDetail> {
     return this.http.get<ManagerProjectDetail>(`${this.apiUrl}/projects/${projectId}`);
+  }
+
+  generateProjectRiskSummary(projectId: string): Observable<ProjectRiskSummary> {
+    return this.http.post<ProjectRiskSummary>(
+      `${this.apiUrl}/projects/${projectId}/risk-summary`,
+      {}
+    );
   }
 
   getSubmittedTimesheets(): Observable<ManagerTimesheet[]> {

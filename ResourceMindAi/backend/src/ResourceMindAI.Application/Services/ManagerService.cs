@@ -1,22 +1,54 @@
+using System.Globalization;
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Manager;
 using ResourceMindAI.Domain.Entities;
 using ResourceMindAI.Domain.Enums;
 using ResourceMindAI.Domain.Exceptions;
-using System.Globalization;
 
 namespace ResourceMindAI.Application.Services;
 
 public class ManagerService : IManagerService
 {
-    private readonly IManagerRepository _managerRepository;
-    private readonly ILlmClient _llmClient;
+    private const int MaximumAiCandidates = 10;
+    private const decimal MaximumWeeklyHours = 40m;
 
-    public ManagerService(IManagerRepository managerRepository, ILlmClient llmClient)
+    private static readonly JsonSerializerOptions RiskJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    private static readonly IReadOnlyDictionary<string, string> SkillAliases =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["dotnet"] = ".net",
+            ["asp.net core"] = ".net",
+            ["c sharp"] = "c#",
+            ["js"] = "javascript",
+            ["ts"] = "typescript",
+            ["reactjs"] = "react",
+            ["angularjs"] = "angular",
+            ["spring"] = "spring boot"
+        };
+
+    private readonly IManagerRepository _managerRepository;
+    private readonly ISystemConfigRepository _systemConfigRepository;
+    private readonly ILlmClient _llmClient;
+    private readonly ILogger<ManagerService> _logger;
+
+    public ManagerService(
+        IManagerRepository managerRepository,
+        ISystemConfigRepository systemConfigRepository,
+        ILlmClient llmClient,
+        ILogger<ManagerService> logger)
     {
         _managerRepository = managerRepository;
+        _systemConfigRepository = systemConfigRepository;
         _llmClient = llmClient;
+        _logger = logger;
     }
 
     public async Task<ManagerResourceDashboardDto> GetResourceDashboardAsync(Guid managerId)
@@ -66,8 +98,52 @@ public class ManagerService : IManagerService
             Milestones = project.Milestones.OrderBy(x => x.DueDate).Select(MapMilestone).ToList(),
             AllocatedResources = project.Allocations.Where(IsActiveAllocation).Select(MapAllocation).ToList(),
             RiskFlags = health.Flags,
-            RiskSummary = health.Summary,
+            RiskSummary = DeserializeRiskSummary(project.RiskFlagsJson),
         };
+    }
+
+    public async Task<ProjectRiskSummaryDto> GenerateProjectRiskSummaryAsync(
+        Guid managerId,
+        Guid projectId)
+    {
+        var project = await _managerRepository.GetProjectForRiskSummaryAsync(managerId, projectId);
+        if (project is null)
+        {
+            throw new ForbiddenException(
+                "You can generate risk summaries only for projects managed by you.",
+                "MANAGER_SCOPE_VIOLATION");
+        }
+
+        var configuredHours = await _systemConfigRepository.GetMaxWeeklyHoursAsync();
+        var maximumWeeklyHours = configuredHours is > 0
+            ? configuredHours.Value
+            : MaximumWeeklyHours;
+        var facts = BuildRiskFacts(project, maximumWeeklyHours);
+
+        try
+        {
+            var generated = await _llmClient.GenerateProjectRiskSummaryAsync(facts);
+            var validated = ValidateRiskSummary(generated);
+
+            project.RiskFlagsJson = JsonSerializer.Serialize(validated, RiskJsonOptions);
+            await _managerRepository.SaveChangesAsync();
+
+            return validated;
+        }
+        catch (ExternalServiceException exception)
+        {
+            var previousSummary = DeserializeRiskSummary(project.RiskFlagsJson);
+            if (previousSummary is not null)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "AI risk generation failed for project {ProjectId}; returning saved summary",
+                    projectId);
+                return previousSummary;
+            }
+
+            throw;
+        }
     }
 
     public async Task<IReadOnlyList<ManagerTimesheetDto>> GetSubmittedTimesheetsAsync(Guid managerId)
@@ -90,42 +166,59 @@ public class ManagerService : IManagerService
     {
         await GetOwnedProjectAsync(managerId, request.ProjectId!.Value);
 
-        var intent = await _llmClient.ExtractResourceIntentAsync(request.Requirement);
+        var extractedIntent = await _llmClient.ExtractResourceIntentAsync(request.Requirement);
+        var intent = NormalizeIntent(extractedIntent);
         var requestedDates = ValidateAndParseIntent(intent);
         var employees = await _managerRepository.GetTeamEmployeesAsync(managerId);
 
         var matches = new List<ResourceMatchDto>();
         foreach (var employee in employees)
         {
-            var availablePercent = requestedDates.HasValue
+            var availablePercent = Math.Max(0m, requestedDates.HasValue
                 ? 100 - await _managerRepository.GetOverlappingAllocationPercentAsync(
                     employee.Id,
                     requestedDates.Value.FromDate,
                     requestedDates.Value.ToDate)
-                : 100 - MapResource(employee).AllocationPercent;
+                : 100 - MapResource(employee).AllocationPercent);
 
-            if (intent.AvailabilityRequirement.HasValue
-                && availablePercent < intent.AvailabilityRequirement.Value)
+            if (availablePercent <= 0
+                || (intent.AvailabilityRequirement.HasValue
+                    && availablePercent < intent.AvailabilityRequirement.Value))
+            {
+                continue;
+            }
+
+            if (!MatchesRequiredRole(employee, intent.RequiredRole)
+                || !HasRequiredSkills(employee, intent.RequiredSkills)
+                || MatchesExclusion(employee, intent.ExclusionConstraints))
             {
                 continue;
             }
 
             var match = ScoreEmployee(employee, intent, availablePercent);
-            if (match.Score > 0)
-            {
-                matches.Add(match);
-            }
+            matches.Add(match);
         }
 
         matches = matches
             .OrderByDescending(match => match.Score)
             .ThenBy(match => match.Employee.FullName)
+            .Take(MaximumAiCandidates)
             .ToList();
+
+        await AddAiCandidateExplanationsAsync(request.Requirement, intent, matches);
+        foreach (var match in matches.Where(match => string.IsNullOrWhiteSpace(match.AiReason)))
+        {
+            match.AiReason = string.Join(" ", match.Reasons);
+        }
 
         return new ResourceMatchResponseDto
         {
             Intent = intent,
-            Matches = matches,
+            Matches = matches
+                .OrderBy(match => match.AiRank ?? int.MaxValue)
+                .ThenByDescending(match => match.Score)
+                .ThenBy(match => match.Employee.FullName)
+                .ToList(),
         };
     }
 
@@ -295,15 +388,18 @@ public class ManagerService : IManagerService
         var reasons = new List<string>();
         var score = 0;
 
-        if (!string.IsNullOrWhiteSpace(intent.RequiredRole)
-            && employee.Designation.Contains(intent.RequiredRole.Split(' ')[0], StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(intent.RequiredRole))
         {
             score += 20;
             reasons.Add($"Designation aligns with {intent.RequiredRole}.");
         }
 
-        var employeeSkills = resource.Skills.Select(x => x.ToLowerInvariant()).ToHashSet();
-        var matchedSkills = intent.RequiredSkills.Where(skill => employeeSkills.Any(value => value.Contains(skill))).ToList();
+        var employeeSkills = resource.Skills
+            .Select(NormalizeSkill)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var matchedSkills = intent.RequiredSkills
+            .Where(employeeSkills.Contains)
+            .ToList();
         if (matchedSkills.Count > 0)
         {
             score += matchedSkills.Count * 15;
@@ -311,7 +407,9 @@ public class ManagerService : IManagerService
         }
 
         var matchedActivity = intent.RequiredSkills
-            .Where(skill => resource.RecentActivityTags.Any(tag => tag.Contains(skill, StringComparison.OrdinalIgnoreCase)))
+            .Where(skill => resource.RecentActivityTags
+                .Select(NormalizeSearchValue)
+                .Any(tag => ContainsWholeTerm(tag, skill)))
             .ToList();
         if (matchedActivity.Count > 0)
         {
@@ -346,8 +444,194 @@ public class ManagerService : IManagerService
         {
             Employee = resource,
             Score = Math.Min(score, 100),
+            AvailablePercent = availablePercent,
             Reasons = reasons,
         };
+    }
+
+    private async Task AddAiCandidateExplanationsAsync(
+        string requirement,
+        ResourceIntentDto intent,
+        IReadOnlyList<ResourceMatchDto> matches)
+    {
+        if (matches.Count == 0)
+        {
+            return;
+        }
+
+        var request = new ResourceCandidateExplanationRequestDto
+        {
+            Requirement = requirement,
+            Intent = intent,
+            Candidates = matches.Select(match => new ResourceCandidateDto
+            {
+                EmployeeId = match.Employee.Id,
+                Name = match.Employee.FullName,
+                Designation = match.Employee.Designation,
+                Skills = match.Employee.Skills,
+                RecentActivityTags = match.Employee.RecentActivityTags,
+                AvailablePercent = match.AvailablePercent,
+                BackendScore = match.Score,
+                BackendReasons = match.Reasons
+            }).ToList()
+        };
+
+        try
+        {
+            var response = await _llmClient.ExplainResourceMatchesAsync(request);
+            var knownMatches = matches.ToDictionary(match => match.Employee.Id);
+            var validExplanations = response.Matches
+                .Where(explanation =>
+                    explanation.AiRank > 0
+                    && knownMatches.ContainsKey(explanation.EmployeeId))
+                .GroupBy(explanation => explanation.EmployeeId)
+                .Where(group => group.Count() == 1)
+                .Select(group => group.Single())
+                .OrderBy(explanation => explanation.AiRank)
+                .ToList();
+
+            if (validExplanations.Count != matches.Count
+                || validExplanations.Select(item => item.AiRank).Distinct().Count() != matches.Count)
+            {
+                _logger.LogWarning(
+                    "AI candidate explanation returned an incomplete or invalid candidate ranking");
+                return;
+            }
+
+            foreach (var explanation in validExplanations)
+            {
+                var match = knownMatches[explanation.EmployeeId];
+                match.AiRank = explanation.AiRank;
+                match.AiReason = explanation.AiReason.Trim();
+                match.Strengths = CleanValues(explanation.Strengths);
+                match.Concerns = CleanValues(explanation.Concerns);
+            }
+        }
+        catch (ExternalServiceException exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "AI candidate explanation failed; returning backend-ranked resource matches");
+        }
+    }
+
+    private static ResourceIntentDto NormalizeIntent(ResourceIntentDto intent)
+    {
+        return new ResourceIntentDto
+        {
+            RequiredRole = NormalizeOptionalValue(intent.RequiredRole),
+            RequiredSkills = intent.RequiredSkills
+                .Select(NormalizeSkill)
+                .Where(value => value.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            ExperienceHint = NormalizeOptionalValue(intent.ExperienceHint),
+            AvailabilityRequirement = intent.AvailabilityRequirement,
+            FromDate = NormalizeOptionalValue(intent.FromDate),
+            ToDate = NormalizeOptionalValue(intent.ToDate),
+            PrioritySignals = CleanValues(intent.PrioritySignals),
+            SoftConstraints = CleanValues(intent.SoftConstraints),
+            ExclusionConstraints = CleanValues(intent.ExclusionConstraints)
+        };
+    }
+
+    private static bool MatchesRequiredRole(Employee employee, string? requiredRole)
+    {
+        if (string.IsNullOrWhiteSpace(requiredRole))
+        {
+            return true;
+        }
+
+        var designation = NormalizeSearchValue(employee.Designation);
+        var role = NormalizeSearchValue(requiredRole);
+        return designation == role
+            || designation.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Intersect(role.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                .Any();
+    }
+
+    private static bool HasRequiredSkills(
+        Employee employee,
+        IReadOnlyList<string> requiredSkills)
+    {
+        if (requiredSkills.Count == 0)
+        {
+            return true;
+        }
+
+        var employeeSkills = employee.Skills
+            .Select(skill => NormalizeSkill(skill.SkillName))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return requiredSkills.All(employeeSkills.Contains);
+    }
+
+    private static bool MatchesExclusion(
+        Employee employee,
+        IReadOnlyList<string> exclusions)
+    {
+        if (exclusions.Count == 0)
+        {
+            return false;
+        }
+
+        var searchableValues = employee.Skills
+            .Select(skill => NormalizeSearchValue(skill.SkillName))
+            .Append(NormalizeSearchValue(employee.Designation))
+            .Append(NormalizeSearchValue(employee.Department))
+            .ToList();
+
+        return exclusions
+            .Select(NormalizeSearchValue)
+            .Any(exclusion => searchableValues.Any(value => ContainsWholeTerm(value, exclusion)));
+    }
+
+    private static string NormalizeSkill(string value)
+    {
+        var normalized = NormalizeSearchValue(value);
+        return SkillAliases.TryGetValue(normalized, out var canonical)
+            ? canonical
+            : normalized;
+    }
+
+    private static string NormalizeSearchValue(string value)
+    {
+        return string.Join(
+            ' ',
+            value.Trim()
+                .ToLowerInvariant()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    private static string? NormalizeOptionalValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : NormalizeSearchValue(value);
+    }
+
+    private static IReadOnlyList<string> CleanValues(IEnumerable<string> values)
+    {
+        return values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static bool ContainsWholeTerm(string value, string term)
+    {
+        if (value.Equals(term, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var valueWords = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var termWords = term.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return termWords.Length > 0
+            && termWords.All(termWord => valueWords.Contains(
+                termWord,
+                StringComparer.OrdinalIgnoreCase));
     }
 
     private static (DateTime FromDate, DateTime ToDate)? ValidateAndParseIntent(ResourceIntentDto intent)
@@ -357,9 +641,16 @@ public class ManagerService : IManagerService
             throw new ExternalServiceException("AI intent detection returned an invalid availability requirement.");
         }
 
-        if (string.IsNullOrWhiteSpace(intent.FromDate) || string.IsNullOrWhiteSpace(intent.ToDate))
+        var hasFromDate = !string.IsNullOrWhiteSpace(intent.FromDate);
+        var hasToDate = !string.IsNullOrWhiteSpace(intent.ToDate);
+        if (!hasFromDate && !hasToDate)
         {
             return null;
+        }
+
+        if (!hasFromDate || !hasToDate)
+        {
+            throw new ExternalServiceException("AI intent detection returned an incomplete date range.");
         }
 
         if (!TryParseIntentDate(intent.FromDate, out var fromDate)
@@ -380,6 +671,203 @@ public class ManagerService : IManagerService
             CultureInfo.InvariantCulture,
             DateTimeStyles.None,
             out date);
+    }
+
+    private static ProjectRiskFactsDto BuildRiskFacts(
+        Project project,
+        decimal maximumWeeklyHours)
+    {
+        var health = CalculateHealth(project);
+        var recentCutoff = DateTime.UtcNow.Date.AddDays(-56);
+
+        return new ProjectRiskFactsDto
+        {
+            ProjectName = project.Name,
+            ProjectStatus = project.Status.ToString(),
+            StartDate = project.StartDate,
+            EndDate = project.EndDate,
+            Milestones = project.Milestones
+                .OrderBy(milestone => milestone.DueDate)
+                .Select(milestone => new ProjectRiskMilestoneFactDto
+                {
+                    Title = milestone.Title,
+                    DueDate = milestone.DueDate,
+                    Status = milestone.Status.ToString()
+                })
+                .ToList(),
+            ActiveAllocations = project.Allocations
+                .Where(IsActiveAllocation)
+                .Select(allocation => new ProjectRiskAllocationFactDto
+                {
+                    EmployeeName = allocation.Employee.User.FullName,
+                    AllocationPercent = allocation.UtilisationPercent,
+                    FromDate = allocation.FromDate,
+                    ToDate = allocation.ToDate.Date == DateTime.MaxValue.Date
+                        ? null
+                        : allocation.ToDate,
+                    ExpectedWeeklyHours = maximumWeeklyHours
+                        * allocation.UtilisationPercent
+                        / 100m
+                })
+                .ToList(),
+            RecentTimesheets = BuildRecentTimesheetFacts(
+                project,
+                recentCutoff,
+                maximumWeeklyHours),
+            SystemRiskFlags = health.Flags
+        };
+    }
+
+    private static IReadOnlyList<ProjectRiskTimesheetFactDto> BuildRecentTimesheetFacts(
+        Project project,
+        DateTime recentCutoff,
+        decimal maximumWeeklyHours)
+    {
+        var facts = project.Timesheets
+            .Where(timesheet => timesheet.WeekStartDate >= recentCutoff)
+            .Select(timesheet => new ProjectRiskTimesheetFactDto
+            {
+                EmployeeName = timesheet.Employee.User.FullName,
+                WeekStart = timesheet.WeekStartDate,
+                LoggedHours = timesheet.HoursLogged,
+                ExpectedHours = GetExpectedHours(project, timesheet, maximumWeeklyHours),
+                Status = "Submitted"
+            })
+            .ToList();
+
+        var submittedWeeks = project.Timesheets
+            .Select(timesheet => (timesheet.EmployeeId, Week: timesheet.WeekStartDate.Date))
+            .ToHashSet();
+        var firstWeek = StartOfWeek(recentCutoff);
+        var lastCompletedWeek = StartOfWeek(DateTime.UtcNow.Date).AddDays(-7);
+
+        foreach (var employeeAllocations in project.Allocations.GroupBy(allocation => allocation.EmployeeId))
+        {
+            for (var week = firstWeek; week <= lastCompletedWeek; week = week.AddDays(7))
+            {
+                var weeklyAllocations = employeeAllocations
+                    .Where(allocation =>
+                        allocation.FromDate.Date <= week.AddDays(6)
+                        && allocation.ToDate.Date >= week)
+                    .ToList();
+
+                if (weeklyAllocations.Count == 0
+                    || submittedWeeks.Contains((employeeAllocations.Key, week)))
+                {
+                    continue;
+                }
+
+                facts.Add(new ProjectRiskTimesheetFactDto
+                {
+                    EmployeeName = weeklyAllocations[0].Employee.User.FullName,
+                    WeekStart = week,
+                    LoggedHours = 0m,
+                    ExpectedHours = maximumWeeklyHours
+                        * Math.Min(weeklyAllocations.Sum(allocation => allocation.UtilisationPercent), 100m)
+                        / 100m,
+                    Status = "Missed"
+                });
+            }
+        }
+
+        return facts
+            .OrderByDescending(fact => fact.WeekStart)
+            .ThenBy(fact => fact.EmployeeName)
+            .ToList();
+    }
+
+    private static decimal GetExpectedHours(
+        Project project,
+        Timesheet timesheet,
+        decimal maximumWeeklyHours)
+    {
+        var allocationPercent = project.Allocations
+            .Where(allocation =>
+                allocation.EmployeeId == timesheet.EmployeeId
+                && allocation.FromDate.Date <= timesheet.WeekStartDate.Date.AddDays(6)
+                && allocation.ToDate.Date >= timesheet.WeekStartDate.Date)
+            .Sum(allocation => allocation.UtilisationPercent);
+
+        return maximumWeeklyHours * Math.Min(allocationPercent, 100m) / 100m;
+    }
+
+    private static ProjectRiskSummaryDto ValidateRiskSummary(ProjectRiskSummaryDto summary)
+    {
+        var validHealthValues = new[] { "ON_TRACK", "ATTENTION", "AT_RISK" };
+        var overallHealth = summary.OverallHealth?.Trim().ToUpperInvariant();
+        if (!validHealthValues.Contains(overallHealth)
+            || string.IsNullOrWhiteSpace(summary.Summary))
+        {
+            throw new ExternalServiceException("AI project risk summary returned invalid content.");
+        }
+
+        var validSeverities = new[] { "LOW", "MEDIUM", "HIGH" };
+        var riskPoints = summary.RiskPoints
+            .Where(point =>
+                validSeverities.Contains(point.Severity?.Trim().ToUpperInvariant())
+                && !string.IsNullOrWhiteSpace(point.Title)
+                && !string.IsNullOrWhiteSpace(point.Description))
+            .Select(point => new ProjectRiskPointDto
+            {
+                Severity = point.Severity.Trim().ToUpperInvariant(),
+                Title = point.Title.Trim(),
+                Description = point.Description.Trim()
+            })
+            .ToList();
+
+        if (riskPoints.Count != summary.RiskPoints.Count)
+        {
+            throw new ExternalServiceException("AI project risk summary returned invalid risk points.");
+        }
+
+        return new ProjectRiskSummaryDto
+        {
+            OverallHealth = overallHealth,
+            Summary = summary.Summary.Trim(),
+            RiskPoints = riskPoints,
+            RecommendedActions = CleanValues(summary.RecommendedActions),
+            GeneratedAt = DateTime.UtcNow
+        };
+    }
+
+    private static ProjectRiskSummaryDto? DeserializeRiskSummary(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            var summary = JsonSerializer.Deserialize<ProjectRiskSummaryDto>(json, RiskJsonOptions);
+            return IsValidSavedRiskSummary(summary) ? summary : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static bool IsValidSavedRiskSummary(ProjectRiskSummaryDto? summary)
+    {
+        if (summary is null
+            || summary.GeneratedAt == default
+            || string.IsNullOrWhiteSpace(summary.Summary)
+            || summary.OverallHealth is not ("ON_TRACK" or "ATTENTION" or "AT_RISK"))
+        {
+            return false;
+        }
+
+        return summary.RiskPoints.All(point =>
+            point.Severity is "LOW" or "MEDIUM" or "HIGH"
+            && !string.IsNullOrWhiteSpace(point.Title)
+            && !string.IsNullOrWhiteSpace(point.Description));
+    }
+
+    private static DateTime StartOfWeek(DateTime date)
+    {
+        var daysSinceMonday = ((int)date.DayOfWeek + 6) % 7;
+        return date.Date.AddDays(-daysSinceMonday);
     }
 
     private static (HealthStatus Health, IReadOnlyList<string> Flags, IReadOnlyList<string> Summary) CalculateHealth(Project project)

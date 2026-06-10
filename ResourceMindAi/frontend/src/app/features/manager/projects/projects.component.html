@@ -1,6 +1,7 @@
 <app-layout role="manager" title="My Projects">
   <app-page-header title="My Projects" subtitle="Track health, milestones, and risk for your projects"></app-page-header>
 
+  <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
   <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
 
   <div class="surface kendo-grid-shell">
@@ -34,8 +35,12 @@
 
   <div *ngIf="isDetailLoading()" class="hint-panel mt-4">Loading project detail...</div>
 
-  <kendo-dialog *ngIf="selectedProject()" [title]="selectedProject()!.name" [width]="760" (close)="closeProject()">
-    <div class="form-stack">
+  <kendo-dialog
+    *ngIf="selectedProject()"
+    [title]="selectedProject()!.name"
+    [width]="detailDialogWidth"
+    (close)="closeProject()">
+    <div class="form-stack project-detail-content">
       <div class="grid grid-cols-3 gap-4 text-sm">
         <div><span class="text-muted-foreground">Health</span><div><app-health-dot [health]="selectedProject()!.healthStatus"></app-health-dot></div></div>
         <div><span class="text-muted-foreground">Status</span><div><app-status-badge [status]="selectedProject()!.status"></app-status-badge></div></div>
@@ -43,9 +48,45 @@
       </div>
 
       <section>
-        <h3 class="text-sm font-semibold mb-2">Risk Summary</h3>
-        <div class="hint-panel">
-          <div *ngFor="let risk of selectedProject()!.riskSummary">- {{ risk }}</div>
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <h3 class="text-sm font-semibold">AI Risk Summary</h3>
+          <button
+            kendoButton
+            size="small"
+            themeColor="primary"
+            [disabled]="isRiskGenerating()"
+            (click)="generateRiskSummary()">
+            {{ isRiskGenerating() ? 'Generating...' : 'Get Risk Summary' }}
+          </button>
+        </div>
+
+        <div *ngIf="!selectedProject()!.riskSummary" class="hint-panel">
+          No AI risk summary generated yet. Click Get Risk Summary to generate one.
+        </div>
+
+        <div *ngIf="selectedProject()!.riskSummary as riskSummary" class="risk-summary">
+          <div class="flex items-center justify-between gap-3">
+            <span class="font-medium">{{ riskSummary.overallHealth }}</span>
+            <span class="text-xs text-muted-foreground">
+              {{ riskSummary.generatedAt | date:'medium' }}
+            </span>
+          </div>
+          <p class="text-sm text-muted-foreground mt-2">{{ riskSummary.summary }}</p>
+
+          <div *ngFor="let risk of riskSummary.riskPoints" class="risk-point">
+            <div class="flex items-center gap-2">
+              <app-status-badge [status]="risk.severity"></app-status-badge>
+              <span class="font-medium text-sm">{{ risk.title }}</span>
+            </div>
+            <p class="text-sm text-muted-foreground mt-1">{{ risk.description }}</p>
+          </div>
+
+          <div *ngIf="riskSummary.recommendedActions.length > 0" class="mt-3">
+            <div class="text-sm font-medium mb-1">Recommended Actions</div>
+            <div *ngFor="let action of riskSummary.recommendedActions" class="text-sm text-muted-foreground">
+              - {{ action }}
+            </div>
+          </div>
         </div>
       </section>
 

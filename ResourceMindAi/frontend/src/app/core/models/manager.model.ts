@@ -53,7 +53,21 @@ export interface ManagerProjectDetail extends ManagerProject {
   milestones: ManagerMilestone[];
   allocatedResources: ManagerAllocation[];
   riskFlags: string[];
-  riskSummary: string[];
+  riskSummary: ProjectRiskSummary | null;
+}
+
+export interface ProjectRiskSummary {
+  overallHealth: 'ON_TRACK' | 'ATTENTION' | 'AT_RISK';
+  summary: string;
+  riskPoints: ProjectRiskPoint[];
+  recommendedActions: string[];
+  generatedAt: Date | string;
+}
+
+export interface ProjectRiskPoint {
+  severity: 'LOW' | 'MEDIUM' | 'HIGH';
+  title: string;
+  description: string;
 }
 
 export interface ManagerTimesheet {
@@ -94,7 +108,12 @@ export interface ResourceIntent {
 export interface ResourceMatch {
   employee: ManagerResource;
   score: number;
+  availablePercent: number;
   reasons: string[];
+  aiRank: number | null;
+  aiReason: string;
+  strengths: string[];
+  concerns: string[];
 }
 
 export interface ResourceMatchResponse {
