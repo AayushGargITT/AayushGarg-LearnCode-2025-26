@@ -11,7 +11,7 @@ public interface IUserService
     Task<UserProfileDto> GetByIdAsync(Guid id);
     Task<UserProfileDto> CreateAsync(CreateUserDto request);
     Task<UserProfileDto> ResetPasswordAsync(Guid id);
-    Task<UserProfileDto> ToggleStatusAsync(Guid id);
-     Task<UserProfileDto> AddEmployeeAsync(Guid userId, AddEmployeeDto request);
-    
+    Task<DeactivateUserResultDto> DeactivateAsync(Guid id);
+    Task<UserProfileDto> ReactivateAsync(Guid id);
+    Task<UserProfileDto> AddEmployeeAsync(Guid userId, AddEmployeeDto request);
 }

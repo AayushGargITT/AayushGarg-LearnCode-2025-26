@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.Services;
 
@@ -53,6 +54,28 @@ public static class ServiceCollectionExtensions
                     RoleClaimType = ClaimTypes.Role
                 };
 
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var userIdValue = context.Principal?
+                            .FindFirstValue(ClaimTypes.NameIdentifier);
+
+                        if (!Guid.TryParse(userIdValue, out var userId))
+                        {
+                            context.Fail("Authenticated user id is invalid.");
+                            return;
+                        }
+
+                        var userRepository = context.HttpContext.RequestServices
+                            .GetRequiredService<IUserRepository>();
+
+                        if (!await userRepository.IsActiveAsync(userId))
+                        {
+                            context.Fail("User account is inactive.");
+                        }
+                    }
+                };
             });
 
         services.AddAuthorization();

@@ -4,6 +4,7 @@ using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Application.DTOs.Employee;
 using ResourceMindAI.Application.DTOs.User;
+using ResourceMindAI.Application.Exceptions;
 using ResourceMindAI.Domain.Entities;
 using ResourceMindAI.Domain.Enums;
 using ResourceMindAI.Domain.Exceptions;
@@ -117,21 +118,71 @@ public class UserService : IUserService
         return AuthService.ToProfile(updatedUser);
     }
 
-    public async Task<UserProfileDto> ToggleStatusAsync(Guid id)
+    public async Task<DeactivateUserResultDto> DeactivateAsync(Guid id)
     {
-        _logger.LogInformation("Toggle status requested for user {UserId}", id);
+        _logger.LogInformation("Deactivate requested for user {UserId}", id);
 
-        var user = await _userRepository.GetByIdAsync(id);
+        var user = await _userRepository.GetForStatusChangeAsync(id);
         if (user is null)
         {
-            _logger.LogWarning("Toggle status rejected: user {UserId} was not found", id);
+            _logger.LogWarning("Deactivate rejected: user {UserId} was not found", id);
             throw new EntityNotFoundException("User", id);
         }
 
-        user.IsActive = !user.IsActive;
+        if (!user.IsActive)
+        {
+            throw new ConflictException("User is already inactive.", "USER_ALREADY_INACTIVE");
+        }
+
+        var endedAllocationCount = user.Role switch
+        {
+            Role.Employee => DeactivateEmployeeUser(user),
+            Role.Manager => await DeactivateManagerUserAsync(user),
+            _ => DeactivateAdminUser(user)
+        };
+
         var updatedUser = await _userRepository.UpdateAsync(user);
 
-        _logger.LogInformation("Toggle status completed for user {UserId}; active={IsActive}", updatedUser.Id, updatedUser.IsActive);
+        _logger.LogInformation(
+            "Deactivate completed for user {UserId}; ended allocations={EndedAllocationCount}",
+            updatedUser.Id,
+            endedAllocationCount);
+
+        return new DeactivateUserResultDto
+        {
+            User = AuthService.ToProfile(updatedUser),
+            EndedAllocationCount = endedAllocationCount,
+            Message = endedAllocationCount > 0
+                ? $"User deactivated successfully. {endedAllocationCount} active allocation(s) were ended as of today."
+                : "User deactivated successfully."
+        };
+    }
+
+    public async Task<UserProfileDto> ReactivateAsync(Guid id)
+    {
+        _logger.LogInformation("Reactivate requested for user {UserId}", id);
+
+        var user = await _userRepository.GetForStatusChangeAsync(id);
+        if (user is null)
+        {
+            throw new EntityNotFoundException("User", id);
+        }
+
+        if (user.IsActive)
+        {
+            throw new ConflictException("User is already active.", "USER_ALREADY_ACTIVE");
+        }
+
+        user.IsActive = true;
+        if (user.Employee is not null)
+        {
+            user.Employee.IsActive = true;
+            user.Employee.Status = EmployeeStatus.Active;
+        }
+
+        var updatedUser = await _userRepository.UpdateAsync(user);
+
+        _logger.LogInformation("Reactivate completed for user {UserId}", updatedUser.Id);
         return AuthService.ToProfile(updatedUser);
     }
 
@@ -193,5 +244,70 @@ public class UserService : IUserService
         };
 
         return await _userRepository.CreateWithEmployeeAsync(user, employee);
+    }
+
+    private static int DeactivateAdminUser(User user)
+    {
+        user.IsActive = false;
+        return 0;
+    }
+
+    private static int DeactivateEmployeeUser(User user)
+    {
+        user.IsActive = false;
+
+        if (user.Employee is null)
+        {
+            return 0;
+        }
+
+        var today = DateTime.UtcNow.Date;
+        var activeAllocations = user.Employee.Allocations
+            .Where(allocation => allocation.IsActive)
+            .ToList();
+
+        foreach (var allocation in activeAllocations)
+        {
+            allocation.IsActive = false;
+            allocation.ToDate = today;
+        }
+
+        user.Employee.IsActive = false;
+        user.Employee.Status = EmployeeStatus.Inactive;
+        user.Employee.ManagerId = null;
+        user.Employee.Manager = null;
+
+        return activeAllocations.Count;
+    }
+
+    private async Task<int> DeactivateManagerUserAsync(User user)
+    {
+        await CheckManagerDeactivationPossibleAsync(user.Id);
+
+        user.IsActive = false;
+        if (user.Employee is not null)
+        {
+            user.Employee.IsActive = false;
+            user.Employee.Status = EmployeeStatus.Inactive;
+        }
+
+        return 0;
+    }
+
+    private async Task CheckManagerDeactivationPossibleAsync(Guid managerId)
+    {
+        var projectNames = await _userRepository.GetActiveOrPlannedProjectNamesAsync(managerId);
+        var employeeNames = await _userRepository.GetActiveAssignedEmployeeNamesAsync(managerId);
+
+        if (projectNames.Count == 0 && employeeNames.Count == 0)
+        {
+            return;
+        }
+
+        throw new ManagerDeactivationBlockedException(new ManagerDeactivationValidationDto
+        {
+            Projects = projectNames,
+            Employees = employeeNames
+        });
     }
 }

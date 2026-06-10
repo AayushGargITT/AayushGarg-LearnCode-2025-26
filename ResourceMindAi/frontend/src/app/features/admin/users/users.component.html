@@ -60,6 +60,22 @@
     (confirmed)="confirmResetPassword()">
   </app-confirm-dialog>
 
+  <app-confirm-dialog
+    *ngIf="deactivateUser()"
+    title="Deactivate User"
+    [message]="deactivationMessage(deactivateUser()!)"
+    confirmText="Deactivate"
+    [isBusy]="pageState.activeActionId() === deactivateUser()?.id"
+    (cancelled)="closeDeactivateDialog()"
+    (confirmed)="confirmDeactivate()">
+  </app-confirm-dialog>
+
+  <app-deactivation-blocked-dialog
+    *ngIf="deactivationBlockers()"
+    [details]="deactivationBlockers()"
+    (closed)="closeDeactivationBlockers()">
+  </app-deactivation-blocked-dialog>
+
   <app-add-employee-dialog
     *ngIf="employeeDialogUser()"
     [user]="employeeDialogUser()"

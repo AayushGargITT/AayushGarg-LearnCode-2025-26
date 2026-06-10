@@ -1,7 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AddEmployeeRequest, CreateUserRequest, User } from '../models/user.model';
+import {
+  AddEmployeeRequest,
+  CreateUserRequest,
+  DeactivateUserResult,
+  User
+} from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class AdminUserService {
@@ -24,8 +29,12 @@ export class AdminUserService {
     return this.http.post<User>(`${this.apiUrl}/reset-password/${userId}`, {});
   }
 
-  toggleStatus(userId: string): Observable<User> {
-    return this.http.patch<User>(`${this.apiUrl}/toggle-status/${userId}`, {});
+  deactivateUser(userId: string): Observable<DeactivateUserResult> {
+    return this.http.patch<DeactivateUserResult>(`${this.apiUrl}/${userId}/deactivate`, {});
+  }
+
+  reactivateUser(userId: string): Observable<User> {
+    return this.http.patch<User>(`${this.apiUrl}/${userId}/reactivate`, {});
   }
 
   addEmployee(userId: string, request: AddEmployeeRequest): Observable<User> {

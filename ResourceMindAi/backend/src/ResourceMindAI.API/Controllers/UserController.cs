@@ -75,12 +75,18 @@ public class UserController : ControllerBase
         return Ok(user);
     }
 
-    [HttpPatch("toggle-status/{id:guid}")]
-    public async Task<ActionResult<UserProfileDto>> ToggleStatus(Guid id)
+    [HttpPatch("{id:guid}/deactivate")]
+    public async Task<ActionResult<DeactivateUserResultDto>> Deactivate(Guid id)
     {
-        _logger.LogInformation("Toggle status request received for user {UserId}", id);
-        var user = await _userService.ToggleStatusAsync(id);
-        return Ok(user);
+        _logger.LogInformation("Deactivate user request received for user {UserId}", id);
+        return Ok(await _userService.DeactivateAsync(id));
+    }
+
+    [HttpPatch("{id:guid}/reactivate")]
+    public async Task<ActionResult<UserProfileDto>> Reactivate(Guid id)
+    {
+        _logger.LogInformation("Reactivate user request received for user {UserId}", id);
+        return Ok(await _userService.ReactivateAsync(id));
     }
 
     [HttpPost("add-employee/{id:guid}")]

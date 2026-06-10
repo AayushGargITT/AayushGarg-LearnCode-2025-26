@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
+using ResourceMindAI.Application.Exceptions;
 using ResourceMindAI.Domain.Exceptions;
 
 namespace ResourceMindAI.API.Middleware;
@@ -70,7 +71,8 @@ public class GlobalExceptionMiddleware
         {
             Status = statusCode,
             Message = exception.Message,
-            Errors = (exception as ValidationException)?.Errors, 
+            Errors = (exception as ValidationException)?.Errors,
+            Details = (exception as ManagerDeactivationBlockedException)?.Details,
             StackTrace = _env.IsDevelopment() ? exception.StackTrace : null,
             TraceId = Activity.Current?.Id ?? context.TraceIdentifier
         };

@@ -44,6 +44,13 @@ public class UserRepository : IUserRepository
         return managers;
     }
 
+    public Task<bool> IsActiveAsync(Guid id)
+    {
+        return _dbContext.Users
+            .AsNoTracking()
+            .AnyAsync(user => user.Id == id && user.IsActive);
+    }
+
     public async Task<User?> GetByUsernameAsync(string username)
     {
         var normalized = username.Trim().ToLowerInvariant();
@@ -75,6 +82,40 @@ public class UserRepository : IUserRepository
             user is not null);
 
         return user;
+    }
+
+    public Task<User?> GetForStatusChangeAsync(Guid id)
+    {
+        return _dbContext.Users
+            .Include(user => user.Employee)
+                .ThenInclude(employee => employee!.Allocations)
+            .FirstOrDefaultAsync(user => user.Id == id);
+    }
+
+    public async Task<IReadOnlyList<string>> GetActiveOrPlannedProjectNamesAsync(Guid managerId)
+    {
+        return await _dbContext.Projects
+            .AsNoTracking()
+            .Where(project =>
+                project.ManagerId == managerId
+                && (project.Status == ProjectStatus.Active
+                    || project.Status == ProjectStatus.Planned))
+            .OrderBy(project => project.Name)
+            .Select(project => project.Name)
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<string>> GetActiveAssignedEmployeeNamesAsync(Guid managerId)
+    {
+        return await _dbContext.Employees
+            .AsNoTracking()
+            .Where(employee =>
+                employee.ManagerId == managerId
+                && employee.IsActive
+                && employee.User.IsActive)
+            .OrderBy(employee => employee.User.FullName)
+            .Select(employee => employee.User.FullName)
+            .ToListAsync();
     }
 
     public async Task<bool> ExistsByUsernameOrEmailAsync(string username, string email)

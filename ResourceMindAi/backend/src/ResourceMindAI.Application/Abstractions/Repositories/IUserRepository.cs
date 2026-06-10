@@ -6,7 +6,11 @@ public interface IUserRepository
 {
     Task<IReadOnlyList<User>> GetAllAsync();
     Task<IReadOnlyList<User>> GetActiveManagersAsync();
+    Task<bool> IsActiveAsync(Guid id);
     Task<User?> GetByIdAsync(Guid id);
+    Task<User?> GetForStatusChangeAsync(Guid id);
+    Task<IReadOnlyList<string>> GetActiveOrPlannedProjectNamesAsync(Guid managerId);
+    Task<IReadOnlyList<string>> GetActiveAssignedEmployeeNamesAsync(Guid managerId);
     Task<User?> GetByUsernameAsync(string username);
     Task<bool> ExistsByUsernameOrEmailAsync(string username, string email);
     Task<User> CreateAsync(User user);

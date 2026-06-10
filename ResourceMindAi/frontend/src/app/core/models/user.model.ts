@@ -29,3 +29,14 @@ export interface AddEmployeeRequest {
   designation: string;
   department: string;
 }
+
+export interface DeactivateUserResult {
+  user: User;
+  message: string;
+  endedAllocationCount: number;
+}
+
+export interface ManagerDeactivationDetails {
+  projects: string[];
+  employees: string[];
+}

@@ -6,7 +6,13 @@ import { InputsModule } from '@progress/kendo-angular-inputs';
 import { AppLayoutComponent } from '../../../shared/components/app-layout/app-layout.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
-import { AddEmployeeRequest, CreateUserRequest, Role, User } from '../../../core/models/user.model';
+import {
+  AddEmployeeRequest,
+  CreateUserRequest,
+  ManagerDeactivationDetails,
+  Role,
+  User
+} from '../../../core/models/user.model';
 import { AdminUserService } from '../../../core/services/admin-user.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
@@ -14,8 +20,9 @@ import { RowActionItem, RowActionMenuComponent } from '../../../shared/component
 import { PageStateService } from '../../../shared/services/page-state.service';
 import { AddEmployeeDialogComponent } from './components/add-employee-dialog/add-employee-dialog.component';
 import { CreateUserDialogComponent } from './components/create-user-dialog/create-user-dialog.component';
+import { DeactivationBlockedDialogComponent } from './components/deactivation-blocked-dialog/deactivation-blocked-dialog.component';
 
-type UserAction = 'resetPassword' | 'toggleStatus' | 'addEmployee';
+type UserAction = 'resetPassword' | 'deactivate' | 'reactivate' | 'addEmployee';
 type UserActionItem = RowActionItem<UserAction>;
 
 @Component({
@@ -33,7 +40,8 @@ type UserActionItem = RowActionItem<UserAction>;
     PageFeedbackComponent,
     RowActionMenuComponent,
     CreateUserDialogComponent,
-    AddEmployeeDialogComponent
+    AddEmployeeDialogComponent,
+    DeactivationBlockedDialogComponent
   ],
   templateUrl: './users.component.html',
   styleUrl: './users.component.css',
@@ -47,6 +55,8 @@ export class AdminUsersComponent {
   rows = signal<User[]>([]);
   isCreating = signal(false);
   resetPasswordUser = signal<User | null>(null);
+  deactivateUser = signal<User | null>(null);
+  deactivationBlockers = signal<ManagerDeactivationDetails | null>(null);
   employeeDialogUser = signal<User | null>(null);
   isAddingEmployee = signal(false);
   createError = signal<string | null>(null);
@@ -103,7 +113,9 @@ export class AdminUsersComponent {
   actionsFor(user: User): UserActionItem[] {
     const actions: UserActionItem[] = [
       { text: 'Reset Password', action: 'resetPassword' },
-      { text: user.isActive ? 'Deactivate User' : 'Activate User', action: 'toggleStatus' }
+      user.isActive
+        ? { text: 'Deactivate User', action: 'deactivate' }
+        : { text: 'Reactivate User', action: 'reactivate' }
     ];
 
     if (user.role === Role.EMPLOYEE && !user.employeeId) {
@@ -124,8 +136,13 @@ export class AdminUsersComponent {
       return;
     }
 
-    if (item.action === 'toggleStatus') {
-      this.toggleStatus(user);
+    if (item.action === 'deactivate') {
+      this.openDeactivateDialog(user);
+      return;
+    }
+
+    if (item.action === 'reactivate') {
+      this.reactivate(user);
       return;
     }
 
@@ -161,19 +178,72 @@ export class AdminUsersComponent {
     });
   }
 
-  toggleStatus(user: User): void {
+  openDeactivateDialog(user: User): void {
+    this.deactivateUser.set(user);
+  }
+
+  closeDeactivateDialog(): void {
+    this.deactivateUser.set(null);
+  }
+
+  deactivationMessage(user: User): string {
+    if (user.role === Role.EMPLOYEE) {
+      return `Deactivate ${user.fullName}? Their active allocations will be ended as of today, their manager assignment will be removed, and historical records will be preserved.`;
+    }
+
+    if (user.role === Role.MANAGER) {
+      return `Deactivate ${user.fullName}? This will proceed only if no active or planned projects and no active employees are assigned to this manager.`;
+    }
+
+    return `Deactivate ${user.fullName}?`;
+  }
+
+  confirmDeactivate(): void {
+    const user = this.deactivateUser();
+    if (!user) {
+      return;
+    }
+
     this.pageState.startAction(user.id);
-    this.adminUserService.toggleStatus(user.id).subscribe({
-      next: () => {
+    this.adminUserService.deactivateUser(user.id).subscribe({
+      next: result => {
         this.pageState.stopAction();
-        this.pageState.setSuccess(user.isActive ? 'User deactivated successfully.' : 'User activated successfully.');
+        this.closeDeactivateDialog();
+        this.pageState.setSuccess(result.message);
         this.loadUsers();
       },
       error: (err) => {
         this.pageState.stopAction();
-        this.pageState.setError(err.error?.message ?? 'Unable to update user status.');
+        this.closeDeactivateDialog();
+
+        const details = err.error?.details as ManagerDeactivationDetails | undefined;
+        if (details && (details.projects?.length || details.employees?.length)) {
+          this.deactivationBlockers.set(details);
+          return;
+        }
+
+        this.pageState.setError(err.error?.message ?? 'Unable to deactivate user.');
       }
     });
+  }
+
+  reactivate(user: User): void {
+    this.pageState.startAction(user.id);
+    this.adminUserService.reactivateUser(user.id).subscribe({
+      next: () => {
+        this.pageState.stopAction();
+        this.pageState.setSuccess('User reactivated successfully.');
+        this.loadUsers();
+      },
+      error: err => {
+        this.pageState.stopAction();
+        this.pageState.setError(err.error?.message ?? 'Unable to reactivate user.');
+      }
+    });
+  }
+
+  closeDeactivationBlockers(): void {
+    this.deactivationBlockers.set(null);
   }
 
   openEmployeeDialog(user: User): void {
