@@ -21,9 +21,8 @@ public class AuthService : IAuthService
     public async Task<UserProfileDto> LoginAsync(LoginDto request)
     {
         _logger.LogInformation("Authenticating username {Username}", request.Username);
-
         var user = await _userRepository.GetByUsernameAsync(request.Username);
-
+       
         if (user is null || !PasswordHasher.Verify(request.Password, user.PasswordHash))
         {
             _logger.LogWarning("Authentication failed for username {Username}: invalid credentials", request.Username);
@@ -101,9 +100,9 @@ public class AuthService : IAuthService
             Role = user.Role,
             IsActive = user.IsActive,
             ForcePasswordChange = user.ForcePasswordChange,
-            EmployeeId = user.Employee?.Id,
-            Department = user.Employee?.Department,
-            Designation = user.Employee?.Designation,
+            EmployeeId = user.ResourceProfile?.Id,
+            Department = user.ResourceProfile?.Department,
+            Designation = user.ResourceProfile?.Designation,
         };
     }
 

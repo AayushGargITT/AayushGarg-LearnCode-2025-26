@@ -20,7 +20,11 @@ public class TimesheetConfiguration : IEntityTypeConfiguration<Timesheet>
                .IsRequired()
                .HasConversion<string>();
 
-        builder.HasIndex(x => new { x.EmployeeId, x.ProjectId, x.WeekStartDate }).IsUnique();
+        builder.HasOne(timesheet => timesheet.ResourceProfile)
+            .WithMany(profile => profile.Timesheets)
+            .HasForeignKey(timesheet => timesheet.ResourceProfileId)
+            .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasIndex(x => new { x.ResourceProfileId, x.ProjectId, x.WeekStartDate }).IsUnique();
     }
 }

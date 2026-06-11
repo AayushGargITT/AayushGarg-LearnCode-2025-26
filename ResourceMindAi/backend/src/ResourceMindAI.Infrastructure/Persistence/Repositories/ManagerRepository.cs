@@ -17,23 +17,22 @@ public class ManagerRepository : IManagerRepository
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<Employee>> GetTeamEmployeesAsync(Guid managerId)
+    public async Task<IReadOnlyList<ResourceProfile>> GetTeamEmployeesAsync(Guid managerId)
     {
         _logger.LogDebug("Querying team employees for manager {ManagerId}", managerId);
 
-        return await EmployeeGraph()
-            .Where(x => x.ManagerId == managerId && x.IsActive && x.User.IsActive && x.User.Role == Role.Employee)
+        return await ResourceProfileGraph()
+            .Where(x => x.ManagerId == managerId && x.User.IsActive && x.User.Role == Role.Employee)
             .OrderBy(x => x.User.FullName)
             .ToListAsync();
     }
 
-    public async Task<Employee?> GetTeamEmployeeAsync(Guid managerId, Guid employeeId)
+    public async Task<ResourceProfile?> GetTeamEmployeeAsync(Guid managerId, Guid employeeId)
     {
-        return await EmployeeGraph()
+        return await ResourceProfileGraph()
             .FirstOrDefaultAsync(x =>
                 x.Id == employeeId
                 && x.ManagerId == managerId
-                && x.IsActive
                 && x.User.IsActive
                 && x.User.Role == Role.Employee);
     }
@@ -57,10 +56,10 @@ public class ManagerRepository : IManagerRepository
         return await _dbContext.Projects
             .Include(x => x.Milestones)
             .Include(x => x.Allocations)
-                .ThenInclude(x => x.Employee)
+                .ThenInclude(x => x.ResourceProfile)
                     .ThenInclude(x => x.User)
             .Include(x => x.Timesheets)
-                .ThenInclude(x => x.Employee)
+                .ThenInclude(x => x.ResourceProfile)
                     .ThenInclude(x => x.User)
             .FirstOrDefaultAsync(x => x.Id == projectId && x.ManagerId == managerId);
     }
@@ -68,7 +67,7 @@ public class ManagerRepository : IManagerRepository
     public async Task<IReadOnlyList<Timesheet>> GetSubmittedTimesheetsAsync(Guid managerId)
     {
         return await _dbContext.Timesheets
-            .Include(x => x.Employee)
+            .Include(x => x.ResourceProfile)
                 .ThenInclude(x => x.User)
             .Include(x => x.Project)
             .Include(x => x.ActivityTags)
@@ -80,7 +79,7 @@ public class ManagerRepository : IManagerRepository
     public async Task<Allocation?> GetAllocationAsync(Guid managerId, Guid allocationId)
     {
         return await _dbContext.Allocations
-            .Include(x => x.Employee)
+            .Include(x => x.ResourceProfile)
                 .ThenInclude(x => x.User)
             .Include(x => x.Project)
             .FirstOrDefaultAsync(x => x.Id == allocationId && x.Project.ManagerId == managerId);
@@ -94,7 +93,7 @@ public class ManagerRepository : IManagerRepository
     {
         return await _dbContext.Allocations
             .Where(x =>
-                x.EmployeeId == employeeId
+                x.ResourceProfileId == employeeId
                 && x.IsActive
                 && x.FromDate <= toDate
                 && x.ToDate >= fromDate
@@ -114,9 +113,9 @@ public class ManagerRepository : IManagerRepository
         return _dbContext.SaveChangesAsync();
     }
 
-    private IQueryable<Employee> EmployeeGraph()
+    private IQueryable<ResourceProfile> ResourceProfileGraph()
     {
-        return _dbContext.Employees
+        return _dbContext.ResourceProfiles
             .Include(x => x.User)
             .Include(x => x.Skills)
             .Include(x => x.Allocations)
@@ -130,7 +129,7 @@ public class ManagerRepository : IManagerRepository
         return _dbContext.Projects
             .Include(x => x.Milestones)
             .Include(x => x.Allocations)
-                .ThenInclude(x => x.Employee)
+                .ThenInclude(x => x.ResourceProfile)
                     .ThenInclude(x => x.User);
     }
 }

@@ -124,9 +124,8 @@ public class ProjectService : IProjectService
         var activeEmployees = project.Allocations
             .Where(allocation =>
                 allocation.IsActive
-                && allocation.Employee.IsActive
-                && allocation.Employee.User.IsActive)
-            .Select(allocation => allocation.Employee)
+                && allocation.ResourceProfile.User.IsActive)
+            .Select(allocation => allocation.ResourceProfile)
             .DistinctBy(employee => employee.Id)
             .ToList();
 
@@ -186,7 +185,7 @@ public class ProjectService : IProjectService
 
     private async Task EnsureNoManagerUpdateConflictsAsync(
         Project project,
-        IReadOnlyCollection<Employee> activeEmployees)
+        IReadOnlyCollection<ResourceProfile> activeEmployees)
     {
         if (activeEmployees.Count == 0)
         {
@@ -202,8 +201,8 @@ public class ProjectService : IProjectService
         var conflicts = allocations
             .GroupBy(allocation => new
             {
-                allocation.EmployeeId,
-                allocation.Employee.User.FullName
+                allocation.ResourceProfileId,
+                allocation.ResourceProfile.User.FullName
             })
             .Select(group => new
             {

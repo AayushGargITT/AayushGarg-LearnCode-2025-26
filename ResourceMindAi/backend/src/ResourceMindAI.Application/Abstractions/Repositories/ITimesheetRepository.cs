@@ -4,7 +4,7 @@ namespace ResourceMindAI.Application.Abstractions.Repositories;
 
 public interface ITimesheetRepository
 {
-    Task<Employee?> GetEmployeeByUserIdAsync(Guid userId);
+    Task<ResourceProfile?> GetResourceProfileByUserIdAsync(Guid userId);
     Task<IReadOnlyList<Allocation>> GetAllocationsAsync(Guid employeeId);
     Task<IReadOnlyList<Allocation>> GetAllocationsForWeekAsync(
         Guid employeeId,

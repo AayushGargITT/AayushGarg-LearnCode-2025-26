@@ -15,5 +15,5 @@ public interface IProjectRepository
     Task<Milestone?> GetMilestoneAsync(Guid projectId, Guid milestoneId);
     Task<Milestone> AddMilestoneAsync(Milestone milestone);
     Task<Milestone> UpdateMilestoneAsync(Milestone milestone);
-    Task SaveManagerUpdateAsync(Project project, IReadOnlyCollection<Employee> employees);
+    Task SaveManagerUpdateAsync(Project project, IReadOnlyCollection<ResourceProfile> resourceProfiles);
 }

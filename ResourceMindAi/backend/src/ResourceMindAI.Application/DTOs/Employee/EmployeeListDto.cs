@@ -9,7 +9,7 @@ public class EmployeeListDto
     public string FullName { get; set; } = null!;
     public string Email { get; set; } = null!;
     public Role Role { get; set; }
-    public string AllocationStatus { get; set; } = null!;
+    public ResourceStatus AllocationStatus { get; set; }
     public string Department { get; set; } = null!;
     public string Designation { get; set; } = null!;
     public bool IsActive { get; set; }

@@ -161,7 +161,7 @@ public class TimesheetService : ITimesheetService
             timesheets.Add(new Timesheet
             {
                 Id = timesheetId,
-                EmployeeId = employee.Id,
+                ResourceProfileId = employee.Id,
                 ProjectId = entry.ProjectId,
                 WeekStartDate = weekStart,
                 HoursLogged = entry.Hours,
@@ -259,9 +259,9 @@ public class TimesheetService : ITimesheetService
             Array.Empty<EmployeeTimesheetEntryDto>());
     }
 
-    private async Task<Employee> GetEmployeeAsync(Guid userId)
+    private async Task<ResourceProfile> GetEmployeeAsync(Guid userId)
     {
-        return await _timesheetRepository.GetEmployeeByUserIdAsync(userId)
+        return await _timesheetRepository.GetResourceProfileByUserIdAsync(userId)
             ?? throw new EntityNotFoundException(
                 "An active employee profile was not found for the logged-in user.");
     }

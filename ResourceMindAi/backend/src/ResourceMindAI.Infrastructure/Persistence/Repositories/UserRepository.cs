@@ -22,7 +22,7 @@ public class UserRepository : IUserRepository
         _logger.LogDebug("Querying all users with employee profiles");
 
         var users = await _dbContext.Users
-            .Include(x => x.Employee)
+            .Include(x => x.ResourceProfile)
             .OrderBy(x => x.FullName)
             .ToListAsync();
 
@@ -35,7 +35,7 @@ public class UserRepository : IUserRepository
         _logger.LogDebug("Querying active managers with employee profiles");
 
         var managers = await _dbContext.Users
-            .Include(x => x.Employee)
+            .Include(x => x.ResourceProfile)
             .Where(x => x.Role == Role.Manager && x.IsActive)
             .OrderBy(x => x.FullName)
             .ToListAsync();
@@ -57,7 +57,7 @@ public class UserRepository : IUserRepository
         _logger.LogDebug("Querying user by username {Username}", normalized);
 
         var user = await _dbContext.Users
-            .Include(x => x.Employee)
+            .Include(x => x.ResourceProfile)
             .FirstOrDefaultAsync(x => x.Username == normalized);
 
         _logger.LogDebug(
@@ -73,7 +73,7 @@ public class UserRepository : IUserRepository
         _logger.LogDebug("Querying user by id {UserId}", id);
 
         var user = await _dbContext.Users
-            .Include(x => x.Employee)
+            .Include(x => x.ResourceProfile)
             .FirstOrDefaultAsync(x => x.Id == id);
 
         _logger.LogDebug(
@@ -87,8 +87,8 @@ public class UserRepository : IUserRepository
     public Task<User?> GetForStatusChangeAsync(Guid id)
     {
         return _dbContext.Users
-            .Include(user => user.Employee)
-                .ThenInclude(employee => employee!.Allocations)
+            .Include(user => user.ResourceProfile)
+                .ThenInclude(profile => profile!.Allocations)
             .FirstOrDefaultAsync(user => user.Id == id);
     }
 
@@ -107,14 +107,13 @@ public class UserRepository : IUserRepository
 
     public async Task<IReadOnlyList<string>> GetActiveAssignedEmployeeNamesAsync(Guid managerId)
     {
-        return await _dbContext.Employees
+        return await _dbContext.ResourceProfiles
             .AsNoTracking()
-            .Where(employee =>
-                employee.ManagerId == managerId
-                && employee.IsActive
-                && employee.User.IsActive)
-            .OrderBy(employee => employee.User.FullName)
-            .Select(employee => employee.User.FullName)
+            .Where(profile =>
+                profile.ManagerId == managerId
+                && profile.User.IsActive)
+            .OrderBy(profile => profile.User.FullName)
+            .Select(profile => profile.User.FullName)
             .ToListAsync();
     }
 
@@ -151,17 +150,17 @@ public class UserRepository : IUserRepository
         return user;
     }
 
-    public async Task<User> CreateWithEmployeeAsync(User user, Employee employee)
+    public async Task<User> CreateWithResourceProfileAsync(User user, ResourceProfile resourceProfile)
     {
-        _logger.LogInformation("Adding user {UserId} and employee {EmployeeId} to database", user.Id, employee.Id);
+        _logger.LogInformation("Adding user {UserId} and resource profile to database", user.Id);
 
         _dbContext.Users.Add(user);
-        _dbContext.Employees.Add(employee);
+        _dbContext.ResourceProfiles.Add(resourceProfile);
         await _dbContext.SaveChangesAsync();
 
-        user.Employee = employee;
+        user.ResourceProfile = resourceProfile;
 
-        _logger.LogInformation("Saved user {UserId} and employee {EmployeeId} to database", user.Id, employee.Id);
+        _logger.LogInformation("Saved user {UserId} and resource profile to database", user.Id);
         return user;
     }
 
@@ -190,14 +189,14 @@ public class UserRepository : IUserRepository
         return user;
     }
 
-    public async Task<Employee> AddEmployeeAsync(Employee employee)
+    public async Task<ResourceProfile> AddResourceProfileAsync(ResourceProfile resourceProfile)
     {
-        _logger.LogInformation("Adding employee {EmployeeId} for user {UserId}", employee.Id, employee.UserId);
+        _logger.LogInformation("Adding resource profile for user {UserId}", resourceProfile.Id);
 
-        _dbContext.Employees.Add(employee);
+        _dbContext.ResourceProfiles.Add(resourceProfile);
         await _dbContext.SaveChangesAsync();
 
-        _logger.LogInformation("Saved employee {EmployeeId} for user {UserId}", employee.Id, employee.UserId);
-        return employee;
+        _logger.LogInformation("Saved resource profile for user {UserId}", resourceProfile.Id);
+        return resourceProfile;
     }
 }

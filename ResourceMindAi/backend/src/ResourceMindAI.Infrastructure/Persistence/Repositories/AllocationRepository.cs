@@ -21,7 +21,7 @@ public class AllocationRepository : IAllocationRepository
         _logger.LogDebug("Querying all allocations");
 
         return await _dbContext.Allocations
-            .Include(x => x.Employee)
+            .Include(x => x.ResourceProfile)
                 .ThenInclude(x => x.User)
             .Include(x => x.Project)
                 .ThenInclude(x => x.Manager)

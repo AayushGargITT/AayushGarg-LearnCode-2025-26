@@ -4,8 +4,8 @@ namespace ResourceMindAI.Application.Abstractions.Repositories;
 
 public interface IManagerRepository
 {
-    Task<IReadOnlyList<Employee>> GetTeamEmployeesAsync(Guid managerId);
-    Task<Employee?> GetTeamEmployeeAsync(Guid managerId, Guid employeeId);
+    Task<IReadOnlyList<ResourceProfile>> GetTeamEmployeesAsync(Guid managerId);
+    Task<ResourceProfile?> GetTeamEmployeeAsync(Guid managerId, Guid employeeId);
     Task<IReadOnlyList<Project>> GetProjectsAsync(Guid managerId);
     Task<Project?> GetProjectAsync(Guid managerId, Guid projectId);
     Task<Project?> GetProjectForRiskSummaryAsync(Guid managerId, Guid projectId);

@@ -114,7 +114,7 @@ sequenceDiagram
     UI->>Auth: POST /api/v1/auth/login
     Auth->>Service: LoginAsync
     Service->>Repo: Find user by username
-    Repo-->>Service: User and employee profile
+    Repo-->>Service: User and optional resource profile
     Service->>Service: Verify password and active state
     Service-->>Auth: User profile
     Auth->>JWT: Generate signed token
@@ -152,20 +152,18 @@ classDiagram
         +DateTime? UpdatedAt
     }
 
-    class Employee {
+    class ResourceProfile {
         +Guid Id
-        +Guid UserId
         +Guid? ManagerId
         +string Department
         +string Designation
-        +EmployeeStatus Status
-        +bool IsActive
-        +DateTime CreatedAt
     }
+
+    note for ResourceProfile "Id is both the primary key and foreign key to User.Id"
 
     class Skill {
         +Guid Id
-        +Guid EmployeeId
+        +Guid ResourceProfileId
         +string SkillName
         +SkillCategory Category
         +ProficiencyLevel Proficiency
@@ -196,7 +194,7 @@ classDiagram
 
     class Allocation {
         +Guid Id
-        +Guid EmployeeId
+        +Guid ResourceProfileId
         +Guid ProjectId
         +decimal UtilisationPercent
         +DateTime FromDate
@@ -207,7 +205,7 @@ classDiagram
 
     class Timesheet {
         +Guid Id
-        +Guid EmployeeId
+        +Guid ResourceProfileId
         +Guid ProjectId
         +DateTime WeekStartDate
         +decimal HoursLogged
@@ -229,12 +227,12 @@ classDiagram
         +decimal MaxWeeklyHours
     }
 
-    User "1" --> "0..1" Employee : profile
-    User "1" --> "0..*" Employee : manages
+    User "1" --> "0..1" ResourceProfile : shared PK profile
+    User "1" --> "0..*" ResourceProfile : manages
     User "1" --> "0..*" Project : owns
-    Employee "1" --> "0..*" Skill : has
-    Employee "1" --> "0..*" Allocation : receives
-    Employee "1" --> "0..*" Timesheet : submits
+    ResourceProfile "1" --> "0..*" Skill : has
+    ResourceProfile "1" --> "0..*" Allocation : receives
+    ResourceProfile "1" --> "0..*" Timesheet : submits
     Project "1" --> "0..*" Milestone : contains
     Project "1" --> "0..*" Allocation : includes
     Project "1" --> "0..*" Timesheet : records
@@ -462,7 +460,7 @@ flowchart LR
 flowchart LR
     Manager([Logged-in Manager])
     OwnedProjects[Projects where Project.ManagerId equals manager user ID]
-    TeamEmployees[Active Employee-role profiles where Employee.ManagerId equals manager user ID]
+    TeamEmployees[Active Employee-role users whose ResourceProfile.ManagerId equals manager user ID]
     Allowed[Resources, allocations, project detail, timesheets, AI candidate facts]
     CompanyData[Other managers' projects and employees]
 
@@ -477,8 +475,9 @@ flowchart LR
 
 ### Admin creates a user
 
-Managers receive an employee profile automatically. Employee-role users can be
-mapped to an employee profile through the Admin flow.
+Managers receive a resource profile automatically. Employee-role users can be
+mapped to a resource profile through the Admin flow. The profile reuses the
+user ID as its shared primary and foreign key.
 
 ```mermaid
 sequenceDiagram
@@ -501,7 +500,7 @@ sequenceDiagram
         Service->>Service: Password = username, hash password
         Service->>Service: Set active and forcePasswordChange
         alt Role is Manager
-            Service->>Repo: Create user and manager employee profile transactionally
+            Service->>Repo: Create user and ResourceProfile with the same ID
         else Admin or Employee
             Service->>Repo: Create user
         end
@@ -529,15 +528,15 @@ sequenceDiagram
     alt Admin user
         Service->>Service: Set User.IsActive = false
     else Employee user
-        Service->>Service: Deactivate user and employee profile
+        Service->>Service: Set User.IsActive = false
         Service->>Service: End active allocations today
-        Service->>Service: Clear Employee.ManagerId
+        Service->>Service: Clear ResourceProfile.ManagerId
     else Manager user
         Service->>Repo: Find active/planned projects and active subordinates
         alt Manager still owns work or employees
             Service-->>UI: Validation details with project and employee names
         else No dependencies
-            Service->>Service: Deactivate user and linked profile
+            Service->>Service: Set User.IsActive = false
         end
     end
 
@@ -547,7 +546,7 @@ sequenceDiagram
     opt Admin later selects Reactivate
         UI->>API: PATCH /api/v1/user/{id}/reactivate
         API->>Service: ReactivateAsync
-        Service->>Service: Reactivate user and linked profile only
+        Service->>Service: Set User.IsActive = true
         Note over Service: Allocations and manager assignment are not restored
     end
 ```
@@ -566,8 +565,8 @@ sequenceDiagram
     Admin->>UI: Select new active manager
     UI->>API: GET manager-update-preview?newManagerId
     API->>Service: GetManagerUpdatePreviewAsync
-    Service->>Repo: Load active employee and active allocations
-    Repo-->>Service: Employee and project names
+    Service->>Repo: Load active resource profile and active allocations
+    Repo-->>Service: Resource profile and project names
     Service-->>UI: Active project list
     UI->>Admin: Confirm allocations will end today
 
@@ -577,11 +576,11 @@ sequenceDiagram
     else Confirm
         UI->>API: PATCH /api/v1/admin/employees/{id}/manager
         API->>Service: UpdateManagerAsync
-        Service->>Service: Validate active Employee and active Manager role
+        Service->>Service: Validate active Employee-role user and active Manager
         Service->>Service: End all active allocations today
-        Service->>Service: Set Employee.ManagerId
+        Service->>Service: Set ResourceProfile.ManagerId
         Service->>Repo: Save transaction
-        Repo->>DB: Update employee and allocations
+        Repo->>DB: Update resource profile and allocations
         DB-->>UI: Success details
         UI->>UI: Refresh complete employee list
     end
@@ -601,7 +600,7 @@ sequenceDiagram
     Admin->>UI: Select new active manager
     UI->>API: PATCH /api/v1/project/{id}/manager
     API->>Service: UpdateManagerAsync
-    Service->>Repo: Load project and active allocated employees
+    Service->>Repo: Load project and active allocated resource profiles
     Service->>Repo: Find other active projects under current manager
 
     alt Employee has another active project under current manager
@@ -609,9 +608,9 @@ sequenceDiagram
         UI->>Admin: Show update-not-possible dialog
     else No conflicts
         Service->>Service: Update Project.ManagerId
-        Service->>Service: Update allocated Employee.ManagerId values
+        Service->>Service: Update allocated ResourceProfile.ManagerId values
         Service->>Repo: Save transaction
-        Repo->>DB: Update project and employees
+        Repo->>DB: Update project and resource profiles
         DB-->>UI: Success
         UI->>UI: Refresh project list
     end
@@ -773,12 +772,12 @@ sequenceDiagram
 
 ```mermaid
 erDiagram
-    USER ||--o| EMPLOYEE : "has profile"
-    USER ||--o{ EMPLOYEE : "manages"
+    USER ||--o| RESOURCE_PROFILE : "has shared-key profile"
+    USER ||--o{ RESOURCE_PROFILE : "manages"
     USER ||--o{ PROJECT : "owns"
-    EMPLOYEE ||--o{ SKILL : "has"
-    EMPLOYEE ||--o{ ALLOCATION : "receives"
-    EMPLOYEE ||--o{ TIMESHEET : "submits"
+    RESOURCE_PROFILE ||--o{ SKILL : "has"
+    RESOURCE_PROFILE ||--o{ ALLOCATION : "receives"
+    RESOURCE_PROFILE ||--o{ TIMESHEET : "submits"
     PROJECT ||--o{ MILESTONE : "contains"
     PROJECT ||--o{ ALLOCATION : "staffs"
     PROJECT ||--o{ TIMESHEET : "records"
@@ -797,20 +796,16 @@ erDiagram
         datetime UpdatedAt
     }
 
-    EMPLOYEE {
-        uniqueidentifier Id PK
-        uniqueidentifier UserId FK
+    RESOURCE_PROFILE {
+        uniqueidentifier Id PK, FK
         uniqueidentifier ManagerId FK
         string Department
         string Designation
-        string Status
-        boolean IsActive
-        datetime CreatedAt
     }
 
     SKILL {
         uniqueidentifier Id PK
-        uniqueidentifier EmployeeId FK
+        uniqueidentifier ResourceProfileId FK
         string SkillName
         string Category
         string Proficiency
@@ -841,7 +836,7 @@ erDiagram
 
     ALLOCATION {
         uniqueidentifier Id PK
-        uniqueidentifier EmployeeId FK
+        uniqueidentifier ResourceProfileId FK
         uniqueidentifier ProjectId FK
         decimal UtilisationPercent
         datetime FromDate
@@ -852,7 +847,7 @@ erDiagram
 
     TIMESHEET {
         uniqueidentifier Id PK
-        uniqueidentifier EmployeeId FK
+        uniqueidentifier ResourceProfileId FK
         uniqueidentifier ProjectId FK
         datetime WeekStartDate
         decimal HoursLogged
@@ -880,7 +875,7 @@ erDiagram
 | Enum | Values |
 | --- | --- |
 | Role | Admin, Manager, Employee |
-| EmployeeStatus | Active, Inactive, OnLeave |
+| ResourceStatus | Bench, Allocated (computed from current allocations) |
 | SkillCategory | Technical, Soft, Management, Domain |
 | ProficiencyLevel | Beginner, Intermediate, Advanced, Expert |
 | ProjectStatus | Planned, Active, Completed, OnHold, Cancelled |
@@ -959,10 +954,15 @@ All routes except login require JWT authentication.
 ### User and employee lifecycle
 
 - Email and username must be unique.
-- A Manager user receives an employee profile during user creation.
-- Employee profiles are unique per user.
-- Deactivating an Employee ends active allocations, deactivates the linked
-  profile, and clears the manager assignment.
+- A Manager user receives a resource profile during user creation.
+- `ResourceProfile.Id` is both its primary key and a foreign key to `User.Id`.
+- A user can have at most one resource profile; no separate profile identity or
+  `UserId` column exists.
+- Active state and creation date come from the linked `User`.
+- Bench or Allocated status is calculated from current allocations and is not
+  stored in `ResourceProfile`.
+- Deactivating an Employee sets `User.IsActive` to false, ends active
+  allocations, and clears the resource profile manager assignment.
 - A Manager cannot be deactivated while active/planned projects or active
   employees remain assigned.
 - Reactivation does not restore manager assignments or allocations.

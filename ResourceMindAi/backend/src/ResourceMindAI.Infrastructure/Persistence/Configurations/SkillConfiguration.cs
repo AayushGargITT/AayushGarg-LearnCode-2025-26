@@ -22,6 +22,11 @@ public class SkillConfiguration : IEntityTypeConfiguration<Skill>
                .IsRequired()
                .HasConversion<string>();
 
-        builder.HasIndex(x => new { x.EmployeeId, x.SkillName }).IsUnique();
+        builder.HasOne(skill => skill.ResourceProfile)
+            .WithMany(profile => profile.Skills)
+            .HasForeignKey(skill => skill.ResourceProfileId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(x => new { x.ResourceProfileId, x.SkillName }).IsUnique();
     }
 }

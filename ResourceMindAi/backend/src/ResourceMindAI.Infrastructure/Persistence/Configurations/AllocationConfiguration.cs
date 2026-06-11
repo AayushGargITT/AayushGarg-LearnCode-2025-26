@@ -19,6 +19,11 @@ public class AllocationConfiguration : IEntityTypeConfiguration<Allocation>
         builder.Property(x => x.ToDate)
                .IsRequired();
 
+        builder.HasOne(allocation => allocation.ResourceProfile)
+            .WithMany(profile => profile.Allocations)
+            .HasForeignKey(allocation => allocation.ResourceProfileId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.ToTable(t =>
             t.HasCheckConstraint(
                 "CK_Allocation_UtilisationPercent",

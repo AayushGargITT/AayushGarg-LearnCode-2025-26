@@ -76,7 +76,6 @@ public class UserService : IUserService
                 "DUPLICATE_USER");
         }
 
-        var now = DateTime.UtcNow;
         var user = new User
         {
             Id = Guid.NewGuid(),
@@ -87,12 +86,12 @@ public class UserService : IUserService
             Role = request.Role!.Value,
             IsActive = true,
             ForcePasswordChange = true,
-            CreatedAt = now
+            CreatedAt = DateTime.UtcNow
         };
 
         _logger.LogInformation("Persisting new user {UserId} with role {Role}", user.Id, user.Role);
         var createdUser = user.Role == Role.Manager
-            ? await CreateManagerWithEmployeeAsync(user, now)
+            ? await CreateManagerWithResourceProfileAsync(user)
             : await _userRepository.CreateAsync(user);
         _logger.LogInformation("Persisted new user {UserId}", createdUser.Id);
 
@@ -174,11 +173,6 @@ public class UserService : IUserService
         }
 
         user.IsActive = true;
-        if (user.Employee is not null)
-        {
-            user.Employee.IsActive = true;
-            user.Employee.Status = EmployeeStatus.Active;
-        }
 
         var updatedUser = await _userRepository.UpdateAsync(user);
 
@@ -203,47 +197,39 @@ public class UserService : IUserService
             throw new ForbiddenException("Admin users cannot be added as employees.", "ADMIN_EMPLOYEE_NOT_ALLOWED");
         }
 
-        if (user.Employee is not null)
+        if (user.ResourceProfile is not null)
         {
             _logger.LogWarning(
                 "Add employee rejected: user {UserId} is already mapped to employee {EmployeeId}",
                 userId,
-                user.Employee.Id);
+                user.ResourceProfile.Id);
             throw new ConflictException("This user is already added as an employee.", "EMPLOYEE_ALREADY_EXISTS");
         }
 
-        var employee = new Employee
+        var resourceProfile = new ResourceProfile
         {
-            Id = Guid.NewGuid(),
-            UserId = userId,
+            Id = userId,
             Department = request.Department.Trim(),
             Designation = request.Designation.Trim(),
-            Status = EmployeeStatus.Active,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow,
         };
 
-        var createdEmployee = await _userRepository.AddEmployeeAsync(employee);
-        user.Employee = createdEmployee;
+        var createdResourceProfile = await _userRepository.AddResourceProfileAsync(resourceProfile);
+        user.ResourceProfile = createdResourceProfile;
 
-        _logger.LogInformation("Add employee completed for user {UserId} with employee {EmployeeId}", userId, createdEmployee.Id);
+        _logger.LogInformation("Add employee completed for user {UserId}", userId);
         return AuthService.ToProfile(user);
     }
 
-    private async Task<User> CreateManagerWithEmployeeAsync(User user, DateTime now)
+    private async Task<User> CreateManagerWithResourceProfileAsync(User user)
     {
-        var employee = new Employee
+        var resourceProfile = new ResourceProfile
         {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
+            Id = user.Id,
             Department = DefaultManagerDepartment,
             Designation = DefaultManagerDesignation,
-            Status = EmployeeStatus.Active,
-            IsActive = true,
-            CreatedAt = now,
         };
 
-        return await _userRepository.CreateWithEmployeeAsync(user, employee);
+        return await _userRepository.CreateWithResourceProfileAsync(user, resourceProfile);
     }
 
     private static int DeactivateAdminUser(User user)
@@ -256,13 +242,13 @@ public class UserService : IUserService
     {
         user.IsActive = false;
 
-        if (user.Employee is null)
+        if (user.ResourceProfile is null)
         {
             return 0;
         }
 
         var today = DateTime.UtcNow.Date;
-        var activeAllocations = user.Employee.Allocations
+        var activeAllocations = user.ResourceProfile.Allocations
             .Where(allocation => allocation.IsActive)
             .ToList();
 
@@ -272,10 +258,8 @@ public class UserService : IUserService
             allocation.ToDate = today;
         }
 
-        user.Employee.IsActive = false;
-        user.Employee.Status = EmployeeStatus.Inactive;
-        user.Employee.ManagerId = null;
-        user.Employee.Manager = null;
+        user.ResourceProfile.ManagerId = null;
+        user.ResourceProfile.Manager = null;
 
         return activeAllocations.Count;
     }
@@ -285,12 +269,6 @@ public class UserService : IUserService
         await CheckManagerDeactivationPossibleAsync(user.Id);
 
         user.IsActive = false;
-        if (user.Employee is not null)
-        {
-            user.Employee.IsActive = false;
-            user.Employee.Status = EmployeeStatus.Inactive;
-        }
-
         return 0;
     }
 

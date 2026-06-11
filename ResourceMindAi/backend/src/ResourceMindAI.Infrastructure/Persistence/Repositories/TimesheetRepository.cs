@@ -13,11 +13,12 @@ public class TimesheetRepository : ITimesheetRepository
         _dbContext = dbContext;
     }
 
-    public Task<Employee?> GetEmployeeByUserIdAsync(Guid userId)
+    public Task<ResourceProfile?> GetResourceProfileByUserIdAsync(Guid userId)
     {
-        return _dbContext.Employees
+        return _dbContext.ResourceProfiles
             .AsNoTracking()
-            .SingleOrDefaultAsync(employee => employee.UserId == userId && employee.IsActive);
+            .Include(profile => profile.User)
+            .SingleOrDefaultAsync(profile => profile.Id == userId && profile.User.IsActive);
     }
 
     public async Task<IReadOnlyList<Allocation>> GetAllocationsAsync(Guid employeeId)
@@ -25,7 +26,7 @@ public class TimesheetRepository : ITimesheetRepository
         return await _dbContext.Allocations
             .AsNoTracking()
             .Include(allocation => allocation.Project)
-            .Where(allocation => allocation.EmployeeId == employeeId)
+            .Where(allocation => allocation.ResourceProfileId == employeeId)
             .OrderByDescending(allocation => allocation.FromDate)
             .ToListAsync();
     }
@@ -39,7 +40,7 @@ public class TimesheetRepository : ITimesheetRepository
             .AsNoTracking()
             .Include(allocation => allocation.Project)
             .Where(allocation =>
-                allocation.EmployeeId == employeeId
+                allocation.ResourceProfileId == employeeId
                 && allocation.FromDate <= weekEnd
                 && allocation.ToDate >= weekStart)
             .ToListAsync();
@@ -51,7 +52,7 @@ public class TimesheetRepository : ITimesheetRepository
             .AsNoTracking()
             .Include(timesheet => timesheet.Project)
             .Include(timesheet => timesheet.ActivityTags)
-            .Where(timesheet => timesheet.EmployeeId == employeeId)
+            .Where(timesheet => timesheet.ResourceProfileId == employeeId)
             .OrderByDescending(timesheet => timesheet.WeekStartDate)
             .ToListAsync();
     }
@@ -59,7 +60,7 @@ public class TimesheetRepository : ITimesheetRepository
     public Task<bool> HasTimesheetForWeekAsync(Guid employeeId, DateTime weekStart)
     {
         return _dbContext.Timesheets.AnyAsync(timesheet =>
-            timesheet.EmployeeId == employeeId
+            timesheet.ResourceProfileId == employeeId
             && timesheet.WeekStartDate == weekStart);
     }
 

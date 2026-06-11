@@ -18,11 +18,11 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<Employee>> GetAllAsync()
+    public async Task<IReadOnlyList<ResourceProfile>> GetAllAsync()
     {
         _logger.LogDebug("Querying all employees with user profiles");
 
-        var employees = await _dbContext.Employees
+        var employees = await _dbContext.ResourceProfiles
             .Include(x => x.User)
             .Include(x => x.Manager)
             .Include(x => x.Allocations)
@@ -33,13 +33,13 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         return employees;
     }
 
-    public async Task<Employee?> GetByIdAsync(Guid userId)
+    public async Task<ResourceProfile?> GetByIdAsync(Guid userId)
     {
         _logger.LogDebug("Querying employee by user {UserId}", userId);
 
-        var employee = await _dbContext.Employees
+        var employee = await _dbContext.ResourceProfiles
             .Include(x => x.User)
-            .FirstOrDefaultAsync(x => x.UserId == userId);
+            .FirstOrDefaultAsync(x => x.Id == userId);
 
         _logger.LogDebug(
             "Employee lookup by user {UserId} returned {Found}",
@@ -49,26 +49,9 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         return employee;
     }
 
-    public async Task<Employee?> GetByEmployeeIdAsync(Guid employeeId)
+    public Task<ResourceProfile?> GetForManagerUpdateAsync(Guid employeeId)
     {
-        _logger.LogDebug("Querying employee by employee {EmployeeId}", employeeId);
-
-        var employee = await _dbContext.Employees
-            .Include(x => x.User)
-            .Include(x => x.Manager)
-            .FirstOrDefaultAsync(x => x.Id == employeeId);
-
-        _logger.LogDebug(
-            "Employee lookup by employee {EmployeeId} returned {Found}",
-            employeeId,
-            employee is not null);
-
-        return employee;
-    }
-
-    public Task<Employee?> GetForManagerUpdateAsync(Guid employeeId)
-    {
-        return _dbContext.Employees
+        return _dbContext.ResourceProfiles
             .Include(employee => employee.User)
             .Include(employee => employee.Manager)
             .Include(employee => employee.Allocations.Where(allocation => allocation.IsActive))
@@ -81,7 +64,7 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         _logger.LogDebug("Querying skills for employee {EmployeeId}", employeeId);
 
         return await _dbContext.Skills
-            .Where(x => x.EmployeeId == employeeId)
+            .Where(x => x.ResourceProfileId == employeeId)
             .OrderBy(x => x.SkillName)
             .ToListAsync();
     }
@@ -91,7 +74,7 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         _logger.LogDebug("Querying skill {SkillId} for employee {EmployeeId}", skillId, employeeId);
 
         return await _dbContext.Skills
-            .FirstOrDefaultAsync(x => x.EmployeeId == employeeId && x.Id == skillId);
+            .FirstOrDefaultAsync(x => x.ResourceProfileId == employeeId && x.Id == skillId);
     }
 
     public async Task<Skill?> GetSkillByNameAsync(Guid employeeId, string skillName)
@@ -99,7 +82,7 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         _logger.LogDebug("Querying skill {SkillName} for employee {EmployeeId}", skillName, employeeId);
 
         return await _dbContext.Skills
-            .FirstOrDefaultAsync(x => x.EmployeeId == employeeId && x.SkillName == skillName);
+            .FirstOrDefaultAsync(x => x.ResourceProfileId == employeeId && x.SkillName == skillName);
     }
 
     public async Task<Skill> AddSkillAsync(Skill skill)
@@ -116,11 +99,11 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         return skill;
     }
 
-    public async Task SaveManagerUpdateAsync(Employee employee)
+    public async Task SaveManagerUpdateAsync(ResourceProfile resourceProfile)
     {
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
-        _dbContext.Employees.Update(employee);
+        _dbContext.ResourceProfiles.Update(resourceProfile);
         await _dbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();

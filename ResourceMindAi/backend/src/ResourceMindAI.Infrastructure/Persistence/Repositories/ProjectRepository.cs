@@ -41,8 +41,8 @@ public class ProjectRepository : IProjectRepository
         return _dbContext.Projects
             .Include(project => project.Manager)
             .Include(project => project.Allocations.Where(allocation => allocation.IsActive))
-                .ThenInclude(allocation => allocation.Employee)
-                    .ThenInclude(employee => employee.User)
+                .ThenInclude(allocation => allocation.ResourceProfile)
+                    .ThenInclude(profile => profile.User)
             .FirstOrDefaultAsync(project => project.Id == id);
     }
 
@@ -53,11 +53,11 @@ public class ProjectRepository : IProjectRepository
         return await _dbContext.Allocations
             .AsNoTracking()
             .Include(allocation => allocation.Project)
-            .Include(allocation => allocation.Employee)
-                .ThenInclude(employee => employee.User)
+            .Include(allocation => allocation.ResourceProfile)
+                .ThenInclude(profile => profile.User)
             .Where(allocation =>
                 allocation.IsActive
-                && employeeIds.Contains(allocation.EmployeeId)
+                && employeeIds.Contains(allocation.ResourceProfileId)
                 && allocation.Project.ManagerId == managerId
                 && (allocation.Project.Status == ProjectStatus.Active
                     || allocation.Project.Status == ProjectStatus.Planned))
@@ -101,12 +101,12 @@ public class ProjectRepository : IProjectRepository
 
     public async Task SaveManagerUpdateAsync(
         Project project,
-        IReadOnlyCollection<Employee> employees)
+        IReadOnlyCollection<ResourceProfile> resourceProfiles)
     {
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
         _dbContext.Projects.Update(project);
-        _dbContext.Employees.UpdateRange(employees);
+        _dbContext.ResourceProfiles.UpdateRange(resourceProfiles);
         await _dbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();

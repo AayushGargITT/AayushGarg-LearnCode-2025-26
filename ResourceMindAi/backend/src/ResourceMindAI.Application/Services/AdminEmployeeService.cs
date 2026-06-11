@@ -83,7 +83,7 @@ public class AdminEmployeeService : IAdminEmployeeService
         var skill = new Skill
         {
             Id = Guid.NewGuid(),
-            EmployeeId = employeeId,
+            ResourceProfileId = employeeId,
             SkillName = skillName,
             Category = request.Category!.Value,
             Proficiency = request.Proficiency!.Value,
@@ -170,14 +170,14 @@ public class AdminEmployeeService : IAdminEmployeeService
 
     private async Task EnsureEmployeeExistsAsync(Guid employeeId)
     {
-        var employee = await _adminEmployeeRepository.GetByEmployeeIdAsync(employeeId);
+        var employee = await _adminEmployeeRepository.GetByIdAsync(employeeId);
         if (employee is null)
         {
             throw new EntityNotFoundException("Employee", employeeId);
         }
     }
 
-    private async Task<Employee> GetValidEmployeeForManagerUpdateAsync(Guid employeeId)
+    private async Task<ResourceProfile> GetValidEmployeeForManagerUpdateAsync(Guid employeeId)
     {
         var employee = await _adminEmployeeRepository.GetForManagerUpdateAsync(employeeId);
         if (employee is null)
@@ -190,7 +190,7 @@ public class AdminEmployeeService : IAdminEmployeeService
             throw new ValidationException("Manager can be updated only for users with Employee role.");
         }
 
-        if (!employee.IsActive || !employee.User.IsActive)
+        if (!employee.User.IsActive)
         {
             throw new ValidationException("Manager can be updated only for an active employee.");
         }
@@ -219,7 +219,7 @@ public class AdminEmployeeService : IAdminEmployeeService
         return manager;
     }
 
-    private static IReadOnlyList<string> GetActiveProjectNames(Employee employee)
+    private static IReadOnlyList<string> GetActiveProjectNames(ResourceProfile employee)
     {
         return employee.Allocations
             .Where(allocation => allocation.IsActive)
@@ -234,7 +234,7 @@ public class AdminEmployeeService : IAdminEmployeeService
         return new EmployeeSkillDto
         {
             Id = skill.Id,
-            EmployeeId = skill.EmployeeId,
+            EmployeeId = skill.ResourceProfileId,
             SkillName = skill.SkillName,
             Category = skill.Category,
             Proficiency = skill.Proficiency,
@@ -242,7 +242,7 @@ public class AdminEmployeeService : IAdminEmployeeService
         };
     }
 
-    private static EmployeeListDto MapEmployee(Employee employee)
+    private static EmployeeListDto MapEmployee(ResourceProfile employee)
     {
         return new EmployeeListDto
         {
@@ -251,14 +251,22 @@ public class AdminEmployeeService : IAdminEmployeeService
             FullName = employee.User.FullName,
             Email = employee.User.Email,
             Role = employee.User.Role,
-            AllocationStatus = employee.Allocations.Any(allocation => allocation.IsActive)
-                ? "Allocated"
-                : "Bench",
+            AllocationStatus = employee.Allocations.Any(IsCurrentAllocation)
+                ? ResourceStatus.Allocated
+                : ResourceStatus.Bench,
             Department = employee.Department,
             Designation = employee.Designation,
-            IsActive = employee.IsActive,
+            IsActive = employee.User.IsActive,
             ManagerId = employee.ManagerId,
             ManagerName = employee.Manager?.FullName,
         };
+    }
+
+    private static bool IsCurrentAllocation(Allocation allocation)
+    {
+        var today = DateTime.UtcNow.Date;
+        return allocation.IsActive
+            && allocation.FromDate.Date <= today
+            && allocation.ToDate.Date >= today;
     }
 }
