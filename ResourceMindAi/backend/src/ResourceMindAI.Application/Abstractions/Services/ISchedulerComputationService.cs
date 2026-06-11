@@ -2,5 +2,5 @@ namespace ResourceMindAI.Application.Abstractions.Services;
 
 public interface ISchedulerComputationService
 {
-    void Execute();
+    Task ExecuteAsync(CancellationToken cancellationToken);
 }

@@ -106,29 +106,11 @@ public class ManagerService : IManagerService
         Guid managerId,
         Guid projectId)
     {
-        var project = await _managerRepository.GetProjectForRiskSummaryAsync(managerId, projectId);
-        if (project is null)
-        {
-            throw new ForbiddenException(
-                "You can generate risk summaries only for projects managed by you.",
-                "MANAGER_SCOPE_VIOLATION");
-        }
-
-        var configuredHours = await _systemConfigRepository.GetMaxWeeklyHoursAsync();
-        var maximumWeeklyHours = configuredHours is > 0
-            ? configuredHours.Value
-            : MaximumWeeklyHours;
-        var facts = BuildRiskFacts(project, maximumWeeklyHours);
+        var project = await GetRiskSummaryProjectAsync(managerId, projectId);
 
         try
         {
-            var generated = await _llmClient.GenerateProjectRiskSummaryAsync(facts);
-            var validated = ValidateRiskSummary(generated);
-
-            project.RiskFlagsJson = JsonSerializer.Serialize(validated, RiskJsonOptions);
-            await _managerRepository.SaveChangesAsync();
-
-            return validated;
+            return await GenerateAndSaveRiskSummaryAsync(project);
         }
         catch (ExternalServiceException exception)
         {
@@ -144,6 +126,14 @@ public class ManagerService : IManagerService
 
             throw;
         }
+    }
+
+    public async Task<ProjectRiskSummaryDto> GenerateScheduledProjectRiskSummaryAsync(
+        Guid managerId,
+        Guid projectId)
+    {
+        var project = await GetRiskSummaryProjectAsync(managerId, projectId);
+        return await GenerateAndSaveRiskSummaryAsync(project);
     }
 
     public async Task<IReadOnlyList<ManagerTimesheetDto>> GetSubmittedTimesheetsAsync(Guid managerId)
@@ -296,6 +286,35 @@ public class ManagerService : IManagerService
         return project;
     }
 
+    private async Task<Project> GetRiskSummaryProjectAsync(Guid managerId, Guid projectId)
+    {
+        var project = await _managerRepository.GetProjectForRiskSummaryAsync(managerId, projectId);
+        if (project is null)
+        {
+            throw new ForbiddenException(
+                "You can generate risk summaries only for projects managed by you.",
+                "MANAGER_SCOPE_VIOLATION");
+        }
+
+        return project;
+    }
+
+    private async Task<ProjectRiskSummaryDto> GenerateAndSaveRiskSummaryAsync(Project project)
+    {
+        var configuredHours = await _systemConfigRepository.GetMaxWeeklyHoursAsync();
+        var maximumWeeklyHours = configuredHours is > 0
+            ? configuredHours.Value
+            : MaximumWeeklyHours;
+        var facts = BuildRiskFacts(project, maximumWeeklyHours);
+        var generated = await _llmClient.GenerateProjectRiskSummaryAsync(facts);
+        var validated = ValidateRiskSummary(generated);
+
+        project.RiskFlagsJson = JsonSerializer.Serialize(validated, RiskJsonOptions);
+        await _managerRepository.SaveChangesAsync();
+
+        return validated;
+    }
+
     private static void ValidateDateRange(DateTime fromDate, DateTime toDate)
     {
         if (fromDate >= toDate)
@@ -326,7 +345,9 @@ public class ManagerService : IManagerService
             Department = employee.User.Department ?? string.Empty,
             Designation = employee.User.Designation ?? string.Empty,
             AllocationPercent = allocationPercent,
-            CurrentStatus = allocationPercent == 0 ? "Bench" : allocationPercent >= 100 ? "Full" : "Partial",
+            CurrentStatus = allocationPercent > 0
+                ? ResourceStatus.Allocated
+                : ResourceStatus.Bench,
             Skills = employee.Skills.OrderBy(x => x.SkillName).Select(x => x.SkillName).ToList(),
             ActiveAllocations = activeAllocations.Select(MapAllocation).ToList(),
             RecentActivityTags = employee.User.Timesheets

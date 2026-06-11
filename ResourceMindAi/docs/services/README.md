@@ -1497,15 +1497,28 @@ active flag.
 ## SchedulerComputationService
 
 ```csharp
-public void Execute()
+public async Task ExecuteAsync(CancellationToken cancellationToken)
 {
-    throw new NotImplementedException();
+    var evaluationDate = DateTime.UtcNow.Date;
+    await ComputeResourceStatusesAsync(evaluationDate, cancellationToken);
+    await GenerateProjectRiskSummariesAsync(cancellationToken);
 }
 ```
 
-This is currently a placeholder. Calling it throws immediately. It should not
-be described as an active scheduler workflow until implementation replaces the
-exception.
+1. Loads active Employee-role users with allocations active on the UTC
+   evaluation date.
+2. Computes each resource as only `Allocated` or `Bench`; status remains
+   derived and is not restored as a `ResourceProfile` column.
+3. Logs aggregate allocated and bench counts.
+4. Loads Active and Planned projects.
+5. Calls the same validated AI risk-generation core used by the manual manager
+   action.
+6. Isolates failures per employee and project so later items continue.
+
+`ResourceSchedulerService` is the Infrastructure hosted worker. It creates a
+new DI scope for each execution, waits briefly after application startup, uses
+`SystemConfig.SchedulerIntervalHours` when positive, defaults to 24 hours, and
+honors application cancellation.
 
 ---
 
@@ -2069,8 +2082,8 @@ clearFeedback(): void {
 7. **Frontend services are thin.** They provide typed HTTP operations and
    session/page state, leaving domain decisions to the backend.
 
-## Current placeholder
+## Scheduled processing
 
-`SchedulerComputationService.Execute()` still throws
-`NotImplementedException`. It is the only application service method in this
-document that does not yet provide working behavior.
+The registered hosted service periodically computes derived resource status
+and refreshes validated AI risk summaries. Invalid or failed AI output never
+overwrites the previously saved `Project.RiskFlagsJson`.

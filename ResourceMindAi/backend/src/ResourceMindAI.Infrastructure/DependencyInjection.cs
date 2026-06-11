@@ -11,6 +11,7 @@ using ResourceMindAI.Infrastructure.Persistence.Repositories;
 
 using ResourceMindAI.Infrastructure.ExternalServices.Jwt;
 using ResourceMindAI.Infrastructure.ExternalServices.AI;
+using ResourceMindAI.Infrastructure.BackgroundServices;
 
 namespace ResourceMindAI.Infrastructure;
 public static class DependencyInjection
@@ -30,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IAllocationRepository, AllocationRepository>();
         services.AddScoped<ITimesheetRepository, TimesheetRepository>();
         services.AddScoped<ISystemConfigRepository, SystemConfigRepository>();
+        services.AddScoped<ISchedulerRepository, SchedulerRepository>();
 
         // Services
         services.AddScoped<IJwtService, JwtService>();
@@ -38,6 +40,7 @@ public static class DependencyInjection
             client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
             client.Timeout = TimeSpan.FromSeconds(30);
         });
+        services.AddHostedService<ResourceSchedulerService>();
         return services;
     }
 }

@@ -19,4 +19,13 @@ public class SystemConfigRepository : ISystemConfigRepository
             .Select(config => (decimal?)config.MaxWeeklyHours)
             .FirstOrDefaultAsync();
     }
+
+    public Task<int?> GetSchedulerIntervalHoursAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.SystemConfigs
+            .AsNoTracking()
+            .Select(config => (int?)config.SchedulerIntervalHours)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }

@@ -19,7 +19,7 @@ export interface ManagerResource {
   fullName: string;
   department: string;
   designation: string;
-  currentStatus: 'Bench' | 'Partial' | 'Full' | string;
+  currentStatus: 'Bench' | 'Allocated' | string;
   allocationPercent: number;
   skills: string[];
   activeAllocations: ManagerAllocation[];

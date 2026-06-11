@@ -9,6 +9,9 @@ public interface IManagerService
     Task<IReadOnlyList<ManagerProjectDto>> GetProjectsAsync(Guid managerId);
     Task<ManagerProjectDetailDto> GetProjectDetailAsync(Guid managerId, Guid projectId);
     Task<ProjectRiskSummaryDto> GenerateProjectRiskSummaryAsync(Guid managerId, Guid projectId);
+    Task<ProjectRiskSummaryDto> GenerateScheduledProjectRiskSummaryAsync(
+        Guid managerId,
+        Guid projectId);
     Task<IReadOnlyList<ManagerTimesheetDto>> GetSubmittedTimesheetsAsync(Guid managerId);
     Task<ResourceMatchResponseDto> FindResourcesAsync(Guid managerId, FindResourceRequestDto request);
     Task<ManagerAllocationDto> AllocateAsync(Guid managerId, CreateManagerAllocationDto request);
