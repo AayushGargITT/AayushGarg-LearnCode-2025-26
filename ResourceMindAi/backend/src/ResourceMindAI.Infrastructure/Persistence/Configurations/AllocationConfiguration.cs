@@ -19,9 +19,9 @@ public class AllocationConfiguration : IEntityTypeConfiguration<Allocation>
         builder.Property(x => x.ToDate)
                .IsRequired();
 
-        builder.HasOne(allocation => allocation.ResourceProfile)
-            .WithMany(profile => profile.Allocations)
-            .HasForeignKey(allocation => allocation.ResourceProfileId)
+        builder.HasOne(allocation => allocation.User)
+            .WithMany(user => user.Allocations)
+            .HasForeignKey(allocation => allocation.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.ToTable(t =>

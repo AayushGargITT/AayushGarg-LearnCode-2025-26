@@ -41,8 +41,8 @@ public class ProjectRepository : IProjectRepository
         return _dbContext.Projects
             .Include(project => project.Manager)
             .Include(project => project.Allocations.Where(allocation => allocation.IsActive))
-                .ThenInclude(allocation => allocation.ResourceProfile)
-                    .ThenInclude(profile => profile.User)
+                .ThenInclude(allocation => allocation.User)
+                    .ThenInclude(user => user.ResourceProfile)
             .FirstOrDefaultAsync(project => project.Id == id);
     }
 
@@ -53,11 +53,10 @@ public class ProjectRepository : IProjectRepository
         return await _dbContext.Allocations
             .AsNoTracking()
             .Include(allocation => allocation.Project)
-            .Include(allocation => allocation.ResourceProfile)
-                .ThenInclude(profile => profile.User)
+            .Include(allocation => allocation.User)
             .Where(allocation =>
                 allocation.IsActive
-                && employeeIds.Contains(allocation.ResourceProfileId)
+                && employeeIds.Contains(allocation.UserId)
                 && allocation.Project.ManagerId == managerId
                 && (allocation.Project.Status == ProjectStatus.Active
                     || allocation.Project.Status == ProjectStatus.Planned))
@@ -106,7 +105,16 @@ public class ProjectRepository : IProjectRepository
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
         _dbContext.Projects.Update(project);
-        _dbContext.ResourceProfiles.UpdateRange(resourceProfiles);
+        var profileIds = resourceProfiles.Select(profile => profile.Id).ToList();
+        var existingProfileIds = await _dbContext.ResourceProfiles
+            .Where(profile => profileIds.Contains(profile.Id))
+            .Select(profile => profile.Id)
+            .ToListAsync();
+
+        _dbContext.ResourceProfiles.UpdateRange(
+            resourceProfiles.Where(profile => existingProfileIds.Contains(profile.Id)));
+        await _dbContext.ResourceProfiles.AddRangeAsync(
+            resourceProfiles.Where(profile => !existingProfileIds.Contains(profile.Id)));
         await _dbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();

@@ -81,11 +81,21 @@
             </div>
             <div class="field-stack">
               <label class="text-sm font-medium">To</label>
-              <kendo-datepicker formControlName="toDate"></kendo-datepicker>
+              <kendo-datepicker
+                formControlName="toDate"
+                [max]="selectedProjectEndDate()">
+              </kendo-datepicker>
             </div>
           </div>
           <span *ngIf="hasAllocationDateError()" class="text-xs text-rose-400">From date must be before to date.</span>
-          <button kendoButton themeColor="primary" [disabled]="allocationForm.invalid || hasAllocationDateError() || isSubmitting()" type="submit">
+          <span *ngIf="hasProjectEndDateError()" class="text-xs text-rose-400">
+            Allocation end date cannot be after the project end date.
+          </span>
+          <button
+            kendoButton
+            themeColor="primary"
+            [disabled]="allocationForm.invalid || hasAllocationDateError() || hasProjectEndDateError() || isSubmitting()"
+            type="submit">
             Allocate
           </button>
         </form>

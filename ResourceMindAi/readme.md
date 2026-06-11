@@ -145,6 +145,8 @@ classDiagram
         +string Email
         +string Username
         +string PasswordHash
+        +string? Department
+        +string? Designation
         +Role Role
         +bool IsActive
         +bool ForcePasswordChange
@@ -155,8 +157,6 @@ classDiagram
     class ResourceProfile {
         +Guid Id
         +Guid? ManagerId
-        +string Department
-        +string Designation
     }
 
     note for ResourceProfile "Id is both the primary key and foreign key to User.Id"
@@ -194,7 +194,7 @@ classDiagram
 
     class Allocation {
         +Guid Id
-        +Guid ResourceProfileId
+        +Guid UserId
         +Guid ProjectId
         +decimal UtilisationPercent
         +DateTime FromDate
@@ -205,7 +205,7 @@ classDiagram
 
     class Timesheet {
         +Guid Id
-        +Guid ResourceProfileId
+        +Guid UserId
         +Guid ProjectId
         +DateTime WeekStartDate
         +decimal HoursLogged
@@ -230,9 +230,9 @@ classDiagram
     User "1" --> "0..1" ResourceProfile : shared PK profile
     User "1" --> "0..*" ResourceProfile : manages
     User "1" --> "0..*" Project : owns
+    User "1" --> "0..*" Allocation : receives
+    User "1" --> "0..*" Timesheet : submits
     ResourceProfile "1" --> "0..*" Skill : has
-    ResourceProfile "1" --> "0..*" Allocation : receives
-    ResourceProfile "1" --> "0..*" Timesheet : submits
     Project "1" --> "0..*" Milestone : contains
     Project "1" --> "0..*" Allocation : includes
     Project "1" --> "0..*" Timesheet : records
@@ -259,7 +259,6 @@ classDiagram
         +ResetPasswordAsync(userId)
         +DeactivateAsync(userId)
         +ReactivateAsync(userId)
-        +AddEmployeeAsync(userId, request)
     }
 
     class IAdminEmployeeService {
@@ -475,9 +474,10 @@ flowchart LR
 
 ### Admin creates a user
 
-Managers receive a resource profile automatically. Employee-role users can be
-mapped to a resource profile through the Admin flow. The profile reuses the
-user ID as its shared primary and foreign key.
+User creation writes only the user account. Department, designation, role, and
+active status belong to the user. A shared-key resource profile is created
+later only when profile-specific data is required, such as employee manager
+assignment or skills.
 
 ```mermaid
 sequenceDiagram
@@ -488,7 +488,7 @@ sequenceDiagram
     participant Repo as UserRepository
     participant DB as SQL Server
 
-    Admin->>UI: Submit full name, email, username, role
+    Admin->>UI: Submit identity, temporary password, role,<br/>department and designation
     UI->>API: POST /api/v1/user
     API->>Service: CreateAsync
     Service->>Repo: Check username and email uniqueness
@@ -497,14 +497,10 @@ sequenceDiagram
         Repo-->>Service: Existing record
         Service-->>UI: 409 conflict
     else Valid user
-        Service->>Service: Password = username, hash password
+        Service->>Service: Hash supplied temporary password
         Service->>Service: Set active and forcePasswordChange
-        alt Role is Manager
-            Service->>Repo: Create user and ResourceProfile with the same ID
-        else Admin or Employee
-            Service->>Repo: Create user
-        end
-        Repo->>DB: Save records
+        Service->>Repo: Create user
+        Repo->>DB: Save user record
         DB-->>Repo: Saved
         Service-->>UI: Created user profile
         UI->>UI: Refresh complete user list
@@ -775,9 +771,9 @@ erDiagram
     USER ||--o| RESOURCE_PROFILE : "has shared-key profile"
     USER ||--o{ RESOURCE_PROFILE : "manages"
     USER ||--o{ PROJECT : "owns"
+    USER ||--o{ ALLOCATION : "receives"
+    USER ||--o{ TIMESHEET : "submits"
     RESOURCE_PROFILE ||--o{ SKILL : "has"
-    RESOURCE_PROFILE ||--o{ ALLOCATION : "receives"
-    RESOURCE_PROFILE ||--o{ TIMESHEET : "submits"
     PROJECT ||--o{ MILESTONE : "contains"
     PROJECT ||--o{ ALLOCATION : "staffs"
     PROJECT ||--o{ TIMESHEET : "records"
@@ -789,6 +785,8 @@ erDiagram
         string Email UK
         string Username UK
         string PasswordHash
+        string Department
+        string Designation
         string Role
         boolean IsActive
         boolean ForcePasswordChange
@@ -799,8 +797,6 @@ erDiagram
     RESOURCE_PROFILE {
         uniqueidentifier Id PK, FK
         uniqueidentifier ManagerId FK
-        string Department
-        string Designation
     }
 
     SKILL {
@@ -836,7 +832,7 @@ erDiagram
 
     ALLOCATION {
         uniqueidentifier Id PK
-        uniqueidentifier ResourceProfileId FK
+        uniqueidentifier UserId FK
         uniqueidentifier ProjectId FK
         decimal UtilisationPercent
         datetime FromDate
@@ -847,7 +843,7 @@ erDiagram
 
     TIMESHEET {
         uniqueidentifier Id PK
-        uniqueidentifier ResourceProfileId FK
+        uniqueidentifier UserId FK
         uniqueidentifier ProjectId FK
         datetime WeekStartDate
         decimal HoursLogged
@@ -906,7 +902,6 @@ All routes except login require JWT authentication.
 | POST | `/api/v1/user/reset-password/{id}` | Admin |
 | PATCH | `/api/v1/user/{id}/deactivate` | Admin |
 | PATCH | `/api/v1/user/{id}/reactivate` | Admin |
-| POST | `/api/v1/user/add-employee/{id}` | Admin |
 | GET | `/api/v1/admin/employees` | Admin |
 | GET, POST | `/api/v1/admin/employees/{employeeId}/skills` | Admin |
 | PATCH | `/api/v1/admin/employees/{employeeId}/skills/{skillId}/proficiency` | Admin |
@@ -954,7 +949,13 @@ All routes except login require JWT authentication.
 ### User and employee lifecycle
 
 - Email and username must be unique.
-- A Manager user receives a resource profile during user creation.
+- User creation does not create a resource profile.
+- An employee resource profile is created on demand when a manager is assigned
+  or profile-specific data such as skills is added.
+- Department and designation are nullable `User` fields but are required when
+  creating Manager or Employee users.
+- Admin users may leave department and designation blank.
+- User creation accepts and hashes an explicit temporary password.
 - `ResourceProfile.Id` is both its primary key and a foreign key to `User.Id`.
 - A user can have at most one resource profile; no separate profile identity or
   `UserId` column exists.

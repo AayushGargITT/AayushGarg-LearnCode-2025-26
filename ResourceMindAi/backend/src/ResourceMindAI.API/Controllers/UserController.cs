@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Application.DTOs.User;
-using ResourceMindAI.Application.DTOs.Employee;
 
 namespace ResourceMindAI.API.Controllers;
 
@@ -89,11 +88,4 @@ public class UserController : ControllerBase
         return Ok(await _userService.ReactivateAsync(id));
     }
 
-    [HttpPost("add-employee/{id:guid}")]
-    public async Task<ActionResult<UserProfileDto>> AddEmployee(Guid id, AddEmployeeDto request)
-    {
-        _logger.LogInformation("Add employee request received for user {UserId}", id);
-        var user = await _userService.AddEmployeeAsync(id, request);
-        return Ok(user);
-    }
 }

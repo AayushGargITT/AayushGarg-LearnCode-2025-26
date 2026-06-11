@@ -5,6 +5,7 @@ namespace ResourceMindAI.Application.DTOs.Manager;
 public class ManagerTimesheetDto
 {
     public Guid Id { get; set; }
+    public Guid EmployeeId { get; set; }
     public string EmployeeName { get; set; } = null!;
     public string ProjectName { get; set; } = null!;
     public DateTime WeekStartDate { get; set; }

@@ -2,7 +2,6 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-  AddEmployeeRequest,
   CreateUserRequest,
   DeactivateUserResult,
   User
@@ -35,9 +34,5 @@ export class AdminUserService {
 
   reactivateUser(userId: string): Observable<User> {
     return this.http.patch<User>(`${this.apiUrl}/${userId}/reactivate`, {});
-  }
-
-  addEmployee(userId: string, request: AddEmployeeRequest): Observable<User> {
-    return this.http.post<User>(`${this.apiUrl}/add-employee/${userId}`, request);
   }
 }

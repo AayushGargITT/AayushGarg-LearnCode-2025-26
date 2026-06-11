@@ -13,14 +13,6 @@ public class ResourceProfileConfiguration : IEntityTypeConfiguration<ResourcePro
         builder.Property(profile => profile.Id)
             .ValueGeneratedNever();
 
-        builder.Property(profile => profile.Department)
-            .IsRequired()
-            .HasMaxLength(100);
-
-        builder.Property(profile => profile.Designation)
-            .IsRequired()
-            .HasMaxLength(150);
-
         builder.HasOne(profile => profile.User)
             .WithOne(user => user.ResourceProfile)
             .HasForeignKey<ResourceProfile>(profile => profile.Id)

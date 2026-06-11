@@ -1,5 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { ButtonsModule } from '@progress/kendo-angular-buttons';
+import { DialogModule } from '@progress/kendo-angular-dialog';
 import { GridModule } from '@progress/kendo-angular-grid';
 import { ManagerTimesheet } from '../../../core/models/manager.model';
 import { ManagerService } from '../../../core/services/manager.service';
@@ -15,6 +17,8 @@ import { PageStateService } from '../../../shared/services/page-state.service';
   standalone: true,
   imports: [
     CommonModule,
+    ButtonsModule,
+    DialogModule,
     GridModule,
     AppLayoutComponent,
     PageHeaderComponent,
@@ -31,6 +35,23 @@ export class ManagerTimesheetsComponent {
   readonly pageState = inject(PageStateService);
 
   readonly rows = signal<ManagerTimesheet[]>([]);
+  readonly selectedTimesheet = signal<ManagerTimesheet | null>(null);
+  readonly selectedWeekEntries = computed(() => {
+    const selected = this.selectedTimesheet();
+    if (!selected) {
+      return [];
+    }
+
+    const selectedWeek = this.toDateKey(selected.weekStartDate);
+    return this.rows().filter(timesheet =>
+      timesheet.employeeId === selected.employeeId
+      && this.toDateKey(timesheet.weekStartDate) === selectedWeek);
+  });
+  readonly selectedWeekTotal = computed(() =>
+    this.selectedWeekEntries().reduce(
+      (total, timesheet) => total + timesheet.hoursLogged,
+      0
+    ));
 
   constructor() {
     this.loadTimesheets();
@@ -48,5 +69,18 @@ export class ManagerTimesheetsComponent {
         this.pageState.setError(err.error?.message ?? 'Unable to load timesheets.');
       }
     });
+  }
+
+  openDetail(timesheet: ManagerTimesheet): void {
+    this.selectedTimesheet.set(timesheet);
+  }
+
+  closeDetail(): void {
+    this.selectedTimesheet.set(null);
+  }
+
+  private toDateKey(value: Date | string): string {
+    const date = new Date(value);
+    return `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
   }
 }

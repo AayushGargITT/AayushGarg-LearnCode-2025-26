@@ -134,15 +134,15 @@ public static UserProfileDto ToProfile(User user)
         Role = user.Role,
         IsActive = user.IsActive,
         ForcePasswordChange = user.ForcePasswordChange,
-        EmployeeId = user.Employee?.Id,
-        Department = user.Employee?.Department,
-        Designation = user.Employee?.Designation,
+        EmployeeId = user.ResourceProfile?.Id,
+        Department = user.Department,
+        Designation = user.Designation,
     };
 }
 ```
 
 Each assignment copies an allowed field into the API DTO. The null-conditional
-operator handles Admin or Employee-role users without an employee profile.
+operator handles Admin users without a resource profile.
 `PasswordHash` is intentionally omitted.
 
 ### `IsStrongPassword`
@@ -271,22 +271,23 @@ public async Task<UserProfileDto> CreateAsync(CreateUserDto request)
             "A user with this username or email already exists.",
             "DUPLICATE_USER");
 
-    var now = DateTime.UtcNow;
     var user = new User
     {
         Id = Guid.NewGuid(),
         FullName = fullName,
         Email = email,
         Username = username,
-        PasswordHash = PasswordHasher.Hash(username),
+        PasswordHash = PasswordHasher.Hash(request.TemporaryPassword),
+        Department = NormalizeOptional(request.Department),
+        Designation = NormalizeOptional(request.Designation),
         Role = request.Role!.Value,
         IsActive = true,
         ForcePasswordChange = true,
-        CreatedAt = now
+        CreatedAt = DateTime.UtcNow
     };
 
-    var createdUser = user.Role == Role.Manager
-        ? await CreateManagerWithEmployeeAsync(user, now)
+    var createdUser = user.Role is Role.Manager or Role.Employee
+        ? await CreateResourceUserAsync(user)
         : await _userRepository.CreateAsync(user);
 
     return AuthService.ToProfile(createdUser);
@@ -298,11 +299,10 @@ public async Task<UserProfileDto> CreateAsync(CreateUserDto request)
 3. Throws a conflict rather than allowing a database constraint failure.
 4. Uses UTC for consistent server-side timestamps.
 5. Creates a new GUID identity.
-6. Sets the initial password to the username and hashes it.
+6. Hashes the temporary password supplied by the Admin.
 7. Activates the user and requires a first-login password change.
-8. Manager creation follows a special transactional path that also creates an
-   employee profile.
-9. Other roles create only the user record.
+8. Manager and Employee creation also creates a shared-key resource profile.
+9. Admin creation stores only the user record.
 10. The response excludes the password hash.
 
 ### `ResetPasswordAsync`
@@ -378,68 +378,23 @@ public async Task<UserProfileDto> ReactivateAsync(Guid id)
         throw new ConflictException("User is already active.", "USER_ALREADY_ACTIVE");
 
     user.IsActive = true;
-    if (user.Employee is not null)
-    {
-        user.Employee.IsActive = true;
-        user.Employee.Status = EmployeeStatus.Active;
-    }
 
     var updatedUser = await _userRepository.UpdateAsync(user);
     return AuthService.ToProfile(updatedUser);
 }
 ```
 
-Reactivation restores only user/profile activity. It intentionally does not
+Reactivation restores only user activity. It intentionally does not
 restore previous allocations or manager assignments.
-
-### `AddEmployeeAsync`
-
-```csharp
-public async Task<UserProfileDto> AddEmployeeAsync(Guid userId, AddEmployeeDto request)
-{
-    var user = await _userRepository.GetByIdAsync(userId);
-    if (user is null)
-        throw new EntityNotFoundException("User", userId);
-
-    if (user.Role == Role.Admin)
-        throw new ForbiddenException(
-            "Admin users cannot be added as employees.",
-            "ADMIN_EMPLOYEE_NOT_ALLOWED");
-
-    if (user.Employee is not null)
-        throw new ConflictException(
-            "This user is already added as an employee.",
-            "EMPLOYEE_ALREADY_EXISTS");
-
-    var employee = new Employee
-    {
-        Id = Guid.NewGuid(),
-        UserId = userId,
-        Department = request.Department.Trim(),
-        Designation = request.Designation.Trim(),
-        Status = EmployeeStatus.Active,
-        IsActive = true,
-        CreatedAt = DateTime.UtcNow,
-    };
-
-    var createdEmployee = await _userRepository.AddEmployeeAsync(employee);
-    user.Employee = createdEmployee;
-    return AuthService.ToProfile(user);
-}
-```
-
-The method validates the user, blocks Admin profiles, prevents duplicate
-employee records, creates an active profile, persists it, and attaches it to the
-in-memory user before mapping the response.
 
 ### User lifecycle helpers
 
 | Helper | Responsibility |
 | --- | --- |
-| `CreateManagerWithEmployeeAsync` | Builds a default Management/Manager employee profile and asks the repository to create both records transactionally. |
+| `CreateResourceUserAsync` | Creates a shared-key resource profile for a Manager or Employee user. |
 | `DeactivateAdminUser` | Sets only `User.IsActive` to `false`. |
-| `DeactivateEmployeeUser` | Deactivates user/profile, ends active allocations today, sets employee status inactive, and clears manager assignment. |
-| `DeactivateManagerUserAsync` | Validates that no active work or subordinates remain, then deactivates user/profile. |
+| `DeactivateEmployeeUser` | Deactivates the user, ends active allocations today, and clears the resource manager assignment. |
+| `DeactivateManagerUserAsync` | Validates that no active work or subordinates remain, then deactivates the user. |
 | `CheckManagerDeactivationPossibleAsync` | Loads active/planned project names and active employee names; throws `ManagerDeactivationBlockedException` with structured details when either list is non-empty. |
 
 ---
@@ -473,8 +428,8 @@ public async Task<UserProfileDto> GetByIdAsync(Guid userId)
         IsActive = employee.User.IsActive,
         ForcePasswordChange = employee.User.ForcePasswordChange,
         EmployeeId = employee.Id,
-        Department = employee.Department,
-        Designation = employee.Designation,
+        Department = employee.User.Department,
+        Designation = employee.User.Designation,
     };
 }
 ```
@@ -844,9 +799,9 @@ public async Task<IReadOnlyList<AllocationDto>> GetAllAsync()
     return allocations.Select(allocation => new AllocationDto
     {
         Id = allocation.Id,
-        EmployeeId = allocation.EmployeeId,
-        EmployeeName = allocation.Employee.User.FullName,
-        EmployeeDesignation = allocation.Employee.Designation,
+        EmployeeId = allocation.UserId,
+        EmployeeName = allocation.User.FullName,
+        EmployeeDesignation = allocation.User.Designation,
         ProjectId = allocation.ProjectId,
         ProjectName = allocation.Project.Name,
         ProjectManager = allocation.Project.Manager.FullName,
@@ -859,7 +814,7 @@ public async Task<IReadOnlyList<AllocationDto>> GetAllAsync()
 }
 ```
 
-1. Loads allocations with employee, user, project, and manager relationships.
+1. Loads allocations with user, project, and manager relationships.
 2. Projects the entity graph into a flat DTO suitable for an Admin table.
 3. No mutation or business decision occurs in this read-only method.
 
@@ -1693,13 +1648,6 @@ deactivateUser(userId: string): Observable<DeactivateUserResult> {
 
 reactivateUser(userId: string): Observable<User> {
   return this.http.patch<User>(`${this.apiUrl}/${userId}/reactivate`, {});
-}
-
-addEmployee(userId: string, request: AddEmployeeRequest): Observable<User> {
-  return this.http.post<User>(
-    `${this.apiUrl}/add-employee/${userId}`,
-    request
-  );
 }
 ```
 

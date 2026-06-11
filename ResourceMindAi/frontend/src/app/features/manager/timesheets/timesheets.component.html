@@ -35,6 +35,55 @@
           <app-status-badge [status]="dataItem.status"></app-status-badge>
         </ng-template>
       </kendo-grid-column>
+      <kendo-grid-column title="Actions" [width]="100">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <button kendoButton fillMode="flat" (click)="openDetail(dataItem)">View</button>
+        </ng-template>
+      </kendo-grid-column>
     </kendo-grid>
   </div>
+
+  <kendo-dialog
+    *ngIf="selectedTimesheet()"
+    title="Timesheet Details"
+    [width]="680"
+    [minWidth]="320"
+    (close)="closeDetail()">
+    <div class="space-y-5">
+      <div class="flex flex-wrap justify-between gap-4">
+        <div>
+          <div class="text-xs text-muted-foreground">Employee</div>
+          <div class="font-medium">{{ selectedTimesheet()!.employeeName }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-muted-foreground">Week Starting</div>
+          <div class="font-mono">{{ selectedTimesheet()!.weekStartDate | date:'dd-MM-yyyy':'UTC' }}</div>
+        </div>
+        <app-status-badge [status]="selectedTimesheet()!.status"></app-status-badge>
+      </div>
+
+      <div *ngFor="let entry of selectedWeekEntries()" class="border-b border-border pb-4">
+        <div class="flex justify-between gap-3">
+          <span class="font-medium">{{ entry.projectName }}</span>
+          <span class="font-mono">{{ entry.hoursLogged }}h</span>
+        </div>
+        <div class="flex flex-wrap gap-1 mt-2">
+          <span
+            *ngFor="let tag of entry.tags"
+            class="inline-flex rounded-md border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+            {{ tag }}
+          </span>
+        </div>
+      </div>
+
+      <div class="flex justify-between font-semibold">
+        <span>Total Hours</span>
+        <span class="font-mono">{{ selectedWeekTotal() }}h</span>
+      </div>
+    </div>
+
+    <kendo-dialog-actions>
+      <button kendoButton (click)="closeDetail()">Close</button>
+    </kendo-dialog-actions>
+  </kendo-dialog>
 </app-layout>

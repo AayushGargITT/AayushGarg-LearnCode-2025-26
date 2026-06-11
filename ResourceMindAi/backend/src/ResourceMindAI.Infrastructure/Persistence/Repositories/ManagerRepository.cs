@@ -56,19 +56,16 @@ public class ManagerRepository : IManagerRepository
         return await _dbContext.Projects
             .Include(x => x.Milestones)
             .Include(x => x.Allocations)
-                .ThenInclude(x => x.ResourceProfile)
-                    .ThenInclude(x => x.User)
+                .ThenInclude(x => x.User)
             .Include(x => x.Timesheets)
-                .ThenInclude(x => x.ResourceProfile)
-                    .ThenInclude(x => x.User)
+                .ThenInclude(x => x.User)
             .FirstOrDefaultAsync(x => x.Id == projectId && x.ManagerId == managerId);
     }
 
     public async Task<IReadOnlyList<Timesheet>> GetSubmittedTimesheetsAsync(Guid managerId)
     {
         return await _dbContext.Timesheets
-            .Include(x => x.ResourceProfile)
-                .ThenInclude(x => x.User)
+            .Include(x => x.User)
             .Include(x => x.Project)
             .Include(x => x.ActivityTags)
             .Where(x => x.Project.ManagerId == managerId && x.Status == TimesheetStatus.Submitted)
@@ -79,8 +76,7 @@ public class ManagerRepository : IManagerRepository
     public async Task<Allocation?> GetAllocationAsync(Guid managerId, Guid allocationId)
     {
         return await _dbContext.Allocations
-            .Include(x => x.ResourceProfile)
-                .ThenInclude(x => x.User)
+            .Include(x => x.User)
             .Include(x => x.Project)
             .FirstOrDefaultAsync(x => x.Id == allocationId && x.Project.ManagerId == managerId);
     }
@@ -93,7 +89,7 @@ public class ManagerRepository : IManagerRepository
     {
         return await _dbContext.Allocations
             .Where(x =>
-                x.ResourceProfileId == employeeId
+                x.UserId == employeeId
                 && x.IsActive
                 && x.FromDate <= toDate
                 && x.ToDate >= fromDate
@@ -117,11 +113,13 @@ public class ManagerRepository : IManagerRepository
     {
         return _dbContext.ResourceProfiles
             .Include(x => x.User)
+                .ThenInclude(user => user.Allocations)
+                    .ThenInclude(allocation => allocation.Project)
+            .Include(x => x.User)
+                .ThenInclude(user => user.Timesheets)
+                    .ThenInclude(timesheet => timesheet.ActivityTags)
             .Include(x => x.Skills)
-            .Include(x => x.Allocations)
-                .ThenInclude(x => x.Project)
-            .Include(x => x.Timesheets)
-                .ThenInclude(x => x.ActivityTags);
+            .AsSplitQuery();
     }
 
     private IQueryable<Project> ProjectGraph()
@@ -129,7 +127,6 @@ public class ManagerRepository : IManagerRepository
         return _dbContext.Projects
             .Include(x => x.Milestones)
             .Include(x => x.Allocations)
-                .ThenInclude(x => x.ResourceProfile)
-                    .ThenInclude(x => x.User);
+                .ThenInclude(x => x.User);
     }
 }

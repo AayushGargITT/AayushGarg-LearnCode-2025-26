@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Domain.Entities;
+using ResourceMindAI.Domain.Enums;
 
 namespace ResourceMindAI.Infrastructure.Persistence.Repositories;
 
@@ -18,28 +19,33 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<ResourceProfile>> GetAllAsync()
+    public async Task<IReadOnlyList<User>> GetAllAsync()
     {
-        _logger.LogDebug("Querying all employees with user profiles");
+        _logger.LogDebug("Querying all resource-related users");
 
-        var employees = await _dbContext.ResourceProfiles
-            .Include(x => x.User)
-            .Include(x => x.Manager)
-            .Include(x => x.Allocations)
-            .OrderBy(x => x.User.FullName)
+        var employees = await _dbContext.Users
+            .Include(user => user.ResourceProfile)
+                .ThenInclude(profile => profile!.Manager)
+            .Include(user => user.Allocations)
+            .Where(user => user.Role == Role.Manager || user.Role == Role.Employee)
+            .OrderBy(user => user.FullName)
             .ToListAsync();
 
         _logger.LogDebug("Queried {EmployeeCount} employees", employees.Count);
         return employees;
     }
 
-    public async Task<ResourceProfile?> GetByIdAsync(Guid userId)
+    public async Task<User?> GetByIdAsync(Guid userId)
     {
         _logger.LogDebug("Querying employee by user {UserId}", userId);
 
-        var employee = await _dbContext.ResourceProfiles
-            .Include(x => x.User)
-            .FirstOrDefaultAsync(x => x.Id == userId);
+        var employee = await _dbContext.Users
+            .Include(user => user.ResourceProfile)
+                .ThenInclude(profile => profile!.Manager)
+            .Include(user => user.Allocations)
+            .FirstOrDefaultAsync(user =>
+                user.Id == userId
+                && (user.Role == Role.Manager || user.Role == Role.Employee));
 
         _logger.LogDebug(
             "Employee lookup by user {UserId} returned {Found}",
@@ -49,14 +55,14 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         return employee;
     }
 
-    public Task<ResourceProfile?> GetForManagerUpdateAsync(Guid employeeId)
+    public Task<User?> GetForManagerUpdateAsync(Guid employeeId)
     {
-        return _dbContext.ResourceProfiles
-            .Include(employee => employee.User)
-            .Include(employee => employee.Manager)
-            .Include(employee => employee.Allocations.Where(allocation => allocation.IsActive))
+        return _dbContext.Users
+            .Include(user => user.ResourceProfile)
+                .ThenInclude(profile => profile!.Manager)
+            .Include(user => user.Allocations.Where(allocation => allocation.IsActive))
                 .ThenInclude(allocation => allocation.Project)
-            .FirstOrDefaultAsync(employee => employee.Id == employeeId);
+            .FirstOrDefaultAsync(user => user.Id == employeeId);
     }
 
     public async Task<IReadOnlyList<Skill>> GetSkillsAsync(Guid employeeId)
@@ -99,11 +105,19 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
         return skill;
     }
 
-    public async Task SaveManagerUpdateAsync(ResourceProfile resourceProfile)
+    public async Task SaveResourceProfileAsync(ResourceProfile resourceProfile)
     {
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
-        _dbContext.ResourceProfiles.Update(resourceProfile);
+        if (await _dbContext.ResourceProfiles.AnyAsync(profile => profile.Id == resourceProfile.Id))
+        {
+            _dbContext.ResourceProfiles.Update(resourceProfile);
+        }
+        else
+        {
+            _dbContext.ResourceProfiles.Add(resourceProfile);
+        }
+
         await _dbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();

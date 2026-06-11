@@ -58,7 +58,10 @@
 
       <kendo-grid-column field="allocationStatus" title="Status" [width]="135">
         <ng-template kendoGridCellTemplate let-dataItem>
-          <app-status-badge [status]="dataItem.allocationStatus"></app-status-badge>
+          <span *ngIf="dataItem.role === Role.MANAGER; else employeeStatus">-</span>
+          <ng-template #employeeStatus>
+            <app-status-badge [status]="dataItem.allocationStatus"></app-status-badge>
+          </ng-template>
         </ng-template>
       </kendo-grid-column>
 

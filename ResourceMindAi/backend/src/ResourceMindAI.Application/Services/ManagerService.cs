@@ -94,7 +94,7 @@ public class ManagerService : IManagerService
             EndDate = project.EndDate,
             Status = project.Status,
             HealthStatus = health.Health,
-            TeamSize = project.Allocations.Where(IsActiveAllocation).Select(x => x.ResourceProfileId).Distinct().Count(),
+            TeamSize = project.Allocations.Where(IsActiveAllocation).Select(x => x.UserId).Distinct().Count(),
             Milestones = project.Milestones.OrderBy(x => x.DueDate).Select(MapMilestone).ToList(),
             AllocatedResources = project.Allocations.Where(IsActiveAllocation).Select(MapAllocation).ToList(),
             RiskFlags = health.Flags,
@@ -153,7 +153,8 @@ public class ManagerService : IManagerService
         return timesheets.Select(x => new ManagerTimesheetDto
         {
             Id = x.Id,
-            EmployeeName = x.ResourceProfile.User.FullName,
+            EmployeeId = x.UserId,
+            EmployeeName = x.User.FullName,
             ProjectName = x.Project.Name,
             WeekStartDate = x.WeekStartDate,
             HoursLogged = x.HoursLogged,
@@ -231,6 +232,7 @@ public class ManagerService : IManagerService
             ?? DateTime.MaxValue.Date;
 
         ValidateDateRange(fromDate, toDate);
+        ValidateProjectDateRange(project, toDate);
 
         if (project.Status is not (ProjectStatus.Active or ProjectStatus.Planned))
         {
@@ -252,7 +254,7 @@ public class ManagerService : IManagerService
         var allocation = new Allocation
         {
             Id = Guid.NewGuid(),
-            ResourceProfileId = employee.Id,
+            UserId = employee.Id,
             ProjectId = project.Id,
             UtilisationPercent = request.UtilisationPercent.Value,
             FromDate = fromDate,
@@ -262,7 +264,7 @@ public class ManagerService : IManagerService
         };
 
         var createdAllocation = await _managerRepository.AddAllocationAsync(allocation);
-        createdAllocation.ResourceProfile = employee;
+        createdAllocation.User = employee.User;
         createdAllocation.Project = project;
 
         return MapAllocation(createdAllocation);
@@ -302,9 +304,18 @@ public class ManagerService : IManagerService
         }
     }
 
+    private static void ValidateProjectDateRange(Project project, DateTime allocationToDate)
+    {
+        if (project.EndDate.HasValue && allocationToDate > project.EndDate.Value.Date)
+        {
+            throw new ValidationException(
+                $"Allocation end date cannot be after the project end date ({project.EndDate.Value:dd-MM-yyyy}).");
+        }
+    }
+
     private static ManagerResourceDto MapResource(ResourceProfile employee)
     {
-        var activeAllocations = employee.Allocations.Where(IsActiveAllocation).ToList();
+        var activeAllocations = employee.User.Allocations.Where(IsActiveAllocation).ToList();
         var allocationPercent = activeAllocations.Sum(x => x.UtilisationPercent);
 
         return new ManagerResourceDto
@@ -312,13 +323,13 @@ public class ManagerService : IManagerService
             Id = employee.Id,
             UserId = employee.Id,
             FullName = employee.User.FullName,
-            Department = employee.Department,
-            Designation = employee.Designation,
+            Department = employee.User.Department ?? string.Empty,
+            Designation = employee.User.Designation ?? string.Empty,
             AllocationPercent = allocationPercent,
             CurrentStatus = allocationPercent == 0 ? "Bench" : allocationPercent >= 100 ? "Full" : "Partial",
             Skills = employee.Skills.OrderBy(x => x.SkillName).Select(x => x.SkillName).ToList(),
             ActiveAllocations = activeAllocations.Select(MapAllocation).ToList(),
-            RecentActivityTags = employee.Timesheets
+            RecentActivityTags = employee.User.Timesheets
                 .OrderByDescending(x => x.WeekStartDate)
                 .Take(6)
                 .SelectMany(x => x.ActivityTags)
@@ -334,8 +345,8 @@ public class ManagerService : IManagerService
         return new ManagerAllocationDto
         {
             Id = allocation.Id,
-            EmployeeId = allocation.ResourceProfileId,
-            EmployeeName = allocation.ResourceProfile.User.FullName,
+            EmployeeId = allocation.UserId,
+            EmployeeName = allocation.User.FullName,
             ProjectId = allocation.ProjectId,
             ProjectName = allocation.Project.Name,
             UtilisationPercent = allocation.UtilisationPercent,
@@ -358,7 +369,7 @@ public class ManagerService : IManagerService
             EndDate = project.EndDate,
             Status = project.Status,
             HealthStatus = health.Health,
-            TeamSize = project.Allocations.Where(IsActiveAllocation).Select(x => x.ResourceProfileId).Distinct().Count(),
+            TeamSize = project.Allocations.Where(IsActiveAllocation).Select(x => x.UserId).Distinct().Count(),
         };
     }
 
@@ -542,7 +553,7 @@ public class ManagerService : IManagerService
             return true;
         }
 
-        var designation = NormalizeSearchValue(employee.Designation);
+        var designation = NormalizeSearchValue(employee.User.Designation);
         var role = NormalizeSearchValue(requiredRole);
         return designation == role
             || designation.Split(' ', StringSplitOptions.RemoveEmptyEntries)
@@ -577,8 +588,8 @@ public class ManagerService : IManagerService
 
         var searchableValues = employee.Skills
             .Select(skill => NormalizeSearchValue(skill.SkillName))
-            .Append(NormalizeSearchValue(employee.Designation))
-            .Append(NormalizeSearchValue(employee.Department))
+            .Append(NormalizeSearchValue(employee.User.Designation))
+            .Append(NormalizeSearchValue(employee.User.Department))
             .ToList();
 
         return exclusions
@@ -594,8 +605,13 @@ public class ManagerService : IManagerService
             : normalized;
     }
 
-    private static string NormalizeSearchValue(string value)
+    private static string NormalizeSearchValue(string? value)
     {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
         return string.Join(
             ' ',
             value.Trim()
@@ -699,7 +715,7 @@ public class ManagerService : IManagerService
                 .Where(IsActiveAllocation)
                 .Select(allocation => new ProjectRiskAllocationFactDto
                 {
-                    EmployeeName = allocation.ResourceProfile.User.FullName,
+                    EmployeeName = allocation.User.FullName,
                     AllocationPercent = allocation.UtilisationPercent,
                     FromDate = allocation.FromDate,
                     ToDate = allocation.ToDate.Date == DateTime.MaxValue.Date
@@ -727,7 +743,7 @@ public class ManagerService : IManagerService
             .Where(timesheet => timesheet.WeekStartDate >= recentCutoff)
             .Select(timesheet => new ProjectRiskTimesheetFactDto
             {
-                EmployeeName = timesheet.ResourceProfile.User.FullName,
+                EmployeeName = timesheet.User.FullName,
                 WeekStart = timesheet.WeekStartDate,
                 LoggedHours = timesheet.HoursLogged,
                 ExpectedHours = GetExpectedHours(project, timesheet, maximumWeeklyHours),
@@ -736,12 +752,12 @@ public class ManagerService : IManagerService
             .ToList();
 
         var submittedWeeks = project.Timesheets
-            .Select(timesheet => (timesheet.ResourceProfileId, Week: timesheet.WeekStartDate.Date))
+            .Select(timesheet => (timesheet.UserId, Week: timesheet.WeekStartDate.Date))
             .ToHashSet();
         var firstWeek = StartOfWeek(recentCutoff);
         var lastCompletedWeek = StartOfWeek(DateTime.UtcNow.Date).AddDays(-7);
 
-        foreach (var employeeAllocations in project.Allocations.GroupBy(allocation => allocation.ResourceProfileId))
+        foreach (var employeeAllocations in project.Allocations.GroupBy(allocation => allocation.UserId))
         {
             for (var week = firstWeek; week <= lastCompletedWeek; week = week.AddDays(7))
             {
@@ -759,7 +775,7 @@ public class ManagerService : IManagerService
 
                 facts.Add(new ProjectRiskTimesheetFactDto
                 {
-                    EmployeeName = weeklyAllocations[0].ResourceProfile.User.FullName,
+                    EmployeeName = weeklyAllocations[0].User.FullName,
                     WeekStart = week,
                     LoggedHours = 0m,
                     ExpectedHours = maximumWeeklyHours
@@ -783,7 +799,7 @@ public class ManagerService : IManagerService
     {
         var allocationPercent = project.Allocations
             .Where(allocation =>
-                allocation.ResourceProfileId == timesheet.ResourceProfileId
+                allocation.UserId == timesheet.UserId
                 && allocation.FromDate.Date <= timesheet.WeekStartDate.Date.AddDays(6)
                 && allocation.ToDate.Date >= timesheet.WeekStartDate.Date)
             .Sum(allocation => allocation.UtilisationPercent);
@@ -822,7 +838,7 @@ public class ManagerService : IManagerService
 
         return new ProjectRiskSummaryDto
         {
-            OverallHealth = overallHealth,
+            OverallHealth = overallHealth!,
             Summary = summary.Summary.Trim(),
             RiskPoints = riskPoints,
             RecommendedActions = CleanValues(summary.RecommendedActions),

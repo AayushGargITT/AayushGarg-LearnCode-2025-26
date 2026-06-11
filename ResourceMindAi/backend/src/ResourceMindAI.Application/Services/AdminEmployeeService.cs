@@ -48,13 +48,13 @@ public class AdminEmployeeService : IAdminEmployeeService
         _logger.LogInformation("Loaded employee profile {EmployeeId} for user {UserId}", employee.Id, userId);
         return new UserProfileDto
         {
-            Id = employee.User.Id,
-            FullName = employee.User.FullName,
-            Email = employee.User.Email,
-            Username = employee.User.Username,
-            Role = employee.User.Role,
-            IsActive = employee.User.IsActive,
-            ForcePasswordChange = employee.User.ForcePasswordChange,
+            Id = employee.Id,
+            FullName = employee.FullName,
+            Email = employee.Email,
+            Username = employee.Username,
+            Role = employee.Role,
+            IsActive = employee.IsActive,
+            ForcePasswordChange = employee.ForcePasswordChange,
             EmployeeId = employee.Id,
             Department = employee.Department,
             Designation = employee.Designation,
@@ -71,7 +71,8 @@ public class AdminEmployeeService : IAdminEmployeeService
 
     public async Task<EmployeeSkillDto> AddSkillAsync(Guid employeeId, CreateEmployeeSkillDto request)
     {
-        await EnsureEmployeeExistsAsync(employeeId);
+        var employee = await GetEmployeeAsync(employeeId);
+        await EnsureResourceProfileAsync(employee);
 
         var skillName = request.SkillName.Trim();
         var existingSkill = await _adminEmployeeRepository.GetSkillByNameAsync(employeeId, skillName);
@@ -118,12 +119,12 @@ public class AdminEmployeeService : IAdminEmployeeService
         Guid newManagerId)
     {
         var employee = await GetValidEmployeeForManagerUpdateAsync(employeeId);
-        await GetValidNewManagerAsync(newManagerId, employee.ManagerId);
+        await GetValidNewManagerAsync(newManagerId, employee.ResourceProfile?.ManagerId);
 
         return new EmployeeManagerUpdatePreviewDto
         {
             EmployeeId = employee.Id,
-            CurrentManagerId = employee.ManagerId,
+            CurrentManagerId = employee.ResourceProfile?.ManagerId,
             NewManagerId = newManagerId,
             ActiveProjects = GetActiveProjectNames(employee)
         };
@@ -136,7 +137,7 @@ public class AdminEmployeeService : IAdminEmployeeService
         var employee = await GetValidEmployeeForManagerUpdateAsync(employeeId);
         var newManager = await GetValidNewManagerAsync(
             request.NewManagerId!.Value,
-            employee.ManagerId);
+            employee.ResourceProfile?.ManagerId);
         var activeAllocations = employee.Allocations
             .Where(allocation => allocation.IsActive)
             .ToList();
@@ -153,10 +154,16 @@ public class AdminEmployeeService : IAdminEmployeeService
             allocation.ToDate = today;
         }
 
-        employee.ManagerId = newManager.Id;
-        employee.Manager = newManager;
+        var resourceProfile = employee.ResourceProfile ?? new ResourceProfile
+        {
+            Id = employee.Id,
+            User = employee
+        };
+        resourceProfile.ManagerId = newManager.Id;
+        resourceProfile.Manager = newManager;
+        employee.ResourceProfile = resourceProfile;
 
-        await _adminEmployeeRepository.SaveManagerUpdateAsync(employee);
+        await _adminEmployeeRepository.SaveResourceProfileAsync(resourceProfile);
 
         return new EmployeeManagerUpdateResultDto
         {
@@ -170,14 +177,16 @@ public class AdminEmployeeService : IAdminEmployeeService
 
     private async Task EnsureEmployeeExistsAsync(Guid employeeId)
     {
-        var employee = await _adminEmployeeRepository.GetByIdAsync(employeeId);
-        if (employee is null)
-        {
-            throw new EntityNotFoundException("Employee", employeeId);
-        }
+        await GetEmployeeAsync(employeeId);
     }
 
-    private async Task<ResourceProfile> GetValidEmployeeForManagerUpdateAsync(Guid employeeId)
+    private async Task<User> GetEmployeeAsync(Guid employeeId)
+    {
+        return await _adminEmployeeRepository.GetByIdAsync(employeeId)
+            ?? throw new EntityNotFoundException("Employee", employeeId);
+    }
+
+    private async Task<User> GetValidEmployeeForManagerUpdateAsync(Guid employeeId)
     {
         var employee = await _adminEmployeeRepository.GetForManagerUpdateAsync(employeeId);
         if (employee is null)
@@ -185,12 +194,12 @@ public class AdminEmployeeService : IAdminEmployeeService
             throw new EntityNotFoundException("Employee", employeeId);
         }
 
-        if (employee.User.Role != Role.Employee)
+        if (employee.Role != Role.Employee)
         {
             throw new ValidationException("Manager can be updated only for users with Employee role.");
         }
 
-        if (!employee.User.IsActive)
+        if (!employee.IsActive)
         {
             throw new ValidationException("Manager can be updated only for an active employee.");
         }
@@ -219,7 +228,22 @@ public class AdminEmployeeService : IAdminEmployeeService
         return manager;
     }
 
-    private static IReadOnlyList<string> GetActiveProjectNames(ResourceProfile employee)
+    private async Task EnsureResourceProfileAsync(User employee)
+    {
+        if (employee.ResourceProfile is not null)
+        {
+            return;
+        }
+
+        employee.ResourceProfile = new ResourceProfile
+        {
+            Id = employee.Id,
+            User = employee
+        };
+        await _adminEmployeeRepository.SaveResourceProfileAsync(employee.ResourceProfile);
+    }
+
+    private static IReadOnlyList<string> GetActiveProjectNames(User employee)
     {
         return employee.Allocations
             .Where(allocation => allocation.IsActive)
@@ -242,23 +266,23 @@ public class AdminEmployeeService : IAdminEmployeeService
         };
     }
 
-    private static EmployeeListDto MapEmployee(ResourceProfile employee)
+    private static EmployeeListDto MapEmployee(User employee)
     {
         return new EmployeeListDto
         {
             Id = employee.Id,
-            UserId = employee.User.Id,
-            FullName = employee.User.FullName,
-            Email = employee.User.Email,
-            Role = employee.User.Role,
+            UserId = employee.Id,
+            FullName = employee.FullName,
+            Email = employee.Email,
+            Role = employee.Role,
             AllocationStatus = employee.Allocations.Any(IsCurrentAllocation)
                 ? ResourceStatus.Allocated
                 : ResourceStatus.Bench,
-            Department = employee.Department,
-            Designation = employee.Designation,
-            IsActive = employee.User.IsActive,
-            ManagerId = employee.ManagerId,
-            ManagerName = employee.Manager?.FullName,
+            Department = employee.Department ?? string.Empty,
+            Designation = employee.Designation ?? string.Empty,
+            IsActive = employee.IsActive,
+            ManagerId = employee.ResourceProfile?.ManagerId,
+            ManagerName = employee.ResourceProfile?.Manager?.FullName,
         };
     }
 

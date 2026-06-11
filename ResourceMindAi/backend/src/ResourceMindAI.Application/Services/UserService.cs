@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
-using ResourceMindAI.Application.DTOs.Employee;
 using ResourceMindAI.Application.DTOs.User;
 using ResourceMindAI.Application.Exceptions;
 using ResourceMindAI.Domain.Entities;
@@ -13,9 +12,6 @@ namespace ResourceMindAI.Application.Services;
 
 public class UserService : IUserService
 {
-    private const string DefaultManagerDepartment = "Management";
-    private const string DefaultManagerDesignation = "Manager";
-
     private readonly IUserRepository _userRepository;
     private readonly ILogger<UserService> _logger;
 
@@ -65,6 +61,8 @@ public class UserService : IUserService
         var fullName = request.FullName.Trim();
         var username = request.Username.Trim();
         var email = request.Email.Trim();
+        var department = NormalizeOptional(request.Department);
+        var designation = NormalizeOptional(request.Designation);
 
         _logger.LogInformation("Validating new user {Username} with role {Role}", username, request.Role);
 
@@ -82,7 +80,9 @@ public class UserService : IUserService
             FullName = fullName,
             Email = email,
             Username = username,
-            PasswordHash = PasswordHasher.Hash(username),
+            PasswordHash = PasswordHasher.Hash(request.TemporaryPassword),
+            Department = department,
+            Designation = designation,
             Role = request.Role!.Value,
             IsActive = true,
             ForcePasswordChange = true,
@@ -90,9 +90,7 @@ public class UserService : IUserService
         };
 
         _logger.LogInformation("Persisting new user {UserId} with role {Role}", user.Id, user.Role);
-        var createdUser = user.Role == Role.Manager
-            ? await CreateManagerWithResourceProfileAsync(user)
-            : await _userRepository.CreateAsync(user);
+        var createdUser = await _userRepository.CreateAsync(user);
         _logger.LogInformation("Persisted new user {UserId}", createdUser.Id);
 
         return AuthService.ToProfile(createdUser);
@@ -180,56 +178,9 @@ public class UserService : IUserService
         return AuthService.ToProfile(updatedUser);
     }
 
-    public async Task<UserProfileDto> AddEmployeeAsync(Guid userId, AddEmployeeDto request)
+    private static string? NormalizeOptional(string? value)
     {
-        _logger.LogInformation("Add employee requested for user {UserId}", userId);
-
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user is null)
-        {
-            _logger.LogWarning("Add employee rejected: user {UserId} was not found", userId);
-            throw new EntityNotFoundException("User", userId);
-        }
-
-        if (user.Role == Role.Admin)
-        {
-            _logger.LogWarning("Add employee rejected: user {UserId} is an Admin", userId);
-            throw new ForbiddenException("Admin users cannot be added as employees.", "ADMIN_EMPLOYEE_NOT_ALLOWED");
-        }
-
-        if (user.ResourceProfile is not null)
-        {
-            _logger.LogWarning(
-                "Add employee rejected: user {UserId} is already mapped to employee {EmployeeId}",
-                userId,
-                user.ResourceProfile.Id);
-            throw new ConflictException("This user is already added as an employee.", "EMPLOYEE_ALREADY_EXISTS");
-        }
-
-        var resourceProfile = new ResourceProfile
-        {
-            Id = userId,
-            Department = request.Department.Trim(),
-            Designation = request.Designation.Trim(),
-        };
-
-        var createdResourceProfile = await _userRepository.AddResourceProfileAsync(resourceProfile);
-        user.ResourceProfile = createdResourceProfile;
-
-        _logger.LogInformation("Add employee completed for user {UserId}", userId);
-        return AuthService.ToProfile(user);
-    }
-
-    private async Task<User> CreateManagerWithResourceProfileAsync(User user)
-    {
-        var resourceProfile = new ResourceProfile
-        {
-            Id = user.Id,
-            Department = DefaultManagerDepartment,
-            Designation = DefaultManagerDesignation,
-        };
-
-        return await _userRepository.CreateWithResourceProfileAsync(user, resourceProfile);
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
     private static int DeactivateAdminUser(User user)
@@ -242,13 +193,8 @@ public class UserService : IUserService
     {
         user.IsActive = false;
 
-        if (user.ResourceProfile is null)
-        {
-            return 0;
-        }
-
         var today = DateTime.UtcNow.Date;
-        var activeAllocations = user.ResourceProfile.Allocations
+        var activeAllocations = user.Allocations
             .Where(allocation => allocation.IsActive)
             .ToList();
 
@@ -258,8 +204,11 @@ public class UserService : IUserService
             allocation.ToDate = today;
         }
 
-        user.ResourceProfile.ManagerId = null;
-        user.ResourceProfile.Manager = null;
+        if (user.ResourceProfile is not null)
+        {
+            user.ResourceProfile.ManagerId = null;
+            user.ResourceProfile.Manager = null;
+        }
 
         return activeAllocations.Count;
     }

@@ -22,12 +22,10 @@ export interface CreateUserRequest {
   fullName: string;
   email: string;
   username: string;
+  temporaryPassword: string;
   role: Role;
-}
-
-export interface AddEmployeeRequest {
-  designation: string;
-  department: string;
+  department?: string | null;
+  designation?: string | null;
 }
 
 export interface DeactivateUserResult {

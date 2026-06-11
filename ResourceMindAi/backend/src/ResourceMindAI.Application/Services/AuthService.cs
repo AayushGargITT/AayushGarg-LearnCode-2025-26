@@ -3,6 +3,7 @@ using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Domain.Entities;
+using ResourceMindAI.Domain.Enums;
 using ResourceMindAI.Domain.Exceptions;
 
 namespace ResourceMindAI.Application.Services;
@@ -100,9 +101,11 @@ public class AuthService : IAuthService
             Role = user.Role,
             IsActive = user.IsActive,
             ForcePasswordChange = user.ForcePasswordChange,
-            EmployeeId = user.ResourceProfile?.Id,
-            Department = user.ResourceProfile?.Department,
-            Designation = user.ResourceProfile?.Designation,
+            EmployeeId = user.Role is Role.Manager or Role.Employee
+                ? user.Id
+                : null,
+            Department = user.Department,
+            Designation = user.Designation,
         };
     }
 

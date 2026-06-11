@@ -72,6 +72,7 @@ export interface ProjectRiskPoint {
 
 export interface ManagerTimesheet {
   id: string;
+  employeeId: string;
   employeeName: string;
   projectName: string;
   weekStartDate: Date | string;

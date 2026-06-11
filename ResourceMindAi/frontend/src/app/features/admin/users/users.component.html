@@ -75,13 +75,4 @@
     [details]="deactivationBlockers()"
     (closed)="closeDeactivationBlockers()">
   </app-deactivation-blocked-dialog>
-
-  <app-add-employee-dialog
-    *ngIf="employeeDialogUser()"
-    [user]="employeeDialogUser()"
-    [error]="employeeError()"
-    [isSaving]="isAddingEmployee()"
-    (cancelled)="closeEmployeeDialog()"
-    (submitted)="submitEmployee($event)">
-  </app-add-employee-dialog>
 </app-layout>

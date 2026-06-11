@@ -88,7 +88,7 @@ public class UserRepository : IUserRepository
     {
         return _dbContext.Users
             .Include(user => user.ResourceProfile)
-                .ThenInclude(profile => profile!.Allocations)
+            .Include(user => user.Allocations)
             .FirstOrDefaultAsync(user => user.Id == id);
     }
 
@@ -150,20 +150,6 @@ public class UserRepository : IUserRepository
         return user;
     }
 
-    public async Task<User> CreateWithResourceProfileAsync(User user, ResourceProfile resourceProfile)
-    {
-        _logger.LogInformation("Adding user {UserId} and resource profile to database", user.Id);
-
-        _dbContext.Users.Add(user);
-        _dbContext.ResourceProfiles.Add(resourceProfile);
-        await _dbContext.SaveChangesAsync();
-
-        user.ResourceProfile = resourceProfile;
-
-        _logger.LogInformation("Saved user {UserId} and resource profile to database", user.Id);
-        return user;
-    }
-
     public async Task<User> UpdateAsync(User user)
     {
         _logger.LogInformation("Updating user {UserId}", user.Id);
@@ -189,14 +175,4 @@ public class UserRepository : IUserRepository
         return user;
     }
 
-    public async Task<ResourceProfile> AddResourceProfileAsync(ResourceProfile resourceProfile)
-    {
-        _logger.LogInformation("Adding resource profile for user {UserId}", resourceProfile.Id);
-
-        _dbContext.ResourceProfiles.Add(resourceProfile);
-        await _dbContext.SaveChangesAsync();
-
-        _logger.LogInformation("Saved resource profile for user {UserId}", resourceProfile.Id);
-        return resourceProfile;
-    }
 }

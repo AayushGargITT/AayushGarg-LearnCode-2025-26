@@ -124,8 +124,8 @@ public class ProjectService : IProjectService
         var activeEmployees = project.Allocations
             .Where(allocation =>
                 allocation.IsActive
-                && allocation.ResourceProfile.User.IsActive)
-            .Select(allocation => allocation.ResourceProfile)
+                && allocation.User.IsActive)
+            .Select(allocation => allocation.User)
             .DistinctBy(employee => employee.Id)
             .ToList();
 
@@ -135,16 +135,25 @@ public class ProjectService : IProjectService
         project.Manager = newManager;
         project.UpdatedAt = DateTime.UtcNow;
 
-        foreach (var employee in activeEmployees)
-        {
-            employee.ManagerId = newManager.Id;
-            employee.Manager = newManager;
-        }
+        var resourceProfiles = activeEmployees
+            .Select(employee =>
+            {
+                var profile = employee.ResourceProfile ?? new ResourceProfile
+                {
+                    Id = employee.Id,
+                    User = employee
+                };
+                profile.ManagerId = newManager.Id;
+                profile.Manager = newManager;
+                employee.ResourceProfile = profile;
+                return profile;
+            })
+            .ToList();
 
-        await _projectRepository.SaveManagerUpdateAsync(project, activeEmployees);
+        await _projectRepository.SaveManagerUpdateAsync(project, resourceProfiles);
 
         var employeeNames = activeEmployees
-            .Select(employee => employee.User.FullName)
+            .Select(employee => employee.FullName)
             .OrderBy(name => name)
             .ToList();
 
@@ -185,7 +194,7 @@ public class ProjectService : IProjectService
 
     private async Task EnsureNoManagerUpdateConflictsAsync(
         Project project,
-        IReadOnlyCollection<ResourceProfile> activeEmployees)
+        IReadOnlyCollection<User> activeEmployees)
     {
         if (activeEmployees.Count == 0)
         {
@@ -201,8 +210,8 @@ public class ProjectService : IProjectService
         var conflicts = allocations
             .GroupBy(allocation => new
             {
-                allocation.ResourceProfileId,
-                allocation.ResourceProfile.User.FullName
+                allocation.UserId,
+                allocation.User.FullName
             })
             .Select(group => new
             {

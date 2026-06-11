@@ -1,34 +1,73 @@
 <kendo-dialog title="Create User" [width]="460" (close)="cancel()">
   <p class="text-sm text-muted-foreground mb-4">
-    Add a new account to ResourceMindAI. The initial password will match the username.
+    Add a new account to ResourceMindAI.
   </p>
 
   <app-page-feedback type="error" [message]="error"></app-page-feedback>
 
-  <form [formGroup]="form" class="form-stack">
+  <form [formGroup]="form" class="form-stack" (ngSubmit)="submit()">
     <div class="field-stack">
       <label class="text-sm font-medium">Full Name</label>
       <input kendoTextBox formControlName="fullName" placeholder="Jane Doe" />
+      <span *ngIf="form.controls.fullName.touched && form.controls.fullName.hasError('required')" class="text-sm text-destructive">
+        Full name is required.
+      </span>
     </div>
     <div class="field-stack">
       <label class="text-sm font-medium">Email</label>
       <input kendoTextBox formControlName="email" type="email" />
+      <span *ngIf="form.controls.email.touched && form.controls.email.hasError('required')" class="text-sm text-destructive">
+        Email is required.
+      </span>
+      <span *ngIf="form.controls.email.touched && form.controls.email.hasError('email')" class="text-sm text-destructive">
+        Enter a valid email address.
+      </span>
     </div>
     <div class="field-stack">
       <label class="text-sm font-medium">Username</label>
       <input kendoTextBox formControlName="username" />
+      <span *ngIf="form.controls.username.touched && form.controls.username.hasError('required')" class="text-sm text-destructive">
+        Username is required.
+      </span>
+    </div>
+    <div class="field-stack">
+      <label class="text-sm font-medium">Temporary Password</label>
+      <input kendoTextBox formControlName="temporaryPassword" type="password" />
+      <span *ngIf="form.controls.temporaryPassword.touched && form.controls.temporaryPassword.hasError('required')" class="text-sm text-destructive">
+        Temporary password is required.
+      </span>
+      <span *ngIf="form.controls.temporaryPassword.touched && form.controls.temporaryPassword.hasError('minlength')" class="text-sm text-destructive">
+        Temporary password must be at least 8 characters.
+      </span>
+      <span *ngIf="form.controls.temporaryPassword.touched && form.controls.temporaryPassword.hasError('pattern')" class="text-sm text-destructive">
+        Temporary password must include an uppercase letter and a number.
+      </span>
     </div>
     <div class="field-stack">
       <label class="text-sm font-medium">Role</label>
       <kendo-dropdownlist [data]="roles" formControlName="role"></kendo-dropdownlist>
     </div>
+    <div class="field-stack">
+      <label class="text-sm font-medium">Department</label>
+      <input kendoTextBox formControlName="department" />
+      <span *ngIf="form.controls.department.touched && form.controls.department.hasError('required')" class="text-sm text-destructive">
+        Department is required for Manager and Employee users.
+      </span>
+    </div>
+    <div class="field-stack">
+      <label class="text-sm font-medium">Designation</label>
+      <input kendoTextBox formControlName="designation" />
+      <span *ngIf="form.controls.designation.touched && form.controls.designation.hasError('required')" class="text-sm text-destructive">
+        Designation is required for Manager and Employee users.
+      </span>
+    </div>
     <p class="hint-panel">User will be forced to change the initial password on first login.</p>
-  </form>
 
-  <kendo-dialog-actions>
-    <button kendoButton (click)="cancel()" [disabled]="isSaving">Cancel</button>
-    <button kendoButton themeColor="primary" (click)="submit()" [disabled]="isSaving">
-      {{ isSaving ? 'Creating...' : 'Create User' }}
-    </button>
-  </kendo-dialog-actions>
+    <kendo-dialog-actions>
+      <button kendoButton type="button" (click)="cancel()" [disabled]="isSaving">Cancel</button>
+      <button kendoButton type="submit" themeColor="primary" [disabled]="isSaving">
+        {{ isSaving ? 'Creating...' : 'Create User' }}
+      </button>
+    </kendo-dialog-actions>
+  </form>
 </kendo-dialog>

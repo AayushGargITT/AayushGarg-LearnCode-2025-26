@@ -1,6 +1,5 @@
 using ResourceMindAI.Application.DTOs.Auth;
 using ResourceMindAI.Application.DTOs.User;
-using ResourceMindAI.Application.DTOs.Employee;
 
 namespace ResourceMindAI.Application.Abstractions.Services;
 
@@ -13,5 +12,4 @@ public interface IUserService
     Task<UserProfileDto> ResetPasswordAsync(Guid id);
     Task<DeactivateUserResultDto> DeactivateAsync(Guid id);
     Task<UserProfileDto> ReactivateAsync(Guid id);
-    Task<UserProfileDto> AddEmployeeAsync(Guid userId, AddEmployeeDto request);
 }

@@ -7,7 +7,6 @@ import { AppLayoutComponent } from '../../../shared/components/app-layout/app-la
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import {
-  AddEmployeeRequest,
   CreateUserRequest,
   ManagerDeactivationDetails,
   Role,
@@ -18,11 +17,10 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
 import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
 import { RowActionItem, RowActionMenuComponent } from '../../../shared/components/row-action-menu/row-action-menu.component';
 import { PageStateService } from '../../../shared/services/page-state.service';
-import { AddEmployeeDialogComponent } from './components/add-employee-dialog/add-employee-dialog.component';
 import { CreateUserDialogComponent } from './components/create-user-dialog/create-user-dialog.component';
 import { DeactivationBlockedDialogComponent } from './components/deactivation-blocked-dialog/deactivation-blocked-dialog.component';
 
-type UserAction = 'resetPassword' | 'deactivate' | 'reactivate' | 'addEmployee';
+type UserAction = 'resetPassword' | 'deactivate' | 'reactivate';
 type UserActionItem = RowActionItem<UserAction>;
 
 @Component({
@@ -40,7 +38,6 @@ type UserActionItem = RowActionItem<UserAction>;
     PageFeedbackComponent,
     RowActionMenuComponent,
     CreateUserDialogComponent,
-    AddEmployeeDialogComponent,
     DeactivationBlockedDialogComponent
   ],
   templateUrl: './users.component.html',
@@ -57,10 +54,7 @@ export class AdminUsersComponent {
   resetPasswordUser = signal<User | null>(null);
   deactivateUser = signal<User | null>(null);
   deactivationBlockers = signal<ManagerDeactivationDetails | null>(null);
-  employeeDialogUser = signal<User | null>(null);
-  isAddingEmployee = signal(false);
   createError = signal<string | null>(null);
-  employeeError = signal<string | null>(null);
 
   constructor() {
     this.loadUsers();
@@ -118,13 +112,6 @@ export class AdminUsersComponent {
         : { text: 'Reactivate User', action: 'reactivate' }
     ];
 
-    if (user.role === Role.EMPLOYEE && !user.employeeId) {
-      actions.push({
-        text: 'Add as Employee',
-        action: 'addEmployee'
-      });
-    }
-
     return actions;
   }
 
@@ -143,10 +130,7 @@ export class AdminUsersComponent {
 
     if (item.action === 'reactivate') {
       this.reactivate(user);
-      return;
     }
-
-    this.openEmployeeDialog(user);
   }
 
   openResetPasswordDialog(user: User): void {
@@ -244,38 +228,5 @@ export class AdminUsersComponent {
 
   closeDeactivationBlockers(): void {
     this.deactivationBlockers.set(null);
-  }
-
-  openEmployeeDialog(user: User): void {
-    this.employeeError.set(null);
-    this.employeeDialogUser.set(user);
-  }
-
-  closeEmployeeDialog(): void {
-    this.employeeDialogUser.set(null);
-    this.employeeError.set(null);
-    this.isAddingEmployee.set(false);
-  }
-
-  submitEmployee(request: AddEmployeeRequest): void {
-    const user = this.employeeDialogUser();
-    if (!user) {
-      return;
-    }
-
-    this.employeeError.set(null);
-
-    this.isAddingEmployee.set(true);
-    this.adminUserService.addEmployee(user.id, request).subscribe({
-      next: () => {
-        this.closeEmployeeDialog();
-        this.pageState.setSuccess('Employee profile created successfully.');
-        this.loadUsers();
-      },
-      error: (err) => {
-        this.isAddingEmployee.set(false);
-        this.employeeError.set(err.error?.message ?? 'Unable to add user as employee.');
-      }
-    });
   }
 }

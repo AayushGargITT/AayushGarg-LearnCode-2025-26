@@ -110,7 +110,12 @@ export class ManagerAllocateComponent {
   allocateDirectly(): void {
     this.allocationForm.markAllAsTouched();
     const value = this.allocationForm.getRawValue();
-    if (this.allocationForm.invalid || value.fromDate >= value.toDate || this.isSubmitting()) {
+    if (
+      this.allocationForm.invalid
+      || value.fromDate >= value.toDate
+      || this.hasProjectEndDateError()
+      || this.isSubmitting()
+    ) {
       return;
     }
 
@@ -161,6 +166,25 @@ export class ManagerAllocateComponent {
   hasAllocationDateError(): boolean {
     const value = this.allocationForm.getRawValue();
     return !!value.fromDate && !!value.toDate && value.fromDate >= value.toDate;
+  }
+
+  hasProjectEndDateError(): boolean {
+    const project = this.projects().find(
+      item => item.id === this.allocationForm.controls.projectId.value
+    );
+    const toDate = this.allocationForm.controls.toDate.value;
+
+    return !!project?.endDate
+      && !!toDate
+      && toDate > new Date(project.endDate);
+  }
+
+  selectedProjectEndDate(): Date | null {
+    const project = this.projects().find(
+      item => item.id === this.allocationForm.controls.projectId.value
+    );
+
+    return project?.endDate ? new Date(project.endDate) : null;
   }
 
   private submitAllocation(request: CreateManagerAllocationRequest): void {

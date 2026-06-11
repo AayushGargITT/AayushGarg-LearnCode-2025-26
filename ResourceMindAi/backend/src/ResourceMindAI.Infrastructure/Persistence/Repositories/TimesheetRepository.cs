@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Domain.Entities;
+using ResourceMindAI.Domain.Enums;
 
 namespace ResourceMindAI.Infrastructure.Persistence.Repositories;
 
@@ -13,12 +14,14 @@ public class TimesheetRepository : ITimesheetRepository
         _dbContext = dbContext;
     }
 
-    public Task<ResourceProfile?> GetResourceProfileByUserIdAsync(Guid userId)
+    public Task<User?> GetEmployeeUserAsync(Guid userId)
     {
-        return _dbContext.ResourceProfiles
+        return _dbContext.Users
             .AsNoTracking()
-            .Include(profile => profile.User)
-            .SingleOrDefaultAsync(profile => profile.Id == userId && profile.User.IsActive);
+            .SingleOrDefaultAsync(user =>
+                user.Id == userId
+                && user.IsActive
+                && user.Role == Role.Employee);
     }
 
     public async Task<IReadOnlyList<Allocation>> GetAllocationsAsync(Guid employeeId)
@@ -26,7 +29,7 @@ public class TimesheetRepository : ITimesheetRepository
         return await _dbContext.Allocations
             .AsNoTracking()
             .Include(allocation => allocation.Project)
-            .Where(allocation => allocation.ResourceProfileId == employeeId)
+            .Where(allocation => allocation.UserId == employeeId)
             .OrderByDescending(allocation => allocation.FromDate)
             .ToListAsync();
     }
@@ -40,7 +43,7 @@ public class TimesheetRepository : ITimesheetRepository
             .AsNoTracking()
             .Include(allocation => allocation.Project)
             .Where(allocation =>
-                allocation.ResourceProfileId == employeeId
+                allocation.UserId == employeeId
                 && allocation.FromDate <= weekEnd
                 && allocation.ToDate >= weekStart)
             .ToListAsync();
@@ -52,7 +55,7 @@ public class TimesheetRepository : ITimesheetRepository
             .AsNoTracking()
             .Include(timesheet => timesheet.Project)
             .Include(timesheet => timesheet.ActivityTags)
-            .Where(timesheet => timesheet.ResourceProfileId == employeeId)
+            .Where(timesheet => timesheet.UserId == employeeId)
             .OrderByDescending(timesheet => timesheet.WeekStartDate)
             .ToListAsync();
     }
@@ -60,7 +63,7 @@ public class TimesheetRepository : ITimesheetRepository
     public Task<bool> HasTimesheetForWeekAsync(Guid employeeId, DateTime weekStart)
     {
         return _dbContext.Timesheets.AnyAsync(timesheet =>
-            timesheet.ResourceProfileId == employeeId
+            timesheet.UserId == employeeId
             && timesheet.WeekStartDate == weekStart);
     }
 

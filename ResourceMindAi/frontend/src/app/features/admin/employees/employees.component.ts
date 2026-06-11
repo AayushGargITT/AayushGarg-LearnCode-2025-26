@@ -53,6 +53,7 @@ export class AdminEmployeesComponent {
   private readonly adminEmployeeService = inject(AdminEmployeeService);
   private readonly adminUserService = inject(AdminUserService);
   readonly pageState = inject(PageStateService);
+  readonly Role = Role;
 
   readonly filter = signal<string>('All');
   readonly searchTerm = signal<string>('');
@@ -260,6 +261,12 @@ export class AdminEmployeesComponent {
     }
 
     this.managerError.set(null);
+
+    if (!employee.managerId) {
+      this.saveManagerUpdate(employee, request);
+      return;
+    }
+
     this.isManagerSaving.set(true);
 
     this.adminEmployeeService
@@ -284,6 +291,13 @@ export class AdminEmployeesComponent {
       return;
     }
 
+    this.saveManagerUpdate(employee, request);
+  }
+
+  private saveManagerUpdate(
+    employee: Employee,
+    request: UpdateEmployeeManagerRequest
+  ): void {
     this.isManagerSaving.set(true);
     this.adminEmployeeService.updateManager(employee.id, request).subscribe({
       next: result => {
