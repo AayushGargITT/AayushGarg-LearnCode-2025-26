@@ -23,6 +23,7 @@ The solution uses:
 6. [Entity relationship diagram](#entity-relationship-diagram)
 7. [Current API surface](#current-api-surface)
 8. [Business rules](#business-rules)
+9. [Automated backend tests](#automated-backend-tests)
 
 ## Architecture
 
@@ -1009,3 +1010,43 @@ All routes except login require JWT authentication.
 - Risk summary generation occurs only after the manager clicks the action.
 - Invalid AI risk JSON never overwrites the last valid saved summary.
 - Saved risk summaries are stored in `Project.RiskFlagsJson`.
+
+## Automated backend tests
+
+The backend test suite uses xUnit, FluentAssertions, Moq, and EF Core InMemory.
+Application tests mock repositories and `ILlmClient`, so tests never call
+Gemini or any other external service. Infrastructure tests use an isolated
+database per test class.
+
+Test projects:
+
+- `backend/tests/ResourceMindAI.Application.Tests`
+- `backend/tests/ResourceMindAI.Infrastructure.Tests`
+
+Run every backend test from the `backend` directory:
+
+```bash
+dotnet test
+```
+
+Run one test project:
+
+```bash
+dotnet test tests/ResourceMindAI.Application.Tests/ResourceMindAI.Application.Tests.csproj
+```
+
+Show detailed test output:
+
+```bash
+dotnet test --logger "console;verbosity=detailed"
+```
+
+Collect OpenCover coverage:
+
+```bash
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+```
+
+A successful run shows a non-zero test count and a passed summary. Failed tests
+show the test name, assertion message, and stack trace. No AI API key or running
+backend server is required.
