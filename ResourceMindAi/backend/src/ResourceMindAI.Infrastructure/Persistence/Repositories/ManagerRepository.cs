@@ -37,6 +37,25 @@ public class ManagerRepository : IManagerRepository
                 && x.User.Role == Role.Employee);
     }
 
+    public async Task<IReadOnlyList<User>> GetOrganizationSearchCandidatesAsync()
+    {
+        _logger.LogDebug("Querying organization-wide active employee search candidates");
+
+        return await _dbContext.Users
+            .Include(user => user.ResourceProfile)
+                .ThenInclude(profile => profile!.Skills)
+            .Include(user => user.ResourceProfile)
+                .ThenInclude(profile => profile!.Manager)
+            .Include(user => user.Allocations)
+                .ThenInclude(allocation => allocation.Project)
+            .Include(user => user.Timesheets)
+                .ThenInclude(timesheet => timesheet.ActivityTags)
+            .Where(user => user.IsActive && user.Role == Role.Employee)
+            .OrderBy(user => user.FullName)
+            .AsSplitQuery()
+            .ToListAsync();
+    }
+
     public async Task<IReadOnlyList<Project>> GetProjectsAsync(Guid managerId)
     {
         return await ProjectGraph()

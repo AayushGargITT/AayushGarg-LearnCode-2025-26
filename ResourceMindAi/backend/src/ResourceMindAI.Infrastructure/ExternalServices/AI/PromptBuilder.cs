@@ -105,6 +105,58 @@ public static class PromptBuilder
             });
     }
 
+    public static object BuildTeamRequest(TeamBuilderAiRequestDto request)
+    {
+        const string instruction =
+            """
+            Recommend a complementary project team using only the supplied bench candidates.
+            Use the manager requirement, extracted intent, and candidate facts.
+            Do not invent employees and do not return an employeeId outside the supplied list.
+            Return each employeeId at most once.
+            Select only useful members; do not force a candidate for every requirement.
+            Clearly report uncovered capabilities in missingSkills.
+            If no suitable member exists, return an empty members array and explain why in teamSummary.
+            Keep suggested roles and reasons concise and factual.
+            Return strict JSON matching the supplied schema.
+            """;
+
+        return BuildRequest(
+            instruction,
+            JsonSerializer.Serialize(request, JsonOptions),
+            new
+            {
+                type = "object",
+                properties = new
+                {
+                    teamSummary = new { type = "string" },
+                    members = new
+                    {
+                        type = "array",
+                        items = new
+                        {
+                            type = "object",
+                            properties = new
+                            {
+                                employeeId = new { type = "string" },
+                                suggestedRole = new { type = "string" },
+                                reason = new { type = "string" },
+                                matchedSkills = StringArray()
+                            },
+                            required = new[]
+                            {
+                                "employeeId",
+                                "suggestedRole",
+                                "reason",
+                                "matchedSkills"
+                            }
+                        }
+                    },
+                    missingSkills = StringArray()
+                },
+                required = new[] { "teamSummary", "members", "missingSkills" }
+            });
+    }
+
     public static object BuildProjectRiskRequest(ProjectRiskFactsDto facts)
     {
         const string instruction =

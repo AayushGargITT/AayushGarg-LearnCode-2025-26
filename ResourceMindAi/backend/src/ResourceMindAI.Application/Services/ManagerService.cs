@@ -13,6 +13,7 @@ namespace ResourceMindAI.Application.Services;
 public class ManagerService : IManagerService
 {
     private const int MaximumAiCandidates = 10;
+    private const int MaximumTeamCandidates = 20;
     private const decimal MaximumWeeklyHours = 40m;
 
     private static readonly JsonSerializerOptions RiskJsonOptions = new()
@@ -160,11 +161,18 @@ public class ManagerService : IManagerService
         var extractedIntent = await _llmClient.ExtractResourceIntentAsync(request.Requirement);
         var intent = NormalizeIntent(extractedIntent);
         var requestedDates = ValidateAndParseIntent(intent);
-        var employees = await _managerRepository.GetTeamEmployeesAsync(managerId);
+        var employees = await _managerRepository.GetOrganizationSearchCandidatesAsync();
 
         var matches = new List<ResourceMatchDto>();
         foreach (var employee in employees)
         {
+            if (employee.Allocations.Any(allocation =>
+                allocation.ProjectId == request.ProjectId.Value
+                && IsActiveAllocation(allocation)))
+            {
+                continue;
+            }
+
             var availablePercent = Math.Max(0m, requestedDates.HasValue
                 ? 100 - await _managerRepository.GetOverlappingAllocationPercentAsync(
                     employee.Id,
@@ -186,7 +194,11 @@ public class ManagerService : IManagerService
                 continue;
             }
 
-            var match = ScoreEmployee(employee, intent, availablePercent);
+            var match = ScoreEmployee(
+                employee,
+                intent,
+                availablePercent,
+                employee.ResourceProfile?.ManagerId == managerId);
             matches.Add(match);
         }
 
@@ -211,6 +223,52 @@ public class ManagerService : IManagerService
                 .ThenBy(match => match.Employee.FullName)
                 .ToList(),
         };
+    }
+
+    public async Task<TeamBuilderResponseDto> BuildTeamAsync(
+        Guid managerId,
+        BuildTeamRequestDto request)
+    {
+        var project = await GetOwnedProjectAsync(managerId, request.ProjectId!.Value);
+        var extractedIntent = await _llmClient.ExtractResourceIntentAsync(request.Requirement);
+        var intent = NormalizeIntent(extractedIntent);
+        ValidateAndParseIntent(intent);
+
+        var employees = await _managerRepository.GetOrganizationSearchCandidatesAsync();
+        var candidates = employees
+            .Where(IsBench)
+            .Where(employee => MatchesTeamRequirement(employee, intent))
+            .Select(employee => ScoreEmployee(
+                employee,
+                intent,
+                100m,
+                employee.ResourceProfile?.ManagerId == managerId))
+            .OrderByDescending(match => match.Score)
+            .ThenBy(match => match.Employee.FullName)
+            .Take(MaximumTeamCandidates)
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            return new TeamBuilderResponseDto
+            {
+                Intent = intent,
+                TeamSummary = "No bench employees match the requested team requirements.",
+                Members = [],
+                MissingSkills = intent.RequiredSkills
+            };
+        }
+
+        var aiRequest = new TeamBuilderAiRequestDto
+        {
+            ProjectName = project.Name,
+            Requirement = request.Requirement,
+            Intent = intent,
+            Candidates = candidates.Select(BuildCandidateSummary).ToList()
+        };
+        var aiResponse = await _llmClient.BuildTeamAsync(aiRequest);
+
+        return MapTeamBuilderResponse(intent, candidates, aiResponse);
     }
 
     public async Task<ManagerAllocationDto> AllocateAsync(Guid managerId, CreateManagerAllocationDto request)
@@ -334,23 +392,31 @@ public class ManagerService : IManagerService
 
     private static ManagerResourceDto MapResource(ResourceProfile employee)
     {
-        var activeAllocations = employee.User.Allocations.Where(IsActiveAllocation).ToList();
+        return MapResource(employee.User);
+    }
+
+    private static ManagerResourceDto MapResource(User employee)
+    {
+        var activeAllocations = employee.Allocations.Where(IsActiveAllocation).ToList();
         var allocationPercent = activeAllocations.Sum(x => x.UtilisationPercent);
 
         return new ManagerResourceDto
         {
             Id = employee.Id,
             UserId = employee.Id,
-            FullName = employee.User.FullName,
-            Department = employee.User.Department ?? string.Empty,
-            Designation = employee.User.Designation ?? string.Empty,
+            FullName = employee.FullName,
+            Department = employee.Department ?? string.Empty,
+            Designation = employee.Designation ?? string.Empty,
             AllocationPercent = allocationPercent,
             CurrentStatus = allocationPercent > 0
                 ? ResourceStatus.Allocated
                 : ResourceStatus.Bench,
-            Skills = employee.Skills.OrderBy(x => x.SkillName).Select(x => x.SkillName).ToList(),
+            Skills = employee.ResourceProfile?.Skills
+                .OrderBy(x => x.SkillName)
+                .Select(x => x.SkillName)
+                .ToList() ?? [],
             ActiveAllocations = activeAllocations.Select(MapAllocation).ToList(),
-            RecentActivityTags = employee.User.Timesheets
+            RecentActivityTags = employee.Timesheets
                 .OrderByDescending(x => x.WeekStartDate)
                 .Take(6)
                 .SelectMany(x => x.ActivityTags)
@@ -412,9 +478,10 @@ public class ManagerService : IManagerService
     }
 
     private static ResourceMatchDto ScoreEmployee(
-        ResourceProfile employee,
+        User employee,
         ResourceIntentDto intent,
-        decimal availablePercent)
+        decimal availablePercent,
+        bool isUnderCurrentManager)
     {
         var resource = MapResource(employee);
         var reasons = new List<string>();
@@ -477,6 +544,7 @@ public class ManagerService : IManagerService
             Employee = resource,
             Score = Math.Min(score, 100),
             AvailablePercent = availablePercent,
+            IsUnderCurrentManager = isUnderCurrentManager,
             Reasons = reasons,
         };
     }
@@ -547,6 +615,80 @@ public class ManagerService : IManagerService
         }
     }
 
+    private static ResourceCandidateDto BuildCandidateSummary(ResourceMatchDto match)
+    {
+        return new ResourceCandidateDto
+        {
+            EmployeeId = match.Employee.Id,
+            Name = match.Employee.FullName,
+            Designation = match.Employee.Designation,
+            Skills = match.Employee.Skills,
+            RecentActivityTags = match.Employee.RecentActivityTags,
+            AvailablePercent = 100m,
+            BackendScore = match.Score,
+            BackendReasons = match.Reasons
+        };
+    }
+
+    private static TeamBuilderResponseDto MapTeamBuilderResponse(
+        ResourceIntentDto intent,
+        IReadOnlyList<ResourceMatchDto> candidates,
+        TeamBuilderAiResponseDto response)
+    {
+        if (string.IsNullOrWhiteSpace(response.TeamSummary))
+        {
+            throw new ExternalServiceException("AI team recommendation returned an invalid summary.");
+        }
+
+        var knownCandidates = candidates.ToDictionary(candidate => candidate.Employee.Id);
+        var duplicateIds = response.Members
+            .GroupBy(member => member.EmployeeId)
+            .Any(group => group.Count() > 1);
+        if (duplicateIds
+            || response.Members.Any(member =>
+                !knownCandidates.ContainsKey(member.EmployeeId)
+                || string.IsNullOrWhiteSpace(member.SuggestedRole)
+                || string.IsNullOrWhiteSpace(member.Reason)))
+        {
+            throw new ExternalServiceException("AI team recommendation returned invalid members.");
+        }
+
+        var members = response.Members
+            .Select(member =>
+            {
+                var candidate = knownCandidates[member.EmployeeId];
+                var actualSkills = candidate.Employee.Skills
+                    .GroupBy(NormalizeSkill, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.First(),
+                        StringComparer.OrdinalIgnoreCase);
+                var matchedSkills = member.MatchedSkills
+                    .Select(NormalizeSkill)
+                    .Where(actualSkills.ContainsKey)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Select(skill => actualSkills[skill])
+                    .ToList();
+
+                return new TeamBuilderMemberDto
+                {
+                    Employee = candidate.Employee,
+                    SuggestedRole = member.SuggestedRole.Trim(),
+                    Reason = member.Reason.Trim(),
+                    MatchedSkills = matchedSkills
+                };
+            })
+            .ToList();
+
+        return new TeamBuilderResponseDto
+        {
+            Intent = intent,
+            TeamSummary = response.TeamSummary.Trim(),
+            Members = members,
+            MissingSkills = CleanValues(response.MissingSkills)
+        };
+    }
+
     private static ResourceIntentDto NormalizeIntent(ResourceIntentDto intent)
     {
         return new ResourceIntentDto
@@ -567,14 +709,14 @@ public class ManagerService : IManagerService
         };
     }
 
-    private static bool MatchesRequiredRole(ResourceProfile employee, string? requiredRole)
+    private static bool MatchesRequiredRole(User employee, string? requiredRole)
     {
         if (string.IsNullOrWhiteSpace(requiredRole))
         {
             return true;
         }
 
-        var designation = NormalizeSearchValue(employee.User.Designation);
+        var designation = NormalizeSearchValue(employee.Designation);
         var role = NormalizeSearchValue(requiredRole);
         return designation == role
             || designation.Split(' ', StringSplitOptions.RemoveEmptyEntries)
@@ -583,7 +725,7 @@ public class ManagerService : IManagerService
     }
 
     private static bool HasRequiredSkills(
-        ResourceProfile employee,
+        User employee,
         IReadOnlyList<string> requiredSkills)
     {
         if (requiredSkills.Count == 0)
@@ -591,15 +733,16 @@ public class ManagerService : IManagerService
             return true;
         }
 
-        var employeeSkills = employee.Skills
+        var employeeSkills = employee.ResourceProfile?.Skills
             .Select(skill => NormalizeSkill(skill.SkillName))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .ToHashSet(StringComparer.OrdinalIgnoreCase)
+            ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         return requiredSkills.All(employeeSkills.Contains);
     }
 
     private static bool MatchesExclusion(
-        ResourceProfile employee,
+        User employee,
         IReadOnlyList<string> exclusions)
     {
         if (exclusions.Count == 0)
@@ -607,15 +750,44 @@ public class ManagerService : IManagerService
             return false;
         }
 
-        var searchableValues = employee.Skills
+        var searchableValues = (employee.ResourceProfile?.Skills ?? [])
             .Select(skill => NormalizeSearchValue(skill.SkillName))
-            .Append(NormalizeSearchValue(employee.User.Designation))
-            .Append(NormalizeSearchValue(employee.User.Department))
+            .Append(NormalizeSearchValue(employee.Designation))
+            .Append(NormalizeSearchValue(employee.Department))
             .ToList();
 
         return exclusions
             .Select(NormalizeSearchValue)
             .Any(exclusion => searchableValues.Any(value => ContainsWholeTerm(value, exclusion)));
+    }
+
+    private static bool IsBench(User employee)
+    {
+        return !employee.Allocations.Any(IsActiveAllocation);
+    }
+
+    private static bool MatchesTeamRequirement(User employee, ResourceIntentDto intent)
+    {
+        if (MatchesExclusion(employee, intent.ExclusionConstraints))
+        {
+            return false;
+        }
+
+        var hasRoleRequirement = !string.IsNullOrWhiteSpace(intent.RequiredRole);
+        var roleMatches = hasRoleRequirement
+            && MatchesRequiredRole(employee, intent.RequiredRole);
+        if (intent.RequiredSkills.Count == 0)
+        {
+            return !hasRoleRequirement || roleMatches;
+        }
+
+        var employeeSkills = employee.ResourceProfile?.Skills
+            .Select(skill => NormalizeSkill(skill.SkillName))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase)
+            ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hasAnyRequiredSkill = intent.RequiredSkills.Any(employeeSkills.Contains);
+
+        return hasAnyRequiredSkill || roleMatches;
     }
 
     private static string NormalizeSkill(string value)

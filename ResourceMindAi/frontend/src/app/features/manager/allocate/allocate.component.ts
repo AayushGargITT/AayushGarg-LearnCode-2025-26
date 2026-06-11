@@ -3,6 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonsModule } from '@progress/kendo-angular-buttons';
 import { DateInputsModule } from '@progress/kendo-angular-dateinputs';
+import { DialogModule } from '@progress/kendo-angular-dialog';
 import { DropDownsModule } from '@progress/kendo-angular-dropdowns';
 import { InputsModule } from '@progress/kendo-angular-inputs';
 import {
@@ -28,6 +29,7 @@ import { PageStateService } from '../../../shared/services/page-state.service';
     ReactiveFormsModule,
     ButtonsModule,
     DateInputsModule,
+    DialogModule,
     DropDownsModule,
     InputsModule,
     AppLayoutComponent,
@@ -40,6 +42,8 @@ import { PageStateService } from '../../../shared/services/page-state.service';
   providers: [PageStateService]
 })
 export class ManagerAllocateComponent {
+  private static readonly DEFAULT_MAX_ALLOCATION_DATE = new Date(2099, 11, 31);
+
   private readonly managerService = inject(ManagerService);
   private readonly formBuilder = new FormBuilder();
   readonly pageState = inject(PageStateService);
@@ -47,6 +51,7 @@ export class ManagerAllocateComponent {
   readonly projects = signal<ManagerProject[]>([]);
   readonly employees = signal<ManagerResource[]>([]);
   readonly matches = signal<ResourceMatchResponse | null>(null);
+  readonly selectedMatch = signal<ResourceMatch | null>(null);
   readonly isFinding = signal(false);
   readonly isSubmitting = signal(false);
 
@@ -123,6 +128,11 @@ export class ManagerAllocateComponent {
   }
 
   allocateMatch(match: ResourceMatch): void {
+    if (!match.isUnderCurrentManager) {
+      this.pageState.setError('You can allocate only employees assigned to your team.');
+      return;
+    }
+
     const projectId = this.aiForm.controls.projectId.value;
     const intent = this.matches()?.intent;
     if (!projectId) {
@@ -144,6 +154,14 @@ export class ManagerAllocateComponent {
       fromDate: intent?.fromDate ?? new Date(),
       toDate: intent?.toDate ?? null
     });
+  }
+
+  viewMatchDetails(match: ResourceMatch): void {
+    this.selectedMatch.set(match);
+  }
+
+  closeMatchDetails(): void {
+    this.selectedMatch.set(null);
   }
 
   endAllocation(allocation: ManagerAllocation): void {
@@ -179,12 +197,14 @@ export class ManagerAllocateComponent {
       && toDate > new Date(project.endDate);
   }
 
-  selectedProjectEndDate(): Date | null {
+  selectedProjectEndDate(): Date {
     const project = this.projects().find(
       item => item.id === this.allocationForm.controls.projectId.value
     );
 
-    return project?.endDate ? new Date(project.endDate) : null;
+    return project?.endDate
+      ? new Date(project.endDate)
+      : ManagerAllocateComponent.DEFAULT_MAX_ALLOCATION_DATE;
   }
 
   private submitAllocation(request: CreateManagerAllocationRequest): void {

@@ -6,6 +6,7 @@ public interface IManagerRepository
 {
     Task<IReadOnlyList<ResourceProfile>> GetTeamEmployeesAsync(Guid managerId);
     Task<ResourceProfile?> GetTeamEmployeeAsync(Guid managerId, Guid employeeId);
+    Task<IReadOnlyList<User>> GetOrganizationSearchCandidatesAsync();
     Task<IReadOnlyList<Project>> GetProjectsAsync(Guid managerId);
     Task<Project?> GetProjectAsync(Guid managerId, Guid projectId);
     Task<Project?> GetProjectForRiskSummaryAsync(Guid managerId, Guid projectId);

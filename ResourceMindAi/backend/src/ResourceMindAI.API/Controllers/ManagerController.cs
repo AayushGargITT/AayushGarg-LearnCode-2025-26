@@ -78,6 +78,14 @@ public class ManagerController : ControllerBase
         return Ok(response);
     }
 
+    [HttpPost("team-builder")]
+    public async Task<ActionResult<TeamBuilderResponseDto>> BuildTeam(BuildTeamRequestDto request)
+    {
+        var managerId = GetCurrentUserId();
+        var response = await _managerService.BuildTeamAsync(managerId, request);
+        return Ok(response);
+    }
+
     [HttpPost("allocations")]
     public async Task<ActionResult<ManagerAllocationDto>> Allocate(CreateManagerAllocationDto request)
     {

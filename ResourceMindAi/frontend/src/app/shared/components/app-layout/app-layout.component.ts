@@ -18,6 +18,7 @@ const NAV: Record<Role, { to: string; label: string; icon: string }[]> = {
   [Role.MANAGER]: [
     { to: '/manager/resources', label: 'Resource Dashboard', icon: 'speed' },
     { to: '/manager/allocate', label: 'Allocate Resource', icon: 'auto_awesome' },
+    { to: '/manager/team-builder', label: 'Team Builder', icon: 'groups' },
     { to: '/manager/projects', label: 'My Projects', icon: 'work' },
     { to: '/manager/timesheets', label: 'Timesheets', icon: 'schedule' },
   ],

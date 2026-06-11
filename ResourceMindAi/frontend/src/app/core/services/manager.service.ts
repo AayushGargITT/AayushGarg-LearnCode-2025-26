@@ -11,7 +11,9 @@ import {
   ManagerResource,
   ManagerResourceDashboard,
   ManagerTimesheet,
-  ResourceMatchResponse
+  ResourceMatchResponse,
+  BuildTeamRequest,
+  TeamBuilderResponse
 } from '../models/manager.model';
 
 @Injectable({ providedIn: 'root' })
@@ -48,6 +50,10 @@ export class ManagerService {
 
   findResources(request: FindResourceRequest): Observable<ResourceMatchResponse> {
     return this.http.post<ResourceMatchResponse>(`${this.apiUrl}/resources/find`, request);
+  }
+
+  buildTeam(request: BuildTeamRequest): Observable<TeamBuilderResponse> {
+    return this.http.post<TeamBuilderResponse>(`${this.apiUrl}/team-builder`, request);
   }
 
   allocate(request: CreateManagerAllocationRequest): Observable<ManagerAllocation> {

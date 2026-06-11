@@ -52,6 +52,16 @@ public class GeminiClient : ILlmClient
             cancellationToken);
     }
 
+    public Task<TeamBuilderAiResponseDto> BuildTeamAsync(
+        TeamBuilderAiRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        return GenerateAsync<TeamBuilderAiResponseDto>(
+            PromptBuilder.BuildTeamRequest(request),
+            "team recommendation",
+            cancellationToken);
+    }
+
     public Task<ProjectRiskSummaryDto> GenerateProjectRiskSummaryAsync(
         ProjectRiskFactsDto facts,
         CancellationToken cancellationToken = default)

@@ -12,6 +12,10 @@ public interface ILlmClient
         ResourceCandidateExplanationRequestDto request,
         CancellationToken cancellationToken = default);
 
+    Task<TeamBuilderAiResponseDto> BuildTeamAsync(
+        TeamBuilderAiRequestDto request,
+        CancellationToken cancellationToken = default);
+
     Task<ProjectRiskSummaryDto> GenerateProjectRiskSummaryAsync(
         ProjectRiskFactsDto facts,
         CancellationToken cancellationToken = default);

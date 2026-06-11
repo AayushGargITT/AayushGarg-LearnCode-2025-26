@@ -110,6 +110,7 @@ export interface ResourceMatch {
   employee: ManagerResource;
   score: number;
   availablePercent: number;
+  isUnderCurrentManager: boolean;
   reasons: string[];
   aiRank: number | null;
   aiReason: string;
@@ -120,4 +121,23 @@ export interface ResourceMatch {
 export interface ResourceMatchResponse {
   intent: ResourceIntent;
   matches: ResourceMatch[];
+}
+
+export interface BuildTeamRequest {
+  projectId: string;
+  requirement: string;
+}
+
+export interface TeamBuilderMember {
+  employee: ManagerResource;
+  suggestedRole: string;
+  reason: string;
+  matchedSkills: string[];
+}
+
+export interface TeamBuilderResponse {
+  intent: ResourceIntent;
+  teamSummary: string;
+  members: TeamBuilderMember[];
+  missingSkills: string[];
 }

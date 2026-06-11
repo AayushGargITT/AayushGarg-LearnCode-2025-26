@@ -1,5 +1,8 @@
 <app-layout role="manager" title="Allocate Resource">
-  <app-page-header title="Allocate Resource" subtitle="Find, allocate, and end allocations within your team"></app-page-header>
+  <app-page-header
+    title="Allocate Resource"
+    subtitle="Discover resources organization-wide and allocate within your team">
+  </app-page-header>
 
   <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
   <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
@@ -27,7 +30,7 @@
 
       <div *ngIf="matches()" class="mt-6 space-y-4">
         <div *ngIf="matches()!.matches.length === 0" class="hint-panel">
-          No eligible team resources match the required skills and availability.
+          No eligible organization resources match the required skills and availability.
         </div>
 
         <div *ngFor="let match of matches()!.matches" class="rounded-lg border border-emerald-500/30 bg-card p-4">
@@ -35,7 +38,12 @@
             <app-avatar [name]="match.employee.fullName"></app-avatar>
             <div class="flex-1">
               <div class="flex items-center justify-between">
-                <div class="font-medium">{{ match.employee.fullName }}</div>
+                <div>
+                  <div class="font-medium">{{ match.employee.fullName }}</div>
+                  <div class="text-xs text-muted-foreground">
+                    {{ match.isUnderCurrentManager ? 'Your team' : 'Outside your team' }}
+                  </div>
+                </div>
                 <span class="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-300">{{ match.score }}% Match</span>
               </div>
               <div class="text-sm text-muted-foreground">{{ match.employee.designation }} · {{ match.availablePercent }}% available</div>
@@ -49,9 +57,17 @@
                 </div>
                 <div *ngFor="let reason of match.reasons" class="mt-1 text-xs">{{ reason }}</div>
               </div>
-              <button kendoButton class="mt-4" [disabled]="isSubmitting() || match.availablePercent <= 0" (click)="allocateMatch(match)">
-                Allocate to Project
-              </button>
+              <div class="flex flex-wrap gap-2 mt-4">
+                <button kendoButton (click)="viewMatchDetails(match)">View Details</button>
+                <button
+                  *ngIf="match.isUnderCurrentManager"
+                  kendoButton
+                  themeColor="primary"
+                  [disabled]="isSubmitting() || match.availablePercent <= 0"
+                  (click)="allocateMatch(match)">
+                  Allocate to Project
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -114,4 +130,65 @@
       </div>
     </div>
   </div>
+
+  <kendo-dialog
+    *ngIf="selectedMatch()"
+    [title]="selectedMatch()!.employee.fullName"
+    [width]="620"
+    [minWidth]="320"
+    (close)="closeMatchDetails()">
+    <div class="form-stack">
+      <div class="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <span class="text-muted-foreground">Department</span>
+          <div class="font-medium">{{ selectedMatch()!.employee.department || '-' }}</div>
+        </div>
+        <div>
+          <span class="text-muted-foreground">Designation</span>
+          <div class="font-medium">{{ selectedMatch()!.employee.designation || '-' }}</div>
+        </div>
+        <div>
+          <span class="text-muted-foreground">Availability</span>
+          <div class="font-mono">{{ selectedMatch()!.availablePercent }}%</div>
+        </div>
+        <div>
+          <span class="text-muted-foreground">Team ownership</span>
+          <div class="font-medium">
+            {{ selectedMatch()!.isUnderCurrentManager ? 'Your team' : 'Another manager or unassigned' }}
+          </div>
+        </div>
+      </div>
+
+      <section>
+        <h3 class="text-sm font-semibold mb-2">Skills</h3>
+        <div *ngIf="selectedMatch()!.employee.skills.length === 0" class="hint-panel">
+          No profile skills available.
+        </div>
+        <div class="flex flex-wrap gap-1">
+          <span
+            *ngFor="let skill of selectedMatch()!.employee.skills"
+            class="inline-flex rounded-md border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+            {{ skill }}
+          </span>
+        </div>
+      </section>
+
+      <section>
+        <h3 class="text-sm font-semibold mb-2">Match explanation</h3>
+        <p class="text-sm text-muted-foreground">{{ selectedMatch()!.aiReason }}</p>
+      </section>
+    </div>
+
+    <kendo-dialog-actions>
+      <button kendoButton (click)="closeMatchDetails()">Close</button>
+      <button
+        *ngIf="selectedMatch()!.isUnderCurrentManager"
+        kendoButton
+        themeColor="primary"
+        [disabled]="isSubmitting() || selectedMatch()!.availablePercent <= 0"
+        (click)="allocateMatch(selectedMatch()!)">
+        Allocate to Project
+      </button>
+    </kendo-dialog-actions>
+  </kendo-dialog>
 </app-layout>
