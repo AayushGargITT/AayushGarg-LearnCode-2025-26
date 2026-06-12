@@ -2,7 +2,6 @@ namespace ResourceMindAI.Application.DTOs.Manager;
 
 public class ResourceIntentDto
 {
-    public string? RequiredRole { get; set; }
     public IReadOnlyList<string> RequiredSkills { get; set; } = [];
     public string? ExperienceHint { get; set; }
     public int? AvailabilityRequirement { get; set; }

@@ -95,7 +95,6 @@ export interface FindResourceRequest {
 }
 
 export interface ResourceIntent {
-  requiredRole: string | null;
   requiredSkills: string[];
   experienceHint: string | null;
   availabilityRequirement: number | null;
@@ -135,9 +134,17 @@ export interface TeamBuilderMember {
   matchedSkills: string[];
 }
 
+export interface TeamBuilderUnavailableMember {
+  employee: ManagerResource;
+  matchedRole: string;
+  reason: string;
+  matchedSkills: string[];
+}
+
 export interface TeamBuilderResponse {
   intent: ResourceIntent;
   teamSummary: string;
   members: TeamBuilderMember[];
+  unavailableMatches: TeamBuilderUnavailableMember[];
   missingSkills: string[];
 }

@@ -1,7 +1,7 @@
 <app-layout role="manager" title="Team Builder">
   <app-page-header
     title="Team Builder"
-    subtitle="Plan a project team from organization-wide bench resources">
+    subtitle="Evaluate organization-wide resources and recommend eligible bench employees">
   </app-page-header>
 
   <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
@@ -57,7 +57,9 @@
           <p class="text-sm text-muted-foreground mt-1">{{ team.teamSummary }}</p>
         </div>
 
-        <div *ngIf="team.members.length === 0" class="hint-panel">
+        <div
+          *ngIf="team.members.length === 0 && team.unavailableMatches.length === 0"
+          class="hint-panel">
           No suitable bench employees were found for this requirement.
         </div>
 
@@ -102,6 +104,48 @@
               </div>
             </div>
           </article>
+        </div>
+
+        <div *ngIf="team.unavailableMatches.length > 0" class="mt-6">
+          <h3 class="text-sm font-semibold">Matching But Unavailable</h3>
+          <p class="text-xs text-muted-foreground mt-1 mb-3">
+            These employees match the requirement but cannot be recommended because they are currently allocated.
+          </p>
+
+          <div class="grid xl:grid-cols-2 gap-4">
+            <article
+              *ngFor="let match of team.unavailableMatches"
+              class="rounded-lg border border-amber-500/30 bg-amber-500/5 p-5">
+              <div class="flex items-start gap-3">
+                <app-avatar [name]="match.employee.fullName"></app-avatar>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <div class="font-medium">{{ match.employee.fullName }}</div>
+                      <div class="text-sm text-muted-foreground">
+                        {{ match.employee.designation || '-' }}
+                      </div>
+                    </div>
+                    <app-status-badge status="Allocated"></app-status-badge>
+                  </div>
+
+                  <div class="mt-3 text-sm">
+                    <span class="text-muted-foreground">Matched role:</span>
+                    <span class="font-medium ml-1">{{ match.matchedRole }}</span>
+                  </div>
+                  <p class="text-sm text-muted-foreground mt-2">{{ match.reason }}</p>
+
+                  <div class="flex flex-wrap gap-1 mt-3">
+                    <span
+                      *ngFor="let skill of match.matchedSkills"
+                      class="inline-flex rounded-md border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                      {{ skill }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
         </div>
 
         <div *ngIf="team.missingSkills.length > 0" class="mt-5">

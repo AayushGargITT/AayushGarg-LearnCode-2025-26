@@ -35,12 +35,22 @@ public static class DependencyInjection
 
         // Services
         services.AddScoped<IJwtService, JwtService>();
-        services.AddHttpClient<ILlmClient, GeminiClient>(client =>
-        {
-            client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
-            client.Timeout = TimeSpan.FromSeconds(30);
-        });
+        services.AddHttpClient<GeminiClient>(ConfigureGoogleAiClient);
+        services.AddHttpClient<GemmaClient>(client =>
+            client.Timeout = TimeSpan.FromSeconds(60));
+        services.AddTransient<ILlmProviderClient>(
+            provider => provider.GetRequiredService<GeminiClient>());
+        services.AddTransient<ILlmProviderClient>(
+            provider => provider.GetRequiredService<GemmaClient>());
+        services.AddScoped<ILlmClientFactory, LlmClientFactory>();
+        services.AddScoped<ILlmClient, ConfiguredLlmClient>();
         services.AddHostedService<ResourceSchedulerService>();
         return services;
+    }
+
+    private static void ConfigureGoogleAiClient(HttpClient client)
+    {
+        client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+        client.Timeout = TimeSpan.FromSeconds(30);
     }
 }

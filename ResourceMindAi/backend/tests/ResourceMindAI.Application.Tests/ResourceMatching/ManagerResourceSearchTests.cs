@@ -85,6 +85,32 @@ public class ManagerResourceSearchTests
     }
 
     [Fact]
+    public async Task FindResourcesAsync_WhenAiReturnsRoleLikeSkill_ShouldMatchNormalizedStoredSkill()
+    {
+        var manager = TestDataBuilder.User(Role.Manager);
+        var project = TestDataBuilder.Project(manager);
+        var employee = Candidate("Angular", "Software Engineer");
+        var request = new FindResourceRequestDto
+        {
+            ProjectId = project.Id,
+            Requirement = "Need an Angular developer"
+        };
+        _repository.Setup(x => x.GetProjectAsync(manager.Id, project.Id)).ReturnsAsync(project);
+        _repository.Setup(x => x.GetOrganizationSearchCandidatesAsync())
+            .ReturnsAsync([employee]);
+        _llm.Setup(x => x.ExtractResourceIntentAsync(
+                request.Requirement,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TestDataBuilder.Intent("Angular Developer"));
+        SetupSuccessfulExplanation(employee.Id);
+
+        var result = await _sut.FindResourcesAsync(manager.Id, request);
+
+        result.Intent.RequiredSkills.Should().ContainSingle("angular");
+        result.Matches.Should().ContainSingle(match => match.Employee.Id == employee.Id);
+    }
+
+    [Fact]
     public async Task FindResourcesAsync_ShouldSendOnlyFilteredCandidatesToExplanationAi()
     {
         var context = SetupSearch();
@@ -174,7 +200,6 @@ public class ManagerResourceSearchTests
             Requirement = "Need a Java backend developer"
         };
         var intent = TestDataBuilder.Intent("Java");
-        intent.RequiredRole = "Backend Developer";
         if (withDates)
         {
             intent.FromDate = DateTime.UtcNow.Date.AddDays(1).ToString("yyyy-MM-dd");

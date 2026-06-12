@@ -13,7 +13,6 @@ namespace ResourceMindAI.Application.Services;
 public class ManagerService : IManagerService
 {
     private const int MaximumAiCandidates = 10;
-    private const int MaximumTeamCandidates = 20;
     private const decimal MaximumWeeklyHours = 40m;
 
     private static readonly JsonSerializerOptions RiskJsonOptions = new()
@@ -25,6 +24,10 @@ public class ManagerService : IManagerService
     private static readonly IReadOnlyDictionary<string, string> SkillAliases =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
+            ["back end"] = "backend",
+            ["front end"] = "frontend",
+            ["dev ops"] = "devops",
+            ["quality assurance"] = "qa",
             ["dotnet"] = ".net",
             ["asp.net core"] = ".net",
             ["c sharp"] = "c#",
@@ -33,6 +36,16 @@ public class ManagerService : IManagerService
             ["reactjs"] = "react",
             ["angularjs"] = "angular",
             ["spring"] = "spring boot"
+        };
+
+    private static readonly IReadOnlySet<string> GenericJobWords =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "developer",
+            "engineer",
+            "specialist",
+            "resource",
+            "person"
         };
 
     private readonly IManagerRepository _managerRepository;
@@ -187,8 +200,7 @@ public class ManagerService : IManagerService
                 continue;
             }
 
-            if (!MatchesRequiredRole(employee, intent.RequiredRole)
-                || !HasRequiredSkills(employee, intent.RequiredSkills)
+            if (!HasRequiredSkills(employee, intent.RequiredSkills)
                 || MatchesExclusion(employee, intent.ExclusionConstraints))
             {
                 continue;
@@ -236,16 +248,13 @@ public class ManagerService : IManagerService
 
         var employees = await _managerRepository.GetOrganizationSearchCandidatesAsync();
         var candidates = employees
-            .Where(IsBench)
-            .Where(employee => MatchesTeamRequirement(employee, intent))
             .Select(employee => ScoreEmployee(
                 employee,
                 intent,
-                100m,
+                Math.Max(0m, 100m - MapResource(employee).AllocationPercent),
                 employee.ResourceProfile?.ManagerId == managerId))
             .OrderByDescending(match => match.Score)
             .ThenBy(match => match.Employee.FullName)
-            .Take(MaximumTeamCandidates)
             .ToList();
 
         if (candidates.Count == 0)
@@ -253,8 +262,9 @@ public class ManagerService : IManagerService
             return new TeamBuilderResponseDto
             {
                 Intent = intent,
-                TeamSummary = "No bench employees match the requested team requirements.",
+                TeamSummary = "No active employees are available to evaluate for this team requirement.",
                 Members = [],
+                UnavailableMatches = [],
                 MissingSkills = intent.RequiredSkills
             };
         }
@@ -264,7 +274,7 @@ public class ManagerService : IManagerService
             ProjectName = project.Name,
             Requirement = request.Requirement,
             Intent = intent,
-            Candidates = candidates.Select(BuildCandidateSummary).ToList()
+            Candidates = candidates.Select(BuildTeamCandidateSummary).ToList()
         };
         var aiResponse = await _llmClient.BuildTeamAsync(aiRequest);
 
@@ -487,12 +497,6 @@ public class ManagerService : IManagerService
         var reasons = new List<string>();
         var score = 0;
 
-        if (!string.IsNullOrWhiteSpace(intent.RequiredRole))
-        {
-            score += 20;
-            reasons.Add($"Designation aligns with {intent.RequiredRole}.");
-        }
-
         var employeeSkills = resource.Skills
             .Select(NormalizeSkill)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -580,7 +584,7 @@ public class ManagerService : IManagerService
         {
             var response = await _llmClient.ExplainResourceMatchesAsync(request);
             var knownMatches = matches.ToDictionary(match => match.Employee.Id);
-            var validExplanations = response.Matches
+            var validExplanations = response.Matches 
                 .Where(explanation =>
                     explanation.AiRank > 0
                     && knownMatches.ContainsKey(explanation.EmployeeId))
@@ -615,16 +619,22 @@ public class ManagerService : IManagerService
         }
     }
 
-    private static ResourceCandidateDto BuildCandidateSummary(ResourceMatchDto match)
+    private static TeamBuilderCandidateDto BuildTeamCandidateSummary(ResourceMatchDto match)
     {
-        return new ResourceCandidateDto
+        var isEligible = match.Employee.CurrentStatus == ResourceStatus.Bench;
+        return new TeamBuilderCandidateDto
         {
             EmployeeId = match.Employee.Id,
             Name = match.Employee.FullName,
+            Department = match.Employee.Department,
             Designation = match.Employee.Designation,
             Skills = match.Employee.Skills,
             RecentActivityTags = match.Employee.RecentActivityTags,
-            AvailablePercent = 100m,
+            Status = match.Employee.CurrentStatus,
+            IsEligible = isEligible,
+            EligibilityReason = isEligible
+                ? "Eligible because the employee is currently on bench."
+                : "Not eligible because Team Builder allows only bench employees.",
             BackendScore = match.Score,
             BackendReasons = match.Reasons
         };
@@ -641,14 +651,27 @@ public class ManagerService : IManagerService
         }
 
         var knownCandidates = candidates.ToDictionary(candidate => candidate.Employee.Id);
-        var duplicateIds = response.Members
+        var duplicateMemberIds = response.Members
             .GroupBy(member => member.EmployeeId)
             .Any(group => group.Count() > 1);
-        if (duplicateIds
+        var duplicateUnavailableIds = response.UnavailableMatches
+            .GroupBy(member => member.EmployeeId)
+            .Any(group => group.Count() > 1);
+        if (duplicateMemberIds
+            || duplicateUnavailableIds
             || response.Members.Any(member =>
                 !knownCandidates.ContainsKey(member.EmployeeId)
+                || knownCandidates[member.EmployeeId].Employee.CurrentStatus != ResourceStatus.Bench
                 || string.IsNullOrWhiteSpace(member.SuggestedRole)
-                || string.IsNullOrWhiteSpace(member.Reason)))
+                || string.IsNullOrWhiteSpace(member.Reason))
+            || response.UnavailableMatches.Any(member =>
+                !knownCandidates.ContainsKey(member.EmployeeId)
+                || knownCandidates[member.EmployeeId].Employee.CurrentStatus != ResourceStatus.Allocated
+                || string.IsNullOrWhiteSpace(member.MatchedRole)
+                || string.IsNullOrWhiteSpace(member.Reason))
+            || response.Members.Select(member => member.EmployeeId)
+                .Intersect(response.UnavailableMatches.Select(member => member.EmployeeId))
+                .Any())
         {
             throw new ExternalServiceException("AI team recommendation returned invalid members.");
         }
@@ -657,25 +680,30 @@ public class ManagerService : IManagerService
             .Select(member =>
             {
                 var candidate = knownCandidates[member.EmployeeId];
-                var actualSkills = candidate.Employee.Skills
-                    .GroupBy(NormalizeSkill, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(
-                        group => group.Key,
-                        group => group.First(),
-                        StringComparer.OrdinalIgnoreCase);
-                var matchedSkills = member.MatchedSkills
-                    .Select(NormalizeSkill)
-                    .Where(actualSkills.ContainsKey)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Select(skill => actualSkills[skill])
-                    .ToList();
-
                 return new TeamBuilderMemberDto
                 {
                     Employee = candidate.Employee,
                     SuggestedRole = member.SuggestedRole.Trim(),
                     Reason = member.Reason.Trim(),
-                    MatchedSkills = matchedSkills
+                    MatchedSkills = GetVerifiedMatchedSkills(
+                        candidate.Employee.Skills,
+                        member.MatchedSkills)
+                };
+            })
+            .ToList();
+
+        var unavailableMatches = response.UnavailableMatches
+            .Select(member =>
+            {
+                var candidate = knownCandidates[member.EmployeeId];
+                return new TeamBuilderUnavailableMemberDto
+                {
+                    Employee = candidate.Employee,
+                    MatchedRole = member.MatchedRole.Trim(),
+                    Reason = member.Reason.Trim(),
+                    MatchedSkills = GetVerifiedMatchedSkills(
+                        candidate.Employee.Skills,
+                        member.MatchedSkills)
                 };
             })
             .ToList();
@@ -685,15 +713,34 @@ public class ManagerService : IManagerService
             Intent = intent,
             TeamSummary = response.TeamSummary.Trim(),
             Members = members,
+            UnavailableMatches = unavailableMatches,
             MissingSkills = CleanValues(response.MissingSkills)
         };
+    }
+
+    private static IReadOnlyList<string> GetVerifiedMatchedSkills(
+        IReadOnlyList<string> candidateSkills,
+        IEnumerable<string> matchedSkills)
+    {
+        var actualSkills = candidateSkills
+            .GroupBy(NormalizeSkill, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First(),
+                StringComparer.OrdinalIgnoreCase);
+
+        return matchedSkills
+            .Select(NormalizeSkill)
+            .Where(actualSkills.ContainsKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(skill => actualSkills[skill])
+            .ToList();
     }
 
     private static ResourceIntentDto NormalizeIntent(ResourceIntentDto intent)
     {
         return new ResourceIntentDto
         {
-            RequiredRole = NormalizeOptionalValue(intent.RequiredRole),
             RequiredSkills = intent.RequiredSkills
                 .Select(NormalizeSkill)
                 .Where(value => value.Length > 0)
@@ -707,21 +754,6 @@ public class ManagerService : IManagerService
             SoftConstraints = CleanValues(intent.SoftConstraints),
             ExclusionConstraints = CleanValues(intent.ExclusionConstraints)
         };
-    }
-
-    private static bool MatchesRequiredRole(User employee, string? requiredRole)
-    {
-        if (string.IsNullOrWhiteSpace(requiredRole))
-        {
-            return true;
-        }
-
-        var designation = NormalizeSearchValue(employee.Designation);
-        var role = NormalizeSearchValue(requiredRole);
-        return designation == role
-            || designation.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Intersect(role.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                .Any();
     }
 
     private static bool HasRequiredSkills(
@@ -761,41 +793,18 @@ public class ManagerService : IManagerService
             .Any(exclusion => searchableValues.Any(value => ContainsWholeTerm(value, exclusion)));
     }
 
-    private static bool IsBench(User employee)
-    {
-        return !employee.Allocations.Any(IsActiveAllocation);
-    }
-
-    private static bool MatchesTeamRequirement(User employee, ResourceIntentDto intent)
-    {
-        if (MatchesExclusion(employee, intent.ExclusionConstraints))
-        {
-            return false;
-        }
-
-        var hasRoleRequirement = !string.IsNullOrWhiteSpace(intent.RequiredRole);
-        var roleMatches = hasRoleRequirement
-            && MatchesRequiredRole(employee, intent.RequiredRole);
-        if (intent.RequiredSkills.Count == 0)
-        {
-            return !hasRoleRequirement || roleMatches;
-        }
-
-        var employeeSkills = employee.ResourceProfile?.Skills
-            .Select(skill => NormalizeSkill(skill.SkillName))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase)
-            ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var hasAnyRequiredSkill = intent.RequiredSkills.Any(employeeSkills.Contains);
-
-        return hasAnyRequiredSkill || roleMatches;
-    }
-
     private static string NormalizeSkill(string value)
     {
         var normalized = NormalizeSearchValue(value);
-        return SkillAliases.TryGetValue(normalized, out var canonical)
+        var withoutJobWords = string.Join(
+            ' ',
+            normalized
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Where(word => !GenericJobWords.Contains(word)));
+
+        return SkillAliases.TryGetValue(withoutJobWords, out var canonical)
             ? canonical
-            : normalized;
+            : withoutJobWords;
     }
 
     private static string NormalizeSearchValue(string? value)

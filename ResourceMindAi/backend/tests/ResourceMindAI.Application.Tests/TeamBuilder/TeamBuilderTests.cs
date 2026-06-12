@@ -29,7 +29,7 @@ public class TeamBuilderTests
     }
 
     [Fact]
-    public async Task BuildTeamAsync_ShouldUseOrganizationWideBenchCandidatesOnly()
+    public async Task BuildTeamAsync_ShouldSendBenchAndAllocatedCandidatesWithEligibility()
     {
         var context = Setup();
         var bench = Candidate("Java");
@@ -42,13 +42,22 @@ public class TeamBuilderTests
                 It.IsAny<TeamBuilderAiRequestDto>(),
                 It.IsAny<CancellationToken>()))
             .Callback<TeamBuilderAiRequestDto, CancellationToken>((request, _) => aiRequest = request)
-            .ReturnsAsync(TeamResponse(bench.Id));
+            .ReturnsAsync(TeamResponse(bench.Id, allocated.Id));
 
         var result = await _sut.BuildTeamAsync(context.Manager.Id, context.Request);
 
-        aiRequest!.Candidates.Should().ContainSingle(candidate =>
-            candidate.EmployeeId == bench.Id && candidate.AvailablePercent == 100);
+        aiRequest!.Candidates.Should().HaveCount(2);
+        aiRequest.Candidates.Should().ContainSingle(candidate =>
+            candidate.EmployeeId == bench.Id
+            && candidate.IsEligible
+            && candidate.Status == ResourceStatus.Bench);
+        aiRequest.Candidates.Should().ContainSingle(candidate =>
+            candidate.EmployeeId == allocated.Id
+            && !candidate.IsEligible
+            && candidate.Status == ResourceStatus.Allocated);
         result.Members.Should().ContainSingle(member => member.Employee.Id == bench.Id);
+        result.UnavailableMatches.Should().ContainSingle(member =>
+            member.Employee.Id == allocated.Id);
         _repository.Verify(x => x.GetOrganizationSearchCandidatesAsync(), Times.Once);
     }
 
@@ -78,11 +87,67 @@ public class TeamBuilderTests
         var result = await _sut.BuildTeamAsync(context.Manager.Id, context.Request);
 
         result.Members.Should().BeEmpty();
+        result.UnavailableMatches.Should().BeEmpty();
         result.MissingSkills.Should().ContainSingle("java");
-        result.TeamSummary.Should().Contain("No bench employees");
+        result.TeamSummary.Should().Contain("No active employees");
         _llm.Verify(x => x.BuildTeamAsync(
             It.IsAny<TeamBuilderAiRequestDto>(),
             It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task BuildTeamAsync_WhenOnlyAllocatedEmployeeMatches_ShouldReturnUnavailableMatch()
+    {
+        var context = Setup();
+        var allocated = Candidate("Java");
+        TestDataBuilder.Allocation(allocated, TestDataBuilder.Project(context.Manager));
+        _repository.Setup(x => x.GetOrganizationSearchCandidatesAsync())
+            .ReturnsAsync([allocated]);
+        _llm.Setup(x => x.BuildTeamAsync(
+                It.IsAny<TeamBuilderAiRequestDto>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TeamBuilderAiResponseDto
+            {
+                TeamSummary = "A matching Java developer exists but is currently allocated.",
+                Members = [],
+                UnavailableMatches =
+                [
+                    new TeamBuilderAiUnavailableMemberDto
+                    {
+                        EmployeeId = allocated.Id,
+                        MatchedRole = "Backend Developer",
+                        Reason = "Matches Java requirements but is not on bench.",
+                        MatchedSkills = ["Java"]
+                    }
+                ],
+                MissingSkills = ["Java"]
+            });
+
+        var result = await _sut.BuildTeamAsync(context.Manager.Id, context.Request);
+
+        result.Members.Should().BeEmpty();
+        result.UnavailableMatches.Should().ContainSingle();
+        result.UnavailableMatches[0].Employee.CurrentStatus.Should()
+            .Be(ResourceStatus.Allocated);
+    }
+
+    [Fact]
+    public async Task BuildTeamAsync_WhenAiRecommendsAllocatedEmployee_ShouldRejectResponse()
+    {
+        var context = Setup();
+        var allocated = Candidate("Java");
+        TestDataBuilder.Allocation(allocated, TestDataBuilder.Project(context.Manager));
+        _repository.Setup(x => x.GetOrganizationSearchCandidatesAsync())
+            .ReturnsAsync([allocated]);
+        _llm.Setup(x => x.BuildTeamAsync(
+                It.IsAny<TeamBuilderAiRequestDto>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TeamResponse(allocated.Id));
+
+        var act = () => _sut.BuildTeamAsync(context.Manager.Id, context.Request);
+
+        await act.Should().ThrowAsync<ExternalServiceException>()
+            .WithMessage("*invalid members*");
     }
 
     private TeamContext Setup()
@@ -110,7 +175,9 @@ public class TeamBuilderTests
         return employee;
     }
 
-    private static TeamBuilderAiResponseDto TeamResponse(Guid employeeId)
+    private static TeamBuilderAiResponseDto TeamResponse(
+        Guid employeeId,
+        Guid? unavailableEmployeeId = null)
     {
         return new TeamBuilderAiResponseDto
         {
@@ -125,6 +192,18 @@ public class TeamBuilderTests
                     MatchedSkills = ["Java"]
                 }
             ],
+            UnavailableMatches = unavailableEmployeeId.HasValue
+                ?
+                [
+                    new TeamBuilderAiUnavailableMemberDto
+                    {
+                        EmployeeId = unavailableEmployeeId.Value,
+                        MatchedRole = "Backend Developer",
+                        Reason = "Strong Java match but currently allocated.",
+                        MatchedSkills = ["Java"]
+                    }
+                ]
+                : [],
             MissingSkills = ["DevOps"]
         };
     }

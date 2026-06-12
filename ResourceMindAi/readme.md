@@ -2,7 +2,7 @@
 
 ResourceMindAI is a web-based project and resource management application for
 Admin, Manager, and Employee users. It combines deterministic business rules
-with Gemini-assisted resource matching and project risk summaries.
+with configurable LLM-assisted resource matching and project risk summaries.
 
 The solution uses:
 
@@ -10,7 +10,7 @@ The solution uses:
 - ASP.NET Core Web API
 - Entity Framework Core with SQL Server
 - JWT bearer authentication
-- Gemini structured JSON responses
+- Gemini or Gemma structured JSON responses through a provider factory
 - Global exception handling and role-based authorization
 
 ## Contents
@@ -23,7 +23,8 @@ The solution uses:
 6. [Entity relationship diagram](#entity-relationship-diagram)
 7. [Current API surface](#current-api-surface)
 8. [Business rules](#business-rules)
-9. [Automated backend tests](#automated-backend-tests)
+9. [LLM provider configuration](#llm-provider-configuration)
+10. [Automated backend tests](#automated-backend-tests)
 
 ## Architecture
 
@@ -43,7 +44,9 @@ flowchart LR
     EF["EF Core Repositories"]
     DB[("SQL Server")]
     LLM["ILlmClient"]
+    Factory["LlmClientFactory"]
     Gemini["Gemini API"]
+    Gemma["Gemma API"]
 
     Browser --> Guard
     Browser --> Interceptor
@@ -54,7 +57,9 @@ flowchart LR
     Repositories --> EF
     EF --> DB
     Services --> LLM
-    LLM --> Gemini
+    LLM --> Factory
+    Factory --> Gemini
+    Factory --> Gemma
 ```
 
 ### Frontend modules
@@ -305,10 +310,16 @@ classDiagram
         <<interface>>
         +ExtractResourceIntentAsync(requirement)
         +ExplainResourceMatchesAsync(request)
+        +BuildTeamAsync(request)
         +GenerateProjectRiskSummaryAsync(facts)
     }
 
+    class ConfiguredLlmClient
+    class ILlmClientFactory
+    class LlmClientFactory
+    class ILlmProviderClient
     class GeminiClient
+    class GemmaClient
     class PromptBuilder
     class Repositories {
         IUserRepository
@@ -327,8 +338,14 @@ classDiagram
     IManagerService --> Repositories
     ITimesheetService --> Repositories
     IManagerService --> ILlmClient
-    ILlmClient <|.. GeminiClient
+    ILlmClient <|.. ConfiguredLlmClient
+    ConfiguredLlmClient --> ILlmClientFactory
+    ILlmClientFactory <|.. LlmClientFactory
+    LlmClientFactory --> ILlmProviderClient
+    ILlmProviderClient <|.. GeminiClient
+    ILlmProviderClient <|.. GemmaClient
     GeminiClient --> PromptBuilder
+    GemmaClient --> PromptBuilder
 ```
 
 ### Controller and authorization map
@@ -615,7 +632,7 @@ sequenceDiagram
 
 ### AI-assisted resource search
 
-Resource eligibility remains deterministic. Gemini extracts intent and explains
+Resource eligibility remains deterministic. The configured LLM extracts intent and explains
 only the candidates already approved by backend rules.
 
 ```mermaid
@@ -625,7 +642,7 @@ sequenceDiagram
     participant API as ManagerController
     participant Service as ManagerService
     participant Repo as ManagerRepository
-    participant LLM as GeminiClient
+    participant LLM as Configured LLM provider
 
     Manager->>UI: Select project and enter requirement
     UI->>API: POST /api/v1/manager/resources/find
@@ -1001,7 +1018,7 @@ All routes except login require JWT authentication.
 
 ### AI safety boundaries
 
-- Gemini never receives raw EF Core entities.
+- LLM providers never receive raw EF Core entities.
 - Resource intent is normalized and validated before querying candidates.
 - Candidate eligibility and backend score are deterministic.
 - The second AI call can explain only supplied shortlisted employee IDs.
@@ -1011,11 +1028,59 @@ All routes except login require JWT authentication.
 - Invalid AI risk JSON never overwrites the last valid saved summary.
 - Saved risk summaries are stored in `Project.RiskFlagsJson`.
 
+## LLM provider configuration
+
+`ManagerService` depends only on `ILlmClient`. `ConfiguredLlmClient` asks
+`LlmClientFactory` for the provider selected by
+`LLMProvider:ActiveProvider`. Provider clients share the existing prompt
+builder and structured response contracts.
+
+```json
+{
+  "LLMProvider": {
+    "ActiveProvider": "Gemini",
+    "Providers": {
+      "Gemini": {
+        "ApiKey": "YOUR_GEMINI_API_KEY",
+        "Model": "gemini-2.5-flash"
+      },
+      "Gemma": {
+        "ApiKey": "YOUR_GEMMA_API_KEY",
+        "ApiKeyHeader": "Authorization",
+        "ApiKeyScheme": "Bearer",
+        "Endpoint": "http://164.52.211.238/api/generate",
+        "Model": "gemma-3-27b-it"
+      }
+    }
+  }
+}
+```
+
+Set `ActiveProvider` to either `Gemini` or `Gemma`. Gemini uses Google's
+Generative Language API. Gemma uses the independently configured
+`http://164.52.211.238/api/generate` endpoint.
+
+The Gemma client sends an Ollama-style request containing `model`, `prompt`,
+`stream: false`, and `format: "json"`. It accepts either a response string in
+the `response`, `generated_text`, or `text` property, or a direct JSON object.
+Change `ApiKeyHeader` and `ApiKeyScheme` if the hosted endpoint uses a custom
+authentication header. Leave `ApiKey` as a placeholder when the endpoint does
+not require authentication.
+
+To add another provider:
+
+1. Implement `ILlmProviderClient`.
+2. Give the client a unique `ProviderName`.
+3. Register its typed HTTP client and `ILlmProviderClient` mapping.
+4. Add its configuration and select it through `ActiveProvider`.
+
+Application services and controllers do not need to change.
+
 ## Automated backend tests
 
 The backend test suite uses xUnit, FluentAssertions, Moq, and EF Core InMemory.
 Application tests mock repositories and `ILlmClient`, so tests never call
-Gemini or any other external service. Infrastructure tests use an isolated
+Gemini, Gemma, or any other external service. Infrastructure tests use an isolated
 database per test class.
 
 Test projects:

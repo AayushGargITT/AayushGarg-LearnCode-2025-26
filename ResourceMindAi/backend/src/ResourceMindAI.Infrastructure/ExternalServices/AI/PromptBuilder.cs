@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ResourceMindAI.Application.DTOs.Manager;
 
 namespace ResourceMindAI.Infrastructure.ExternalServices.AI;
@@ -10,6 +11,11 @@ public static class PromptBuilder
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    static PromptBuilder()
+    {
+        JsonOptions.Converters.Add(new JsonStringEnumConverter());
+    }
+
     public static object BuildResourceIntentRequest(string requirement, DateOnly currentDate)
     {
         var instruction =
@@ -18,6 +24,15 @@ public static class PromptBuilder
             Today's date is {currentDate:yyyy-MM-dd}. Resolve relative dates using this date.
             Do not recommend employees and do not add facts that are not present.
             Always return only the intent JSON matching the supplied schema.
+            There is no requiredRole field. Convert role-like phrases into requiredSkills.
+            Remove generic job words such as developer, engineer, specialist, resource, and person.
+            Examples:
+            "Angular developer" becomes requiredSkills ["angular"].
+            "backend developer" becomes requiredSkills ["backend"].
+            "frontend engineer with React" becomes requiredSkills ["frontend", "react"].
+            "QA engineer" becomes requiredSkills ["qa"].
+            "DevOps engineer with Docker" becomes requiredSkills ["devops", "docker"].
+            Keep named technologies and capability areas as separate normalized skills.
             Do not return a dateRange property.
             Split date ranges into fromDate and toDate in YYYY-MM-DD format.
             availabilityRequirement must be an integer from 1 to 100 or null.
@@ -34,7 +49,6 @@ public static class PromptBuilder
                 type = "object",
                 properties = new
                 {
-                    requiredRole = NullableString(),
                     requiredSkills = StringArray(),
                     experienceHint = NullableString(),
                     availabilityRequirement = new
@@ -51,7 +65,6 @@ public static class PromptBuilder
                 },
                 required = new[]
                 {
-                    "requiredRole",
                     "requiredSkills",
                     "experienceHint",
                     "availabilityRequirement",
@@ -109,13 +122,22 @@ public static class PromptBuilder
     {
         const string instruction =
             """
-            Recommend a complementary project team using only the supplied bench candidates.
+            Analyze all supplied active employees for the requested project team.
             Use the manager requirement, extracted intent, and candidate facts.
             Do not invent employees and do not return an employeeId outside the supplied list.
             Return each employeeId at most once.
-            Select only useful members; do not force a candidate for every requirement.
+            Recommend members only when isEligible is true and status is Bench.
+            Never recommend an Allocated employee as a team member.
+            If an Allocated employee matches a requested role or skill, return that employee in
+            unavailableMatches and clearly explain that the match exists but is not eligible
+            because Team Builder allows only bench employees.
+            Do not place the same employee in members and unavailableMatches.
+            Select only useful bench members; do not force a candidate for every requirement.
             Clearly report uncovered capabilities in missingSkills.
-            If no suitable member exists, return an empty members array and explain why in teamSummary.
+            If matching employees exist but all are allocated, return an empty members array,
+            include those matches in unavailableMatches, and explain this in teamSummary.
+            If no employee matches, return empty members and unavailableMatches arrays and
+            explain that no matching employees were found.
             Keep suggested roles and reasons concise and factual.
             Return strict JSON matching the supplied schema.
             """;
@@ -151,9 +173,37 @@ public static class PromptBuilder
                             }
                         }
                     },
+                    unavailableMatches = new
+                    {
+                        type = "array",
+                        items = new
+                        {
+                            type = "object",
+                            properties = new
+                            {
+                                employeeId = new { type = "string" },
+                                matchedRole = new { type = "string" },
+                                reason = new { type = "string" },
+                                matchedSkills = StringArray()
+                            },
+                            required = new[]
+                            {
+                                "employeeId",
+                                "matchedRole",
+                                "reason",
+                                "matchedSkills"
+                            }
+                        }
+                    },
                     missingSkills = StringArray()
                 },
-                required = new[] { "teamSummary", "members", "missingSkills" }
+                required = new[]
+                {
+                    "teamSummary",
+                    "members",
+                    "unavailableMatches",
+                    "missingSkills"
+                }
             });
     }
 

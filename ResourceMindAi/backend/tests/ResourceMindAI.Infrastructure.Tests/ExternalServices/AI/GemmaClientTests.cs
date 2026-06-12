@@ -1,0 +1,122 @@
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using FluentAssertions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Moq;
+using ResourceMindAI.Infrastructure.ExternalServices.AI;
+
+namespace ResourceMindAI.Infrastructure.Tests.ExternalServices.AI;
+
+public class GemmaClientTests
+{
+    [Fact]
+    public async Task ExtractResourceIntentAsync_ShouldCallConfiguredGenerateEndpoint()
+    {
+        HttpRequestMessage? capturedRequest = null;
+        string? capturedBody = null;
+        var handler = new StubHttpMessageHandler(async request =>
+        {
+            capturedRequest = request;
+            capturedBody = await request.Content!.ReadAsStringAsync();
+            return JsonResponse(new
+            {
+                response =
+                    """
+                    {
+                      "requiredSkills": ["c#", "backend"],
+                      "experienceHint": null,
+                      "availabilityRequirement": 50,
+                      "fromDate": null,
+                      "toDate": null,
+                      "prioritySignals": [],
+                      "softConstraints": [],
+                      "exclusionConstraints": []
+                    }
+                    """
+            });
+        });
+        var sut = CreateClient(handler);
+
+        var result = await sut.ExtractResourceIntentAsync(
+            "Need a C# backend developer with 50% availability");
+
+        capturedRequest!.RequestUri.Should()
+            .Be("http://164.52.211.238/api/generate");
+        capturedRequest.Method.Should().Be(HttpMethod.Post);
+        capturedBody.Should().Contain("\"model\":\"gemma-3-27b-it\"");
+        capturedBody.Should().Contain("\"stream\":false");
+        capturedBody.Should().Contain("\"format\":\"json\"");
+        result.RequiredSkills.Should().BeEquivalentTo("c#", "backend");
+        result.AvailabilityRequirement.Should().Be(50);
+    }
+
+    [Fact]
+    public async Task ExtractResourceIntentAsync_WhenEndpointReturnsDirectJson_ShouldParseResponse()
+    {
+        var handler = new StubHttpMessageHandler(_ => Task.FromResult(JsonResponse(new
+        {
+            requiredSkills = Array.Empty<string>(),
+            experienceHint = (string?)null,
+            availabilityRequirement = (int?)null,
+            fromDate = (string?)null,
+            toDate = (string?)null,
+            prioritySignals = Array.Empty<string>(),
+            softConstraints = Array.Empty<string>(),
+            exclusionConstraints = Array.Empty<string>()
+        })));
+        var sut = CreateClient(handler);
+
+        var result = await sut.ExtractResourceIntentAsync("Find an available resource");
+
+        result.RequiredSkills.Should().BeEmpty();
+    }
+
+    private static GemmaClient CreateClient(HttpMessageHandler handler)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["LLMProvider:Providers:Gemma:Endpoint"] =
+                    "http://164.52.211.238/api/generate",
+                ["LLMProvider:Providers:Gemma:Model"] = "gemma-3-27b-it",
+                ["LLMProvider:Providers:Gemma:ApiKey"] = "YOUR_GEMMA_API_KEY"
+            })
+            .Build();
+
+        return new GemmaClient(
+            new HttpClient(handler),
+            configuration,
+            Mock.Of<ILogger<GemmaClient>>());
+    }
+
+    private static HttpResponseMessage JsonResponse(object body)
+    {
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                JsonSerializer.Serialize(body),
+                Encoding.UTF8,
+                "application/json")
+        };
+    }
+
+    private sealed class StubHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, Task<HttpResponseMessage>> _handler;
+
+        public StubHttpMessageHandler(
+            Func<HttpRequestMessage, Task<HttpResponseMessage>> handler)
+        {
+            _handler = handler;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            return _handler(request);
+        }
+    }
+}
