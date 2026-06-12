@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<Timesheet> Timesheets { get; set; }
     public DbSet<ActivityTag> ActivityTags { get; set; }
     public DbSet<SystemConfig> SystemConfigs { get; set; }
+    public DbSet<NotificationLog> NotificationLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

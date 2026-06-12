@@ -73,6 +73,7 @@ public class ManagerRepository : IManagerRepository
     public async Task<Project?> GetProjectForRiskSummaryAsync(Guid managerId, Guid projectId)
     {
         return await _dbContext.Projects
+            .Include(x => x.Manager)
             .Include(x => x.Milestones)
             .Include(x => x.Allocations)
                 .ThenInclude(x => x.User)

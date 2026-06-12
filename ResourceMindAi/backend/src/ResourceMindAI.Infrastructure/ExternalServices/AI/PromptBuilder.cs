@@ -216,6 +216,10 @@ public static class PromptBuilder
             overallHealth must be ON_TRACK, ATTENTION, or AT_RISK.
             Risk severity must be LOW, MEDIUM, or HIGH.
             Keep the summary concise and recommended actions practical.
+            Recommend concise skills or resource capabilities that could address the identified risks.
+            suggestedSkills must contain only relevant skills or resource types supported by the facts.
+            Examples include Senior Backend Developer, QA Automation, SQL Performance Tuning,
+            DevOps, CI/CD, Azure, React, or Technical Lead when justified by the supplied risks.
             Set generatedAt to the current UTC timestamp.
             Return strict JSON matching the supplied schema.
             """;
@@ -254,6 +258,7 @@ public static class PromptBuilder
                         }
                     },
                     recommendedActions = StringArray(),
+                    suggestedSkills = StringArray(),
                     generatedAt = new { type = "string", format = "date-time" }
                 },
                 required = new[]
@@ -262,6 +267,7 @@ public static class PromptBuilder
                     "summary",
                     "riskPoints",
                     "recommendedActions",
+                    "suggestedSkills",
                     "generatedAt"
                 }
             });

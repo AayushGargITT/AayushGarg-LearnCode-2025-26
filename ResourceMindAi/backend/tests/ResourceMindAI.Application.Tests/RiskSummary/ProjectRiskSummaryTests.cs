@@ -113,6 +113,23 @@ public class ProjectRiskSummaryTests
         context.Project.RiskFlagsJson.Should().NotBeNullOrWhiteSpace();
     }
 
+    [Fact]
+    public async Task GenerateScheduledProjectRiskSummaryAsync_AfterGeneratingSummary_ShouldOnlySaveReport()
+    {
+        var context = SetupProject();
+        _llm.Setup(x => x.GenerateProjectRiskSummaryAsync(
+                It.IsAny<ProjectRiskFactsDto>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TestDataBuilder.RiskSummary("AT_RISK"));
+        var result = await _sut.GenerateScheduledProjectRiskSummaryAsync(
+            context.Manager.Id,
+            context.Project.Id);
+
+        result.OverallHealth.Should().Be("AT_RISK");
+        context.Project.RiskFlagsJson.Should().NotContain("lastNotificationSentAt");
+        _repository.Verify(x => x.SaveChangesAsync(), Times.Once);
+    }
+
     private RiskContext SetupProject()
     {
         var manager = TestDataBuilder.User(Role.Manager);

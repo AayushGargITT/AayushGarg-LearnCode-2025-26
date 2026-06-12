@@ -10,4 +10,7 @@ public interface ISchedulerRepository
 
     Task<IReadOnlyList<Project>> GetRiskSummaryProjectsAsync(
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<Project>> GetProjectHealthNotificationCandidatesAsync(
+        CancellationToken cancellationToken);
 }

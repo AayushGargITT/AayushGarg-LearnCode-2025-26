@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.Abstractions.Services;
@@ -14,12 +13,6 @@ public class ManagerService : IManagerService
 {
     private const int MaximumAiCandidates = 10;
     private const decimal MaximumWeeklyHours = 40m;
-
-    private static readonly JsonSerializerOptions RiskJsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 
     private static readonly IReadOnlyDictionary<string, string> SkillAliases =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -112,7 +105,7 @@ public class ManagerService : IManagerService
             Milestones = project.Milestones.OrderBy(x => x.DueDate).Select(MapMilestone).ToList(),
             AllocatedResources = project.Allocations.Where(IsActiveAllocation).Select(MapAllocation).ToList(),
             RiskFlags = health.Flags,
-            RiskSummary = DeserializeRiskSummary(project.RiskFlagsJson),
+            RiskSummary = ProjectRiskSummarySerializer.Deserialize(project.RiskFlagsJson),
         };
     }
 
@@ -128,7 +121,7 @@ public class ManagerService : IManagerService
         }
         catch (ExternalServiceException exception)
         {
-            var previousSummary = DeserializeRiskSummary(project.RiskFlagsJson);
+            var previousSummary = ProjectRiskSummarySerializer.Deserialize(project.RiskFlagsJson);
             if (previousSummary is not null)
             {
                 _logger.LogWarning(
@@ -377,7 +370,7 @@ public class ManagerService : IManagerService
         var generated = await _llmClient.GenerateProjectRiskSummaryAsync(facts);
         var validated = ValidateRiskSummary(generated);
 
-        project.RiskFlagsJson = JsonSerializer.Serialize(validated, RiskJsonOptions);
+        project.RiskFlagsJson = ProjectRiskSummarySerializer.Serialize(validated);
         await _managerRepository.SaveChangesAsync();
 
         return validated;
@@ -1044,42 +1037,9 @@ public class ManagerService : IManagerService
             Summary = summary.Summary.Trim(),
             RiskPoints = riskPoints,
             RecommendedActions = CleanValues(summary.RecommendedActions),
+            SuggestedSkills = CleanValues(summary.SuggestedSkills),
             GeneratedAt = DateTime.UtcNow
         };
-    }
-
-    private static ProjectRiskSummaryDto? DeserializeRiskSummary(string? json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        try
-        {
-            var summary = JsonSerializer.Deserialize<ProjectRiskSummaryDto>(json, RiskJsonOptions);
-            return IsValidSavedRiskSummary(summary) ? summary : null;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
-
-    private static bool IsValidSavedRiskSummary(ProjectRiskSummaryDto? summary)
-    {
-        if (summary is null
-            || summary.GeneratedAt == default
-            || string.IsNullOrWhiteSpace(summary.Summary)
-            || summary.OverallHealth is not ("ON_TRACK" or "ATTENTION" or "AT_RISK"))
-        {
-            return false;
-        }
-
-        return summary.RiskPoints.All(point =>
-            point.Severity is "LOW" or "MEDIUM" or "HIGH"
-            && !string.IsNullOrWhiteSpace(point.Title)
-            && !string.IsNullOrWhiteSpace(point.Description));
     }
 
     private static DateTime StartOfWeek(DateTime date)

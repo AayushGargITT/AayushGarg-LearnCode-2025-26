@@ -61,6 +61,7 @@ export interface ProjectRiskSummary {
   summary: string;
   riskPoints: ProjectRiskPoint[];
   recommendedActions: string[];
+  suggestedSkills: string[];
   generatedAt: Date | string;
 }
 

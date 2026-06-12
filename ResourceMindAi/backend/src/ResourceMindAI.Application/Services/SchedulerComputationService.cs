@@ -8,16 +8,13 @@ namespace ResourceMindAI.Application.Services;
 public class SchedulerComputationService : ISchedulerComputationService
 {
     private readonly ISchedulerRepository _schedulerRepository;
-    private readonly IManagerService _managerService;
     private readonly ILogger<SchedulerComputationService> _logger;
 
     public SchedulerComputationService(
         ISchedulerRepository schedulerRepository,
-        IManagerService managerService,
         ILogger<SchedulerComputationService> logger)
     {
         _schedulerRepository = schedulerRepository;
-        _managerService = managerService;
         _logger = logger;
     }
 
@@ -25,7 +22,6 @@ public class SchedulerComputationService : ISchedulerComputationService
     {
         var evaluationDate = DateTime.UtcNow.Date;
         await ComputeResourceStatusesAsync(evaluationDate, cancellationToken);
-        await GenerateProjectRiskSummariesAsync(cancellationToken);
     }
 
     private async Task ComputeResourceStatusesAsync(
@@ -77,35 +73,4 @@ public class SchedulerComputationService : ISchedulerComputationService
             benchCount);
     }
 
-    private async Task GenerateProjectRiskSummariesAsync(
-        CancellationToken cancellationToken)
-    {
-        var projects = await _schedulerRepository.GetRiskSummaryProjectsAsync(cancellationToken);
-
-        foreach (var project in projects)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
-
-            try
-            {
-                await _managerService.GenerateScheduledProjectRiskSummaryAsync(
-                    project.ManagerId,
-                    project.Id);
-
-                _logger.LogInformation(
-                    "Scheduled AI risk summary completed for project {ProjectId}",
-                    project.Id);
-            }
-            catch (Exception exception)
-            {
-                _logger.LogError(
-                    exception,
-                    "Scheduled AI risk summary failed for project {ProjectId}; existing summary was preserved",
-                    project.Id);
-            }
-        }
-    }
 }

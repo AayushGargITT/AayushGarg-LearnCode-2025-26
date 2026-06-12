@@ -6,17 +6,17 @@ using ResourceMindAI.Application.Abstractions.Services;
 
 namespace ResourceMindAI.Infrastructure.BackgroundServices;
 
-public class ResourceSchedulerService : BackgroundService
+public sealed class ProjectHealthSchedulerService : BackgroundService
 {
     private const int DefaultIntervalHours = 24;
     private static readonly TimeSpan InitialDelay = TimeSpan.FromSeconds(15);
 
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<ResourceSchedulerService> _logger;
+    private readonly ILogger<ProjectHealthSchedulerService> _logger;
 
-    public ResourceSchedulerService(
+    public ProjectHealthSchedulerService(
         IServiceScopeFactory scopeFactory,
-        ILogger<ResourceSchedulerService> logger)
+        ILogger<ProjectHealthSchedulerService> logger)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
@@ -24,13 +24,9 @@ public class ResourceSchedulerService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Resource status scheduler started");
+        _logger.LogInformation("Project health scheduler started");
 
-        try
-        {
-            await Task.Delay(InitialDelay, stoppingToken);
-        }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        if (!await WaitAsync(InitialDelay, stoppingToken))
         {
             return;
         }
@@ -42,14 +38,14 @@ public class ResourceSchedulerService : BackgroundService
             try
             {
                 await using var scope = _scopeFactory.CreateAsyncScope();
-                var computationService = scope.ServiceProvider
-                    .GetRequiredService<ISchedulerComputationService>();
+                var processor = scope.ServiceProvider
+                    .GetRequiredService<IProjectHealthReportProcessor>();
                 var systemConfigRepository = scope.ServiceProvider
                     .GetRequiredService<ISystemConfigRepository>();
 
-                _logger.LogInformation("Resource status scheduler execution started");
-                await computationService.ExecuteAsync(stoppingToken);
-                _logger.LogInformation("Resource status scheduler execution completed");
+                _logger.LogInformation("Project health scheduler execution started");
+                await processor.ProcessAsync(stoppingToken);
+                _logger.LogInformation("Project health scheduler execution completed");
 
                 var configuredInterval = await systemConfigRepository
                     .GetSchedulerIntervalHoursAsync(stoppingToken);
@@ -66,18 +62,29 @@ public class ResourceSchedulerService : BackgroundService
             {
                 _logger.LogError(
                     exception,
-                    "Resource status scheduler execution failed; retrying after {IntervalHours} hours",
+                    "Project health scheduler execution failed; retrying after {IntervalHours} hours",
                     interval.TotalHours);
             }
 
-            try
-            {
-                await Task.Delay(interval, stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            if (!await WaitAsync(interval, stoppingToken))
             {
                 return;
             }
+        }
+    }
+
+    private static async Task<bool> WaitAsync(
+        TimeSpan delay,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(delay, cancellationToken);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return false;
         }
     }
 }

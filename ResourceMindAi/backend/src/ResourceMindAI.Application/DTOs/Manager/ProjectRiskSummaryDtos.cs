@@ -43,6 +43,7 @@ public sealed class ProjectRiskSummaryDto
     public string Summary { get; init; } = null!;
     public IReadOnlyList<ProjectRiskPointDto> RiskPoints { get; init; } = [];
     public IReadOnlyList<string> RecommendedActions { get; init; } = [];
+    public IReadOnlyList<string> SuggestedSkills { get; init; } = [];
     public DateTime GeneratedAt { get; init; }
 }
 

@@ -45,4 +45,17 @@ public class SchedulerRepository : ISchedulerRepository
             })
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Project>> GetProjectHealthNotificationCandidatesAsync(
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.Projects
+            .AsNoTracking()
+            .Include(project => project.Manager)
+            .Where(project =>
+                !string.IsNullOrWhiteSpace(project.RiskFlagsJson)
+                && (project.Status == ProjectStatus.Active
+                    || project.Status == ProjectStatus.Planned))
+            .ToListAsync(cancellationToken);
+    }
 }

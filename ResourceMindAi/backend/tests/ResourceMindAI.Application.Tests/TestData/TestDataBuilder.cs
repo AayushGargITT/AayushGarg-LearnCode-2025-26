@@ -153,6 +153,7 @@ internal static class TestDataBuilder
             Summary = "Delivery remains stable.",
             RiskPoints = [],
             RecommendedActions = ["Continue weekly reviews."],
+            SuggestedSkills = [],
             GeneratedAt = DateTime.UtcNow
         };
     }

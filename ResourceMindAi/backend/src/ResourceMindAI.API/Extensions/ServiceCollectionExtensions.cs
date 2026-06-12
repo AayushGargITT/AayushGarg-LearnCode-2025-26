@@ -20,6 +20,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAllocationService, AllocationService>();
         services.AddScoped<ITimesheetService, TimesheetService>();
         services.AddScoped<ISchedulerComputationService, SchedulerComputationService>();
+        services.AddScoped<IProjectHealthReportProcessor, ProjectHealthReportProcessor>();
+        services.AddScoped<IProjectHealthEmailProcessor, ProjectHealthEmailProcessor>();
 
         return services;
     }

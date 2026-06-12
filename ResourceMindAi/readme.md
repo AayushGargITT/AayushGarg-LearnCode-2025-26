@@ -24,7 +24,8 @@ The solution uses:
 7. [Current API surface](#current-api-surface)
 8. [Business rules](#business-rules)
 9. [LLM provider configuration](#llm-provider-configuration)
-10. [Automated backend tests](#automated-backend-tests)
+10. [Project health email notifications](#project-health-email-notifications)
+11. [Automated backend tests](#automated-backend-tests)
 
 ## Architecture
 
@@ -1075,6 +1076,45 @@ To add another provider:
 4. Add its configuration and select it through `ActiveProvider`.
 
 Application services and controllers do not need to change.
+
+## Project health email notifications
+
+The existing background scheduler generates and saves project risk summaries.
+When a scheduled summary returns `ATTENTION` or `AT_RISK`, the notification
+service sends a plain-English alert to the project manager through Brevo.
+`ON_TRACK` projects do not generate email.
+
+The email contains:
+
+- Project health and summary
+- Key risk points and potential impact
+- Recommended manager actions
+- Suggested skills or resource capabilities
+- UTC generation time
+
+Configure Brevo with a verified sender:
+
+```json
+{
+  "Notifications": {
+    "ProjectHealth": {
+      "ThrottleHours": 24
+    },
+    "Brevo": {
+      "ApiKey": "YOUR_BREVO_API_KEY",
+      "SenderEmail": "YOUR_VERIFIED_SENDER_EMAIL",
+      "SenderName": "ResourceMindAI"
+    }
+  }
+}
+```
+
+Each delivery attempt is stored in `NotificationLogs`. Before sending, the
+notification service checks the latest successful row for the same project,
+recipient, and `PROJECT_HEALTH_ALERT` notification type. A successful email
+within the configured throttle window blocks another email. Failed attempts
+are recorded but do not throttle retries. Email failures do not stop the
+scheduler from processing other projects.
 
 ## Automated backend tests
 
