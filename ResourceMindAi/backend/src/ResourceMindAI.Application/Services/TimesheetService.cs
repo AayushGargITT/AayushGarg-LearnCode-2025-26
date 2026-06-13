@@ -13,13 +13,16 @@ public class TimesheetService : ITimesheetService
     private const decimal DefaultMaxWeeklyHours = 40m;
 
     private readonly ITimesheetRepository _timesheetRepository;
+    private readonly ITimesheetSubmissionIssueRepository _submissionIssueRepository;
     private readonly ISystemConfigRepository _systemConfigRepository;
 
     public TimesheetService(
         ITimesheetRepository timesheetRepository,
+        ITimesheetSubmissionIssueRepository submissionIssueRepository,
         ISystemConfigRepository systemConfigRepository)
     {
         _timesheetRepository = timesheetRepository;
+        _submissionIssueRepository = submissionIssueRepository;
         _systemConfigRepository = systemConfigRepository;
     }
 
@@ -92,6 +95,12 @@ public class TimesheetService : ITimesheetService
         var employee = await GetEmployeeAsync(userId);
         var weekStart = ResolveWeekStart(request.WeekStartDate);
         ValidateWeekStart(weekStart);
+
+        if (await _submissionIssueRepository.IsFrozenAsync(employee.Id, weekStart))
+        {
+            throw new ValidationException(
+                "Timesheet submission for this week is frozen. Please contact your manager to restore access.");
+        }
 
         if (await _timesheetRepository.HasTimesheetForWeekAsync(employee.Id, weekStart))
         {

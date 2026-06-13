@@ -11,6 +11,7 @@ import {
   ManagerResource,
   ManagerResourceDashboard,
   ManagerTimesheet,
+  FrozenTimesheetSubmission,
   ResourceMatchResponse,
   BuildTeamRequest,
   TeamBuilderResponse
@@ -46,6 +47,21 @@ export class ManagerService {
 
   getSubmittedTimesheets(): Observable<ManagerTimesheet[]> {
     return this.http.get<ManagerTimesheet[]>(`${this.apiUrl}/timesheets`);
+  }
+
+  getFrozenTimesheetSubmissions(): Observable<FrozenTimesheetSubmission[]> {
+    return this.http.get<FrozenTimesheetSubmission[]>(`${this.apiUrl}/timesheets/frozen`);
+  }
+
+  restoreTimesheetSubmissionAccess(
+    employeeUserId: string,
+    weekStartDate: Date | string
+  ): Observable<void> {
+    const week = new Date(weekStartDate).toISOString().slice(0, 10);
+    return this.http.patch<void>(
+      `${this.apiUrl}/timesheets/${employeeUserId}/weeks/${week}/restore`,
+      {}
+    );
   }
 
   findResources(request: FindResourceRequest): Observable<ResourceMatchResponse> {

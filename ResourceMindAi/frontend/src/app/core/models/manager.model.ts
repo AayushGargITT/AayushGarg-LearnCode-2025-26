@@ -82,6 +82,13 @@ export interface ManagerTimesheet {
   tags: string[];
 }
 
+export interface FrozenTimesheetSubmission {
+  employeeUserId: string;
+  employeeName: string;
+  weekStartDate: Date | string;
+  frozenAtUtc: Date | string;
+}
+
 export interface CreateManagerAllocationRequest {
   projectId: string;
   employeeId: string;

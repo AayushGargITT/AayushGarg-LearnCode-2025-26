@@ -7,4 +7,5 @@ public sealed class EmailMessageDto
     public string Subject { get; init; } = null!;
     public string TextContent { get; init; } = null!;
     public string HtmlContent { get; init; } = null!;
+    public string Tag { get; init; } = "application-notification";
 }

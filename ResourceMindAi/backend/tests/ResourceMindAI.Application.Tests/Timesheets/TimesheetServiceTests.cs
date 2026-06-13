@@ -13,13 +13,17 @@ namespace ResourceMindAI.Application.Tests.Timesheets;
 public class TimesheetServiceTests
 {
     private readonly Mock<ITimesheetRepository> _timesheets = new();
+    private readonly Mock<ITimesheetSubmissionIssueRepository> _submissionIssues = new();
     private readonly Mock<ISystemConfigRepository> _config = new();
     private readonly TimesheetService _sut;
 
     public TimesheetServiceTests()
     {
         _config.Setup(x => x.GetMaxWeeklyHoursAsync()).ReturnsAsync(40m);
-        _sut = new TimesheetService(_timesheets.Object, _config.Object);
+        _sut = new TimesheetService(
+            _timesheets.Object,
+            _submissionIssues.Object,
+            _config.Object);
     }
 
     [Fact]
@@ -60,6 +64,28 @@ public class TimesheetServiceTests
 
         await act.Should().ThrowAsync<ConflictException>()
             .WithMessage("*already been submitted*");
+    }
+
+    [Fact]
+    public async Task SubmitAsync_WhenWeekIsFrozen_ShouldRejectSubmission()
+    {
+        var employee = TestDataBuilder.User();
+        var week = PreviousMonday();
+        SetupEmployee(employee);
+        _submissionIssues.Setup(x => x.IsFrozenAsync(
+                employee.Id,
+                week,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var act = () => _sut.SubmitAsync(
+            employee.Id,
+            Request(week, Guid.NewGuid(), 8));
+
+        await act.Should().ThrowAsync<ValidationException>()
+            .WithMessage("*frozen*contact your manager*");
+        _timesheets.Verify(x => x.AddRangeAsync(
+            It.IsAny<IReadOnlyCollection<Timesheet>>()), Times.Never);
     }
 
     [Fact]

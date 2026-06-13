@@ -58,7 +58,7 @@ public sealed class BrevoEmailService : IEmailService
                     subject = message.Subject,
                     textContent = message.TextContent,
                     htmlContent = message.HtmlContent,
-                    tags = new[] { "project-health-alert" }
+                    tags = new[] { message.Tag }
                 },
                 options: JsonOptions)
         };
@@ -76,7 +76,7 @@ public sealed class BrevoEmailService : IEmailService
                 "Brevo email delivery failed with status {StatusCode}",
                 response.StatusCode);
             throw new ExternalServiceException(
-                "Project health notification email could not be delivered.");
+                "Email notification could not be delivered.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -90,7 +90,7 @@ public sealed class BrevoEmailService : IEmailService
         {
             _logger.LogError(exception, "Brevo email delivery request failed");
             throw new ExternalServiceException(
-                "Project health notification email could not be delivered.",
+                "Email notification could not be delivered.",
                 exception);
         }
     }

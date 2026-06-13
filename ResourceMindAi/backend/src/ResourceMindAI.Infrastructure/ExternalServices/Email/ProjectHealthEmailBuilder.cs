@@ -20,7 +20,8 @@ internal static class ProjectHealthEmailBuilder
             RecipientName = request.ManagerName,
             Subject = subject,
             TextContent = BuildText(request, displayHealth, impacts),
-            HtmlContent = BuildHtml(request, displayHealth, impacts)
+            HtmlContent = BuildHtml(request, displayHealth, impacts),
+            Tag = "project-health-alert"
         };
     }
 

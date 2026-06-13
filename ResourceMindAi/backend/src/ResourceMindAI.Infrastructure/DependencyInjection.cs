@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<ISystemConfigRepository, SystemConfigRepository>();
         services.AddScoped<ISchedulerRepository, SchedulerRepository>();
         services.AddScoped<INotificationLogRepository, NotificationLogRepository>();
+        services.AddScoped<ITimesheetSubmissionIssueRepository, TimesheetSubmissionIssueRepository>();
 
         // Services
         services.AddScoped<IJwtService, JwtService>();
@@ -52,9 +53,11 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(30);
         });
         services.AddScoped<IProjectHealthNotificationService, ProjectHealthNotificationService>();
+        services.AddScoped<ITimesheetSubmissionNotificationService, TimesheetSubmissionNotificationService>();
         services.AddHostedService<ResourceSchedulerService>();
         services.AddHostedService<ProjectHealthSchedulerService>();
         services.AddHostedService<ProjectHealthEmailSchedulerService>();
+        services.AddHostedService<TimesheetSubmissionReminderScheduler>();
         return services;
     }
 

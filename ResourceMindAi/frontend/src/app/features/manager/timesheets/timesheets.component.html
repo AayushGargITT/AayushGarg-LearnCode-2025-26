@@ -2,6 +2,40 @@
   <app-page-header title="Team Timesheets" subtitle="Review submitted hours and activity tags"></app-page-header>
 
   <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+  <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
+
+  <div *ngIf="!pageState.isLoading() && frozenSubmissions().length > 0" class="surface kendo-grid-shell mb-5">
+    <div class="px-4 py-3 border-b border-border">
+      <h3 class="font-semibold">Frozen Timesheet Submissions</h3>
+      <p class="text-sm text-muted-foreground">Review missed weeks before restoring employee access.</p>
+    </div>
+
+    <kendo-grid [data]="frozenSubmissions()" [resizable]="true">
+      <kendo-grid-column field="employeeName" title="Employee"></kendo-grid-column>
+      <kendo-grid-column title="Week Starting" [width]="170">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          {{ dataItem.weekStartDate | date:'dd-MM-yyyy':'UTC' }}
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Frozen On" [width]="180">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          {{ dataItem.frozenAtUtc | date:'dd-MM-yyyy HH:mm':'UTC' }}
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Actions" [width]="150">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <button
+            kendoButton
+            themeColor="primary"
+            fillMode="flat"
+            [disabled]="pageState.activeActionId() === dataItem.employeeUserId"
+            (click)="requestRestore(dataItem)">
+            Restore Access
+          </button>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
 
   <div class="surface kendo-grid-shell">
     <div *ngIf="pageState.isLoading()" class="hint-panel">Loading timesheets...</div>
@@ -86,4 +120,14 @@
       <button kendoButton (click)="closeDetail()">Close</button>
     </kendo-dialog-actions>
   </kendo-dialog>
+
+  <app-confirm-dialog
+    *ngIf="restoreCandidate()"
+    title="Restore Timesheet Access"
+    [message]="'Restore submission access for ' + restoreCandidate()!.employeeName + ' for the week of ' + (restoreCandidate()!.weekStartDate | date:'dd-MM-yyyy':'UTC') + '?'"
+    confirmText="Restore Access"
+    [isBusy]="pageState.activeActionId() === restoreCandidate()!.employeeUserId"
+    (cancelled)="cancelRestore()"
+    (confirmed)="confirmRestore()">
+  </app-confirm-dialog>
 </app-layout>

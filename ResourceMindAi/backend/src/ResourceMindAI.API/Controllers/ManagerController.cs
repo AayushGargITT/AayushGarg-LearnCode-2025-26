@@ -12,11 +12,16 @@ namespace ResourceMindAI.API.Controllers;
 public class ManagerController : ControllerBase
 {
     private readonly IManagerService _managerService;
+    private readonly ITimesheetSubmissionEscalationService _timesheetEscalationService;
     private readonly ILogger<ManagerController> _logger;
 
-    public ManagerController(IManagerService managerService, ILogger<ManagerController> logger)
+    public ManagerController(
+        IManagerService managerService,
+        ITimesheetSubmissionEscalationService timesheetEscalationService,
+        ILogger<ManagerController> logger)
     {
         _managerService = managerService;
+        _timesheetEscalationService = timesheetEscalationService;
         _logger = logger;
     }
 
@@ -68,6 +73,29 @@ public class ManagerController : ControllerBase
         var managerId = GetCurrentUserId();
         var timesheets = await _managerService.GetSubmittedTimesheetsAsync(managerId);
         return Ok(timesheets);
+    }
+
+    [HttpPatch("timesheets/{employeeUserId:guid}/weeks/{weekStartDate:datetime}/restore")]
+    public async Task<IActionResult> RestoreTimesheetSubmissionAccess(
+        Guid employeeUserId,
+        DateTime weekStartDate,
+        CancellationToken cancellationToken)
+    {
+        await _timesheetEscalationService.RestoreAccessAsync(
+            GetCurrentUserId(),
+            employeeUserId,
+            weekStartDate,
+            cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("timesheets/frozen")]
+    public async Task<ActionResult<IReadOnlyList<FrozenTimesheetSubmissionDto>>>
+        GetFrozenTimesheetSubmissions(CancellationToken cancellationToken)
+    {
+        return Ok(await _timesheetEscalationService.GetFrozenAsync(
+            GetCurrentUserId(),
+            cancellationToken));
     }
 
     [HttpPost("resources/find")]
