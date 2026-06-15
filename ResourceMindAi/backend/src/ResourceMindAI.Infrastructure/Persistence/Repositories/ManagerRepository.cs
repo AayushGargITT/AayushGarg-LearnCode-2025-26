@@ -22,7 +22,7 @@ public class ManagerRepository : IManagerRepository
         _logger.LogDebug("Querying team employees for manager {ManagerId}", managerId);
 
         return await ResourceProfileGraph()
-            .Where(x => x.ManagerId == managerId && x.User.IsActive && x.User.Role == Role.Employee)
+            .Where(x => x.ManagerId == managerId && x.User.IsActive && x.User.Role == Role.Resource)
             .OrderBy(x => x.User.FullName)
             .ToListAsync();
     }
@@ -34,12 +34,12 @@ public class ManagerRepository : IManagerRepository
                 x.Id == employeeId
                 && x.ManagerId == managerId
                 && x.User.IsActive
-                && x.User.Role == Role.Employee);
+                && x.User.Role == Role.Resource);
     }
 
     public async Task<IReadOnlyList<User>> GetOrganizationSearchCandidatesAsync()
     {
-        _logger.LogDebug("Querying organization-wide active employee search candidates");
+        _logger.LogDebug("Querying organization-wide active resource search candidates");
 
         return await _dbContext.Users
             .Include(user => user.ResourceProfile)
@@ -50,7 +50,7 @@ public class ManagerRepository : IManagerRepository
                 .ThenInclude(allocation => allocation.Project)
             .Include(user => user.Timesheets)
                 .ThenInclude(timesheet => timesheet.ActivityTags)
-            .Where(user => user.IsActive && user.Role == Role.Employee)
+            .Where(user => user.IsActive && user.Role == Role.Resource)
             .OrderBy(user => user.FullName)
             .AsSplitQuery()
             .ToListAsync();

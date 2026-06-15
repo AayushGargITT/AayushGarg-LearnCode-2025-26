@@ -101,7 +101,7 @@ public class AuthService : IAuthService
             Role = user.Role,
             IsActive = user.IsActive,
             ForcePasswordChange = user.ForcePasswordChange,
-            EmployeeId = user.Role is Role.Manager or Role.Employee
+            EmployeeId = user.Role is Role.Manager or Role.Resource
                 ? user.Id
                 : null,
             Department = user.Department,

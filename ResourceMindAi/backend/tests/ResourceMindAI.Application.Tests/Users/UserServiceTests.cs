@@ -35,7 +35,7 @@ public class UserServiceTests
             Email = "employee@example.com",
             Username = "employee.1",
             TemporaryPassword = "Temporary1",
-            Role = Role.Employee,
+            Role = Role.Resource,
             Department = "Engineering",
             Designation = "Developer"
         });
@@ -44,7 +44,7 @@ public class UserServiceTests
         result.ForcePasswordChange.Should().BeTrue();
         _users.Verify(x => x.CreateAsync(It.Is<ResourceMindAI.Domain.Entities.User>(user =>
             user.FullName == "Employee One"
-            && user.Role == Role.Employee
+            && user.Role == Role.Resource
             && PasswordHasher.Verify("Temporary1", user.PasswordHash))), Times.Once);
     }
 
@@ -88,7 +88,7 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task DeactivateAsync_WhenUserIsEmployee_ShouldEndAllocationsAndClearManager()
+    public async Task DeactivateAsync_WhenUserIsResource_ShouldEndAllocationsAndClearManager()
     {
         var manager = TestDataBuilder.User(Role.Manager);
         var employee = TestDataBuilder.User();
@@ -168,7 +168,7 @@ public class UserServiceTests
             Email = "employee@example.com",
             Username = "employee.1",
             TemporaryPassword = "Temporary1",
-            Role = Role.Employee,
+            Role = Role.Resource,
             Department = "Engineering",
             Designation = "Developer"
         };

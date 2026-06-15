@@ -12,7 +12,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class EmployeeService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'https://localhost:44374/api/v1/employee';
+  private readonly apiUrl = 'https://localhost:44374/api/v1/resource';
 
   getAllocations(): Observable<EmployeeAllocations> {
     return this.http.get<EmployeeAllocations>(`${this.apiUrl}/allocations`);

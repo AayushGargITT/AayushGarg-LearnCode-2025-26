@@ -21,7 +21,7 @@ public class TimesheetRepository : ITimesheetRepository
             .SingleOrDefaultAsync(user =>
                 user.Id == userId
                 && user.IsActive
-                && user.Role == Role.Employee);
+                && user.Role == Role.Resource);
     }
 
     public async Task<IReadOnlyList<Allocation>> GetAllocationsAsync(Guid employeeId)

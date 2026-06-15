@@ -7,8 +7,8 @@ using ResourceMindAI.Application.DTOs.Employee;
 namespace ResourceMindAI.API.Controllers;
 
 [ApiController]
-[Authorize(Roles = "Employee")]
-[Route("api/v1/employee")]
+[Authorize(Roles = "Resource")]
+[Route("api/v1/resource")]
 public class EmployeeController : ControllerBase
 {
     private readonly ITimesheetService _timesheetService;

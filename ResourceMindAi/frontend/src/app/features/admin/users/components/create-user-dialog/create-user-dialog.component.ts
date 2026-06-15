@@ -33,7 +33,7 @@ export class CreateUserDialogComponent {
   @Output() cancelled = new EventEmitter<void>();
   @Output() submitted = new EventEmitter<CreateUserRequest>();
 
-  readonly roles = [Role.ADMIN, Role.MANAGER, Role.EMPLOYEE];
+  readonly roles = [Role.ADMIN, Role.MANAGER, Role.RESOURCE];
 
   readonly form = this.fb.group({
     fullName: ['', Validators.required],
@@ -47,7 +47,7 @@ export class CreateUserDialogComponent {
         Validators.pattern(/^(?=.*[A-Z])(?=.*\d).+$/)
       ]
     ],
-    role: [Role.EMPLOYEE, Validators.required],
+    role: [Role.RESOURCE, Validators.required],
     department: ['', [Validators.maxLength(100)]],
     designation: ['', [Validators.maxLength(150)]],
   });
@@ -62,7 +62,7 @@ export class CreateUserDialogComponent {
 
   cancel(): void {
     this.form.reset({
-      role: Role.EMPLOYEE,
+      role: Role.RESOURCE,
       fullName: '',
       email: '',
       username: '',
@@ -70,7 +70,7 @@ export class CreateUserDialogComponent {
       department: '',
       designation: ''
     });
-    this.updateResourceFieldValidation(Role.EMPLOYEE);
+    this.updateResourceFieldValidation(Role.RESOURCE);
     this.cancelled.emit();
   }
 

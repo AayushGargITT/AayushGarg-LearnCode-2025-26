@@ -27,7 +27,7 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
             .Include(user => user.ResourceProfile)
                 .ThenInclude(profile => profile!.Manager)
             .Include(user => user.Allocations)
-            .Where(user => user.Role == Role.Manager || user.Role == Role.Employee)
+            .Where(user => user.Role == Role.Manager || user.Role == Role.Resource)
             .OrderBy(user => user.FullName)
             .ToListAsync();
 
@@ -45,7 +45,7 @@ public class AdminEmployeeRepository : IAdminEmployeeRepository
             .Include(user => user.Allocations)
             .FirstOrDefaultAsync(user =>
                 user.Id == userId
-                && (user.Role == Role.Manager || user.Role == Role.Employee));
+                && (user.Role == Role.Manager || user.Role == Role.Resource));
 
         _logger.LogDebug(
             "Employee lookup by user {UserId} returned {Found}",

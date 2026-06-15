@@ -23,7 +23,7 @@ public class CreateUserDto : IValidatableObject
     public string TemporaryPassword { get; set; } = null!;
 
     [Required(ErrorMessage = "Role is required.")]
-    [EnumDataType(typeof(Role), ErrorMessage = "Role must be one of: Admin, Employee, Manager.")]
+    [EnumDataType(typeof(Role), ErrorMessage = "Role must be one of: Admin, Manager, Resource.")]
     public Role? Role { get; set; }
 
     [MaxLength(100, ErrorMessage = "Department cannot exceed 100 characters.")]
@@ -34,7 +34,7 @@ public class CreateUserDto : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (Role is not (ResourceMindAI.Domain.Enums.Role.Manager or ResourceMindAI.Domain.Enums.Role.Employee))
+        if (Role is not (ResourceMindAI.Domain.Enums.Role.Manager or ResourceMindAI.Domain.Enums.Role.Resource))
         {
             yield break;
         }
@@ -42,14 +42,14 @@ public class CreateUserDto : IValidatableObject
         if (string.IsNullOrWhiteSpace(Department))
         {
             yield return new ValidationResult(
-                "Department is required for Manager and Employee users.",
+                "Department is required for Manager and Resource users.",
                 [nameof(Department)]);
         }
 
         if (string.IsNullOrWhiteSpace(Designation))
         {
             yield return new ValidationResult(
-                "Designation is required for Manager and Employee users.",
+                "Designation is required for Manager and Resource users.",
                 [nameof(Designation)]);
         }
     }

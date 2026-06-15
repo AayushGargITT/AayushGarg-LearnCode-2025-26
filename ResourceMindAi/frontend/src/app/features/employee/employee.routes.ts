@@ -3,7 +3,7 @@ import { EmployeeAllocationsComponent } from './allocations/allocations.componen
 import { EmployeeTimesheetSubmitComponent } from './timesheet-submit/timesheet-submit.component';
 import { EmployeeTimesheetHistoryComponent } from './timesheet-history/timesheet-history.component';
 
-export const employeeRoutes: Routes = [
+export const resourceRoutes: Routes = [
   { path: 'allocations', component: EmployeeAllocationsComponent },
   { path: 'timesheets/submit', component: EmployeeTimesheetSubmitComponent },
   { path: 'timesheets/history', component: EmployeeTimesheetHistoryComponent },

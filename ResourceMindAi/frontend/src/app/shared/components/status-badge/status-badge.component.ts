@@ -43,7 +43,7 @@ export class StatusBadgeComponent {
       Ended: "muted",
       Admin: "rose",
       Manager: "indigo",
-      Employee: "slate",
+      Resource: "slate",
       Beginner: "muted",
       Intermediate: "sky",
       Advanced: "emerald",

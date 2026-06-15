@@ -89,7 +89,7 @@ public class AdminEmployeeServiceTests
     public async Task UpdateManagerAsync_WhenSelectedUserIsNotManager_ShouldThrowValidationException()
     {
         var employee = TestDataBuilder.User();
-        var nonManager = TestDataBuilder.User(Role.Employee, name: "Another Employee");
+        var nonManager = TestDataBuilder.User(Role.Resource, name: "Another Employee");
         _employees.Setup(x => x.GetForManagerUpdateAsync(employee.Id)).ReturnsAsync(employee);
         _users.Setup(x => x.GetByIdAsync(nonManager.Id)).ReturnsAsync(nonManager);
 
@@ -102,7 +102,7 @@ public class AdminEmployeeServiceTests
     }
 
     [Fact]
-    public async Task UpdateManagerAsync_WhenTargetUserIsNotEmployee_ShouldThrowValidationException()
+    public async Task UpdateManagerAsync_WhenTargetUserIsNotResource_ShouldThrowValidationException()
     {
         var target = TestDataBuilder.User(Role.Manager);
         var manager = TestDataBuilder.User(Role.Manager, name: "New Manager");
@@ -114,7 +114,7 @@ public class AdminEmployeeServiceTests
         });
 
         await act.Should().ThrowAsync<ValidationException>()
-            .WithMessage("*Employee role*");
+            .WithMessage("*Resource role*");
         _users.Verify(x => x.GetByIdAsync(It.IsAny<Guid>()), Times.Never);
     }
 

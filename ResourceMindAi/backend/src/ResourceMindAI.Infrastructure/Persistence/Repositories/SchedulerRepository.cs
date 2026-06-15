@@ -24,7 +24,7 @@ public class SchedulerRepository : ISchedulerRepository
                 allocation.IsActive
                 && allocation.FromDate <= evaluationDate
                 && allocation.ToDate >= evaluationDate))
-            .Where(user => user.IsActive && user.Role == Role.Employee)
+            .Where(user => user.IsActive && user.Role == Role.Resource)
             .ToListAsync(cancellationToken);
     }
 

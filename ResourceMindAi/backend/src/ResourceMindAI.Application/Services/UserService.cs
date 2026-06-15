@@ -133,7 +133,7 @@ public class UserService : IUserService
 
         var endedAllocationCount = user.Role switch
         {
-            Role.Employee => DeactivateEmployeeUser(user),
+            Role.Resource => DeactivateResourceUser(user),
             Role.Manager => await DeactivateManagerUserAsync(user),
             _ => DeactivateAdminUser(user)
         };
@@ -189,7 +189,7 @@ public class UserService : IUserService
         return 0;
     }
 
-    private static int DeactivateEmployeeUser(User user)
+    private static int DeactivateResourceUser(User user)
     {
         user.IsActive = false;
 

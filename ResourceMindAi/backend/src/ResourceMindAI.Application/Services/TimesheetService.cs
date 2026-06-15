@@ -272,7 +272,7 @@ public class TimesheetService : ITimesheetService
     {
         return await _timesheetRepository.GetEmployeeUserAsync(userId)
             ?? throw new EntityNotFoundException(
-                "An active employee user was not found for the logged-in user.");
+                "An active resource user was not found for the logged-in user.");
     }
 
     private async Task<decimal> GetMaxWeeklyHoursAsync()

@@ -22,7 +22,7 @@ public sealed class TimesheetSubmissionIssueRepository
             .AsNoTracking()
             .Include(user => user.ResourceProfile)
                 .ThenInclude(profile => profile!.Manager)
-            .Where(user => user.IsActive && user.Role == Role.Employee)
+            .Where(user => user.IsActive && user.Role == Role.Resource)
             .ToListAsync(cancellationToken);
     }
 
@@ -72,7 +72,7 @@ public sealed class TimesheetSubmissionIssueRepository
             .SingleOrDefaultAsync(user =>
                 user.Id == employeeUserId
                 && user.IsActive
-                && user.Role == Role.Employee,
+                && user.Role == Role.Resource,
                 cancellationToken);
     }
 

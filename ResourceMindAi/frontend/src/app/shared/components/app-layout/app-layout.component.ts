@@ -22,10 +22,10 @@ const NAV: Record<Role, { to: string; label: string; icon: string }[]> = {
     { to: '/manager/projects', label: 'My Projects', icon: 'work' },
     { to: '/manager/timesheets', label: 'Timesheets', icon: 'schedule' },
   ],
-  [Role.EMPLOYEE]: [
-    { to: '/employee/timesheets/submit', label: 'Submit Timesheet', icon: 'post_add' },
-    { to: '/employee/allocations', label: 'My Allocations', icon: 'work' },
-    { to: '/employee/timesheets/history', label: 'Timesheet History', icon: 'history' },
+  [Role.RESOURCE]: [
+    { to: '/resource/timesheets/submit', label: 'Submit Timesheet', icon: 'post_add' },
+    { to: '/resource/allocations', label: 'My Allocations', icon: 'work' },
+    { to: '/resource/timesheets/history', label: 'Timesheet History', icon: 'history' },
   ],
 };
 

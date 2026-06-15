@@ -129,7 +129,7 @@ export class ManagerAllocateComponent {
 
   allocateMatch(match: ResourceMatch): void {
     if (!match.isUnderCurrentManager) {
-      this.pageState.setError('You can allocate only employees assigned to your team.');
+      this.pageState.setError('You can allocate only resources assigned to your team.');
       return;
     }
 
@@ -143,7 +143,7 @@ export class ManagerAllocateComponent {
       intent?.availabilityRequirement ?? match.availablePercent;
 
     if (utilisationPercent <= 0) {
-      this.pageState.setError('This employee has no remaining allocation capacity.');
+      this.pageState.setError('This resource has no remaining allocation capacity.');
       return;
     }
 

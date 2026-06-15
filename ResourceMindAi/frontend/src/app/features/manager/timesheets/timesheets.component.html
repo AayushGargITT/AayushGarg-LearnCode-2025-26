@@ -7,11 +7,11 @@
   <div *ngIf="!pageState.isLoading() && frozenSubmissions().length > 0" class="surface kendo-grid-shell mb-5">
     <div class="px-4 py-3 border-b border-border">
       <h3 class="font-semibold">Frozen Timesheet Submissions</h3>
-      <p class="text-sm text-muted-foreground">Review missed weeks before restoring employee access.</p>
+      <p class="text-sm text-muted-foreground">Review missed weeks before restoring resource access.</p>
     </div>
 
     <kendo-grid [data]="frozenSubmissions()" [resizable]="true">
-      <kendo-grid-column field="employeeName" title="Employee"></kendo-grid-column>
+      <kendo-grid-column field="employeeName" title="Resource"></kendo-grid-column>
       <kendo-grid-column title="Week Starting" [width]="170">
         <ng-template kendoGridCellTemplate let-dataItem>
           {{ dataItem.weekStartDate | date:'dd-MM-yyyy':'UTC' }}
@@ -42,7 +42,7 @@
     <div *ngIf="!pageState.isLoading() && rows().length === 0" class="hint-panel">No submitted timesheets found.</div>
 
     <kendo-grid *ngIf="!pageState.isLoading() && rows().length > 0" [data]="rows()" [height]="420" [resizable]="true">
-      <kendo-grid-column title="Employee">
+      <kendo-grid-column title="Resource">
         <ng-template kendoGridCellTemplate let-dataItem>
           <div class="flex items-center gap-3">
             <app-avatar [name]="dataItem.employeeName" [size]="28"></app-avatar>
@@ -86,7 +86,7 @@
     <div class="space-y-5">
       <div class="flex flex-wrap justify-between gap-4">
         <div>
-          <div class="text-xs text-muted-foreground">Employee</div>
+          <div class="text-xs text-muted-foreground">Resource</div>
           <div class="font-medium">{{ selectedTimesheet()!.employeeName }}</div>
         </div>
         <div>

@@ -7,7 +7,7 @@ namespace ResourceMindAI.Application.Tests.TestData;
 internal static class TestDataBuilder
 {
     internal static User User(
-        Role role = Role.Employee,
+        Role role = Role.Resource,
         bool isActive = true,
         string name = "Aarav Sharma")
     {
@@ -23,7 +23,7 @@ internal static class TestDataBuilder
             Designation = role switch
             {
                 Role.Manager => "Engineering Manager",
-                Role.Employee => "Backend Developer",
+                Role.Resource => "Backend Developer",
                 _ => null
             },
             Role = role,

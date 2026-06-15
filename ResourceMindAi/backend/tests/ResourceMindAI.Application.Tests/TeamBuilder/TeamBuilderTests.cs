@@ -89,7 +89,7 @@ public class TeamBuilderTests
         result.Members.Should().BeEmpty();
         result.UnavailableMatches.Should().BeEmpty();
         result.MissingSkills.Should().ContainSingle("java");
-        result.TeamSummary.Should().Contain("No active employees");
+        result.TeamSummary.Should().Contain("No active resources");
         _llm.Verify(x => x.BuildTeamAsync(
             It.IsAny<TeamBuilderAiRequestDto>(),
             It.IsAny<CancellationToken>()), Times.Never);

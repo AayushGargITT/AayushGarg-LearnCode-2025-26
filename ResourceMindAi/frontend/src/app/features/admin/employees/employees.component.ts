@@ -124,11 +124,11 @@ export class AdminEmployeesComponent {
   }
 
   canManageSkills(employee: Employee): boolean {
-    return employee.role === Role.EMPLOYEE;
+    return employee.role === Role.RESOURCE;
   }
 
   canUpdateManager(employee: Employee): boolean {
-    return employee.role === Role.EMPLOYEE
+    return employee.role === Role.RESOURCE
       && employee.isActive;
   }
 
@@ -137,7 +137,7 @@ export class AdminEmployeesComponent {
       return 'Self';
     }
 
-    if (employee.role !== Role.EMPLOYEE) {
+    if (employee.role !== Role.RESOURCE) {
       return 'Not applicable';
     }
 

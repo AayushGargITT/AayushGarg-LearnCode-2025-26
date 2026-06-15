@@ -255,7 +255,7 @@ public class ManagerService : IManagerService
             return new TeamBuilderResponseDto
             {
                 Intent = intent,
-                TeamSummary = "No active employees are available to evaluate for this team requirement.",
+                TeamSummary = "No active resources are available to evaluate for this team requirement.",
                 Members = [],
                 UnavailableMatches = [],
                 MissingSkills = intent.RequiredSkills
@@ -293,7 +293,7 @@ public class ManagerService : IManagerService
         var employee = await _managerRepository.GetTeamEmployeeAsync(managerId, request.EmployeeId!.Value);
         if (employee is null)
         {
-            throw new ForbiddenException("You can allocate only employees in your team.", "MANAGER_SCOPE_VIOLATION");
+            throw new ForbiddenException("You can allocate only resources in your team.", "MANAGER_SCOPE_VIOLATION");
         }
 
         var existingPercent = await _managerRepository.GetOverlappingAllocationPercentAsync(employee.Id, fromDate, toDate);
@@ -516,7 +516,7 @@ public class ManagerService : IManagerService
         if (availablePercent >= 100)
         {
             score += 25;
-            reasons.Add("Employee has 100% availability during the requested period.");
+            reasons.Add("Resource has 100% availability during the requested period.");
         }
         else if (availablePercent > 0)
         {
@@ -533,7 +533,7 @@ public class ManagerService : IManagerService
 
         if (reasons.Count == 0 && availablePercent > 0)
         {
-            reasons.Add("Employee has allocation capacity available.");
+            reasons.Add("Resource has allocation capacity available.");
         }
 
         return new ResourceMatchDto

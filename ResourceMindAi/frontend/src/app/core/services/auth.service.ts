@@ -61,7 +61,7 @@ export class AuthService {
     const normalized = String(role).toLowerCase();
     if (normalized === 'admin') return '/admin/dashboard';
     if (normalized === 'manager') return '/manager/resources';
-    return '/employee/allocations';
+    return '/resource/allocations';
   }
 
   private loadUser(): User | null {

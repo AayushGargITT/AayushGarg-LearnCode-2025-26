@@ -194,9 +194,9 @@ public class AdminEmployeeService : IAdminEmployeeService
             throw new EntityNotFoundException("Employee", employeeId);
         }
 
-        if (employee.Role != Role.Employee)
+        if (employee.Role != Role.Resource)
         {
-            throw new ValidationException("Manager can be updated only for users with Employee role.");
+            throw new ValidationException("Manager can be updated only for users with Resource role.");
         }
 
         if (!employee.IsActive)

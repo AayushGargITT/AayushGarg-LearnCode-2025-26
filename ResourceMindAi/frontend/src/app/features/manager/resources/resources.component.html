@@ -46,7 +46,7 @@
         </div>
       </div>
 
-      <div *ngIf="dashboard().activeEmployees.length === 0" class="hint-panel m-4">No active employees found.</div>
+      <div *ngIf="dashboard().activeEmployees.length === 0" class="hint-panel m-4">No active resources found.</div>
 
       <div *ngFor="let emp of dashboard().activeEmployees" class="p-4 border-b border-border/50 last:border-0 hover:bg-accent/40 transition-colors cursor-pointer" (click)="openDetails(emp)">
         <div class="flex items-start gap-4">

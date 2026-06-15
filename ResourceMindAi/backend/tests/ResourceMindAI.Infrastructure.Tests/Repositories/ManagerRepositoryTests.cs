@@ -10,10 +10,10 @@ namespace ResourceMindAI.Infrastructure.Tests.Repositories;
 public class ManagerRepositoryTests : RepositoryTestBase
 {
     [Fact]
-    public async Task GetOrganizationSearchCandidatesAsync_ShouldReturnOnlyActiveEmployees()
+    public async Task GetOrganizationSearchCandidatesAsync_ShouldReturnOnlyActiveResources()
     {
-        var activeEmployee = User(Role.Employee, true, "Active Employee");
-        var inactiveEmployee = User(Role.Employee, false, "Inactive Employee");
+        var activeEmployee = User(Role.Resource, true, "Active Employee");
+        var inactiveEmployee = User(Role.Resource, false, "Inactive Employee");
         var activeManager = User(Role.Manager, true, "Active Manager");
         DbContext.Users.AddRange(activeEmployee, inactiveEmployee, activeManager);
         await DbContext.SaveChangesAsync();
@@ -31,8 +31,8 @@ public class ManagerRepositoryTests : RepositoryTestBase
     {
         var manager = User(Role.Manager, true, "Current Manager");
         var otherManager = User(Role.Manager, true, "Other Manager");
-        var teamEmployee = User(Role.Employee, true, "Team Employee");
-        var otherEmployee = User(Role.Employee, true, "Other Employee");
+        var teamEmployee = User(Role.Resource, true, "Team Employee");
+        var otherEmployee = User(Role.Resource, true, "Other Employee");
         DbContext.Users.AddRange(manager, otherManager, teamEmployee, otherEmployee);
         DbContext.ResourceProfiles.AddRange(
             new ResourceProfile
@@ -61,7 +61,7 @@ public class ManagerRepositoryTests : RepositoryTestBase
     public async Task GetOverlappingAllocationPercentAsync_ShouldSumOnlyActiveOverlappingAllocations()
     {
         var manager = User(Role.Manager, true, "Manager");
-        var employee = User(Role.Employee, true, "Employee");
+        var employee = User(Role.Resource, true, "Employee");
         var project = Project(manager);
         var rangeStart = DateTime.UtcNow.Date;
         var rangeEnd = rangeStart.AddDays(10);

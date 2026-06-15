@@ -51,14 +51,14 @@
       <label class="text-sm font-medium">Department</label>
       <input kendoTextBox formControlName="department" />
       <span *ngIf="form.controls.department.touched && form.controls.department.hasError('required')" class="text-sm text-destructive">
-        Department is required for Manager and Employee users.
+        Department is required for Manager and Resource users.
       </span>
     </div>
     <div class="field-stack">
       <label class="text-sm font-medium">Designation</label>
       <input kendoTextBox formControlName="designation" />
       <span *ngIf="form.controls.designation.touched && form.controls.designation.hasError('required')" class="text-sm text-destructive">
-        Designation is required for Manager and Employee users.
+        Designation is required for Manager and Resource users.
       </span>
     </div>
     <p class="hint-panel">User will be forced to change the initial password on first login.</p>

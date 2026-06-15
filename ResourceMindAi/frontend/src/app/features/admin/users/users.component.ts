@@ -171,12 +171,12 @@ export class AdminUsersComponent {
   }
 
   deactivationMessage(user: User): string {
-    if (user.role === Role.EMPLOYEE) {
+    if (user.role === Role.RESOURCE) {
       return `Deactivate ${user.fullName}? Their active allocations will be ended as of today, their manager assignment will be removed, and historical records will be preserved.`;
     }
 
     if (user.role === Role.MANAGER) {
-      return `Deactivate ${user.fullName}? This will proceed only if no active or planned projects and no active employees are assigned to this manager.`;
+      return `Deactivate ${user.fullName}? This will proceed only if no active or planned projects and no active resources are assigned to this manager.`;
     }
 
     return `Deactivate ${user.fullName}?`;

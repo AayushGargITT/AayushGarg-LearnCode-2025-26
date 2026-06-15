@@ -1,7 +1,7 @@
 # ResourceMindAI
 
 ResourceMindAI is a web-based project and resource management application for
-Admin, Manager, and Employee users. It combines deterministic business rules
+Admin, Manager, and Resource users. It combines deterministic business rules
 with configurable LLM-assisted resource matching and project risk summaries.
 
 The solution uses:
@@ -478,7 +478,7 @@ flowchart LR
 flowchart LR
     Manager([Logged-in Manager])
     OwnedProjects[Projects where Project.ManagerId equals manager user ID]
-    TeamEmployees[Active Employee-role users whose ResourceProfile.ManagerId equals manager user ID]
+    TeamEmployees[Active Resource-role users whose ResourceProfile.ManagerId equals manager user ID]
     Allowed[Resources, allocations, project detail, timesheets, AI candidate facts]
     CompanyData[Other managers' projects and employees]
 
@@ -591,7 +591,7 @@ sequenceDiagram
     else Confirm
         UI->>API: PATCH /api/v1/admin/employees/{id}/manager
         API->>Service: UpdateManagerAsync
-        Service->>Service: Validate active Employee-role user and active Manager
+        Service->>Service: Validate active Resource-role user and active Manager
         Service->>Service: End all active allocations today
         Service->>Service: Set ResourceProfile.ManagerId
         Service->>Repo: Save transaction
@@ -889,7 +889,7 @@ erDiagram
 
 | Enum | Values |
 | --- | --- |
-| Role | Admin, Manager, Employee |
+| Role | Admin, Manager, Resource |
 | ResourceStatus | Bench, Allocated (computed from current allocations) |
 | SkillCategory | Technical, Soft, Management, Domain |
 | ProficiencyLevel | Beginner, Intermediate, Advanced, Expert |
@@ -969,10 +969,10 @@ All routes except login require JWT authentication.
 
 - Email and username must be unique.
 - User creation does not create a resource profile.
-- An employee resource profile is created on demand when a manager is assigned
+- A resource profile is created on demand when a manager is assigned
   or profile-specific data such as skills is added.
 - Department and designation are nullable `User` fields but are required when
-  creating Manager or Employee users.
+  creating Manager or Resource users.
 - Admin users may leave department and designation blank.
 - User creation accepts and hashes an explicit temporary password.
 - `ResourceProfile.Id` is both its primary key and a foreign key to `User.Id`.
@@ -981,7 +981,7 @@ All routes except login require JWT authentication.
 - Active state and creation date come from the linked `User`.
 - Bench or Allocated status is calculated from current allocations and is not
   stored in `ResourceProfile`.
-- Deactivating an Employee sets `User.IsActive` to false, ends active
+- Deactivating a Resource sets `User.IsActive` to false, ends active
   allocations, and clears the resource profile manager assignment.
 - A Manager cannot be deactivated while active/planned projects or active
   employees remain assigned.
@@ -999,7 +999,7 @@ All routes except login require JWT authentication.
 
 ### Allocation
 
-- Managers can access only their own projects and assigned Employee-role team
+- Managers can access only their own projects and assigned Resource-role team
   members.
 - Projects must be Active or Planned before allocation.
 - `FromDate` must be before `ToDate`.

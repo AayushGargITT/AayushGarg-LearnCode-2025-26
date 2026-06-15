@@ -11,7 +11,7 @@
   </div>
 
   <div *ngIf="details?.employees?.length">
-    <h3 class="text-sm font-semibold mb-2">Assigned active employees</h3>
+    <h3 class="text-sm font-semibold mb-2">Assigned active resources</h3>
     <ul class="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
       <li *ngFor="let employee of details!.employees">{{ employee }}</li>
     </ul>

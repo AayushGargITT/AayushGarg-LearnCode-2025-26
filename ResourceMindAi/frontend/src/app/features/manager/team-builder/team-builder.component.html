@@ -1,7 +1,7 @@
 <app-layout role="manager" title="Team Builder">
   <app-page-header
     title="Team Builder"
-    subtitle="Evaluate organization-wide resources and recommend eligible bench employees">
+    subtitle="Evaluate organization-wide resources and recommend eligible bench resources">
   </app-page-header>
 
   <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
@@ -60,7 +60,7 @@
         <div
           *ngIf="team.members.length === 0 && team.unavailableMatches.length === 0"
           class="hint-panel">
-          No suitable bench employees were found for this requirement.
+          No suitable bench resources were found for this requirement.
         </div>
 
         <div class="grid xl:grid-cols-2 gap-4">
@@ -109,7 +109,7 @@
         <div *ngIf="team.unavailableMatches.length > 0" class="mt-6">
           <h3 class="text-sm font-semibold">Matching But Unavailable</h3>
           <p class="text-xs text-muted-foreground mt-1 mb-3">
-            These employees match the requirement but cannot be recommended because they are currently allocated.
+            These resources match the requirement but cannot be recommended because they are currently allocated.
           </p>
 
           <div class="grid xl:grid-cols-2 gap-4">

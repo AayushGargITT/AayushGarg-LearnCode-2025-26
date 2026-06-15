@@ -122,21 +122,21 @@ public static class PromptBuilder
     {
         const string instruction =
             """
-            Analyze all supplied active employees for the requested project team.
+            Analyze all supplied active resources for the requested project team.
             Use the manager requirement, extracted intent, and candidate facts.
             Do not invent employees and do not return an employeeId outside the supplied list.
             Return each employeeId at most once.
             Recommend members only when isEligible is true and status is Bench.
             Never recommend an Allocated employee as a team member.
-            If an Allocated employee matches a requested role or skill, return that employee in
+            If an allocated resource matches a requested role or skill, return that resource in
             unavailableMatches and clearly explain that the match exists but is not eligible
             because Team Builder allows only bench employees.
-            Do not place the same employee in members and unavailableMatches.
+            Do not place the same resource in members and unavailableMatches.
             Select only useful bench members; do not force a candidate for every requirement.
             Clearly report uncovered capabilities in missingSkills.
             If matching employees exist but all are allocated, return an empty members array,
             include those matches in unavailableMatches, and explain this in teamSummary.
-            If no employee matches, return empty members and unavailableMatches arrays and
+            If no resource matches, return empty members and unavailableMatches arrays and
             explain that no matching employees were found.
             Keep suggested roles and reasons concise and factual.
             Return strict JSON matching the supplied schema.

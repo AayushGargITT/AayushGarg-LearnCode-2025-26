@@ -13,7 +13,7 @@ public class UserRepositoryTests : RepositoryTestBase
     {
         var activeManager = User(Role.Manager, true, "Active Manager");
         var inactiveManager = User(Role.Manager, false, "Inactive Manager");
-        var employee = User(Role.Employee, true, "Employee");
+        var employee = User(Role.Resource, true, "Employee");
         DbContext.Users.AddRange(activeManager, inactiveManager, employee);
         await DbContext.SaveChangesAsync();
         var sut = new UserRepository(DbContext, Mock.Of<ILogger<UserRepository>>());
@@ -26,7 +26,7 @@ public class UserRepositoryTests : RepositoryTestBase
     [Fact]
     public async Task ExistsByUsernameOrEmailAsync_ShouldMatchNormalizedInput()
     {
-        var user = User(Role.Employee, true, "Existing User");
+        var user = User(Role.Resource, true, "Existing User");
         DbContext.Users.Add(user);
         await DbContext.SaveChangesAsync();
         var sut = new UserRepository(DbContext, Mock.Of<ILogger<UserRepository>>());
