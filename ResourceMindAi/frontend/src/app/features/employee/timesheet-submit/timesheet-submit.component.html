@@ -1,95 +1,127 @@
 <app-layout role="resource" title="Submit Timesheet">
-  <app-page-header title="Log Hours" subtitle="Submit weekly hours for your active allocations"></app-page-header>
+  <app-page-header title="Submit Timesheet" subtitle="Log weekly project hours against active allocations"></app-page-header>
 
   <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
   <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6">
-    <div class="surface p-5">
-      <label class="block text-sm font-medium mb-2">Week Starting</label>
-      <div class="flex flex-wrap items-end gap-3">
+  <form [formGroup]="form" (ngSubmit)="submit()" class="timesheet-page">
+    <section class="timesheet-hero">
+      <div class="week-field">
+        <label>Week Starting</label>
         <kendo-datepicker
           formControlName="weekStartDate"
           format="dd-MM-yyyy"
           (valueChange)="loadWeek(true)">
         </kendo-datepicker>
-        <span *ngIf="week()" class="text-sm text-muted-foreground">
-          Weekly limit: {{ week()!.maxWeeklyHours }} hours
-        </span>
+      </div>
+
+      <div class="hero-metrics" *ngIf="week()">
+        <div class="metric">
+          <span>Weekly Limit</span>
+          <strong>{{ week()!.maxWeeklyHours }}h</strong>
+        </div>
+        <div class="metric">
+          <span>Total Entered</span>
+          <strong>{{ totalHours() }}h</strong>
+        </div>
+        <div class="metric">
+          <span>Allocations</span>
+          <strong>{{ week()!.allocations.length }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <div *ngIf="pageState.isLoading()" class="empty-state">
+      <span class="loading-dot"></span>
+      <div>
+        <strong>Loading active allocations</strong>
+        <p>Checking the selected week.</p>
       </div>
     </div>
 
-    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading active allocations...</div>
-    <div *ngIf="!pageState.isLoading() && week() && week()!.allocations.length === 0" class="hint-panel">
-      No project allocations are active during this week.
-    </div>
-
-    <div formArrayName="entries" class="space-y-4">
-      <div
-        *ngFor="let entry of entries.controls; let i = index"
-        [formGroupName]="i"
-        class="surface p-5">
-        <div class="flex flex-wrap justify-between gap-3 mb-4">
-          <div>
-            <h3 class="font-semibold">{{ week()!.allocations[i].projectName }}</h3>
-            <p class="text-sm text-muted-foreground">
-              {{ week()!.allocations[i].allocationPercent }}% allocated
-            </p>
-          </div>
-          <span class="font-mono text-sm">
-            Max {{ week()!.allocations[i].maxAllowedHours }}h
-          </span>
-        </div>
-
-        <div class="grid gap-4 md:grid-cols-[180px_1fr]">
-          <div>
-            <label class="block text-sm font-medium mb-2">Hours Worked</label>
-            <kendo-numerictextbox
-              formControlName="hours"
-              [min]="0"
-              [max]="week()!.allocations[i].maxAllowedHours"
-              [decimals]="2">
-            </kendo-numerictextbox>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-2">Activity Tags</label>
-            <kendo-multiselect
-              formControlName="activityTags"
-              [data]="activityTags"
-              [autoClose]="false"
-              placeholder="Select activities">
-            </kendo-multiselect>
-          </div>
-        </div>
+    <div *ngIf="!pageState.isLoading() && week() && week()!.allocations.length === 0" class="empty-state">
+      <div class="empty-icon">0</div>
+      <div>
+        <strong>No active allocations</strong>
+        <p>No project allocations are active during this week.</p>
       </div>
     </div>
 
-    <div *ngIf="week() && week()!.allocations.length > 0" class="surface p-5">
-      <h3 class="font-semibold mb-4">Submission Summary</h3>
-      <div class="space-y-3">
-        <div *ngFor="let entry of entries.controls; let i = index" class="flex justify-between gap-4 text-sm">
-          <div>
-            <div class="font-medium">{{ week()!.allocations[i].projectName }}</div>
-            <div class="text-muted-foreground">
-              {{ entry.get('activityTags')?.value?.join(', ') || 'No activity selected' }}
+    <div *ngIf="week() && week()!.allocations.length > 0" class="timesheet-grid">
+      <section class="allocation-list" formArrayName="entries">
+        <div
+          *ngFor="let entry of entries.controls; let i = index"
+          [formGroupName]="i"
+          class="allocation-card">
+          <div class="allocation-header">
+            <div class="project-title">
+              <span class="project-index">{{ i + 1 }}</span>
+              <div>
+                <h3>{{ week()!.allocations[i].projectName }}</h3>
+                <p>{{ week()!.allocations[i].allocationPercent }}% allocated</p>
+              </div>
+            </div>
+            <div class="capacity-pill">
+              Max {{ week()!.allocations[i].maxAllowedHours }}h
             </div>
           </div>
-          <span class="font-mono">{{ entry.get('hours')?.value || 0 }}h</span>
-        </div>
-        <div class="flex justify-between border-t border-border pt-3 font-semibold">
-          <span>Total</span>
-          <span class="font-mono">{{ totalHours() }} / {{ week()!.maxWeeklyHours }}h</span>
-        </div>
-      </div>
 
-      <button
-        kendoButton
-        themeColor="primary"
-        type="submit"
-        class="w-full mt-5"
-        [disabled]="form.invalid || pageState.isSubmitting()">
-        {{ pageState.isSubmitting() ? 'Submitting...' : 'Submit Timesheet' }}
-      </button>
+          <div class="entry-fields">
+            <div class="field-stack">
+              <label>Hours Worked</label>
+              <kendo-numerictextbox
+                formControlName="hours"
+                [min]="0"
+                [max]="week()!.allocations[i].maxAllowedHours"
+                [decimals]="2">
+              </kendo-numerictextbox>
+            </div>
+
+            <div class="field-stack">
+              <label>Activity Tags</label>
+              <kendo-multiselect
+                formControlName="activityTags"
+                [data]="activityTags"
+                [autoClose]="false"
+                placeholder="Select activities">
+              </kendo-multiselect>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="summary-panel">
+        <div class="summary-header">
+          <span>Summary</span>
+          <strong>{{ totalHours() }} / {{ week()!.maxWeeklyHours }}h</strong>
+        </div>
+
+        <div class="summary-progress">
+          <div
+            class="summary-progress-bar"
+            [style.width.%]="totalHours() > week()!.maxWeeklyHours ? 100 : (totalHours() / week()!.maxWeeklyHours) * 100">
+          </div>
+        </div>
+
+        <div class="summary-list">
+          <div *ngFor="let entry of entries.controls; let i = index" class="summary-row">
+            <div>
+              <span>{{ week()!.allocations[i].projectName }}</span>
+              <p>{{ entry.get('activityTags')?.value?.join(', ') || 'No activity selected' }}</p>
+            </div>
+            <strong>{{ entry.get('hours')?.value || 0 }}h</strong>
+          </div>
+        </div>
+
+        <button
+          kendoButton
+          themeColor="primary"
+          type="submit"
+          class="submit-button"
+          [disabled]="form.invalid || pageState.isSubmitting()">
+          {{ pageState.isSubmitting() ? 'Submitting...' : 'Submit Timesheet' }}
+        </button>
+      </aside>
     </div>
   </form>
 </app-layout>

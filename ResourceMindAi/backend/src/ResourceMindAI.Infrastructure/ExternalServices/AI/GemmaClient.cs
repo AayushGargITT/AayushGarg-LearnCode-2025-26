@@ -1,5 +1,5 @@
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -92,19 +92,23 @@ public sealed class GemmaClient : ILlmProviderClient
             throw new ExternalServiceException("Gemma model is not configured.");
         }
 
+        var requestPayload = new
+        {
+            model,
+            prompt = BuildPrompt(promptRequest),
+            stream = false,
+            format = "json",
+            options = new { temperature = 0.1 }
+        };
+        var requestBody = JsonSerializer.Serialize(requestPayload, JsonOptions);
+        var contentType = _configuration[$"{providerSection}:ContentType"]
+            ?? "application/json";
+
         using var request = new HttpRequestMessage(HttpMethod.Post, endpointUri)
         {
-            Content = JsonContent.Create(
-                new
-                {
-                    model,
-                    prompt = BuildPrompt(promptRequest),
-                    stream = false,
-                    format = "json",
-                    options = new { temperature = 0.1 }
-                },
-                options: JsonOptions)
+            Content = new StringContent(requestBody, Encoding.UTF8, contentType)
         };
+        AddCurlCompatibleHeaders(request, providerSection);
         AddApiKey(request, providerSection);
 
         try
@@ -143,15 +147,17 @@ public sealed class GemmaClient : ILlmProviderClient
 
     private void AddApiKey(HttpRequestMessage request, string providerSection)
     {
-        var apiKey = _configuration[$"{providerSection}:ApiKey"];
+        var configuredApiKey = _configuration[$"{providerSection}:ApiKey"];
+        var apiKey = configuredApiKey?.Trim();
+        var headerName = _configuration[$"{providerSection}:ApiKeyHeader"]
+            ?? "ApiKey";
+
         if (string.IsNullOrWhiteSpace(apiKey)
             || apiKey.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        var headerName = _configuration[$"{providerSection}:ApiKeyHeader"]
-            ?? "Authorization";
         if (headerName.Equals("Authorization", StringComparison.OrdinalIgnoreCase))
         {
             var scheme = _configuration[$"{providerSection}:ApiKeyScheme"] ?? "Bearer";
@@ -160,6 +166,25 @@ public sealed class GemmaClient : ILlmProviderClient
         }
 
         request.Headers.TryAddWithoutValidation(headerName, apiKey);
+    }
+
+    private void AddCurlCompatibleHeaders(
+        HttpRequestMessage request,
+        string providerSection)
+    {
+        var acceptHeader = _configuration[$"{providerSection}:Accept"] ?? "*/*";
+        if (!string.IsNullOrWhiteSpace(acceptHeader))
+        {
+            request.Headers.Accept.Clear();
+            request.Headers.Accept.ParseAdd(acceptHeader);
+        }
+
+        var userAgent = _configuration[$"{providerSection}:UserAgent"] ?? "curl/8.0";
+        if (!string.IsNullOrWhiteSpace(userAgent))
+        {
+            request.Headers.UserAgent.Clear();
+            request.Headers.UserAgent.ParseAdd(userAgent);
+        }
     }
 
     private static string BuildPrompt(object promptRequest)
@@ -211,4 +236,5 @@ public sealed class GemmaClient : ILlmProviderClient
             ? trimmed[(firstLineEnd + 1)..closingFence].Trim()
             : trimmed;
     }
+
 }

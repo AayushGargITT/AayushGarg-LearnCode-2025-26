@@ -45,9 +45,20 @@ public class GemmaClientTests
         capturedRequest!.RequestUri.Should()
             .Be("http://164.52.211.238/api/generate");
         capturedRequest.Method.Should().Be(HttpMethod.Post);
-        capturedBody.Should().Contain("\"model\":\"gemma-3-27b-it\"");
+        capturedRequest.Content!.Headers.ContentType!.MediaType.Should()
+            .Be("application/x-www-form-urlencoded");
+        capturedRequest.Headers.Accept.Select(header => header.MediaType)
+            .Should()
+            .ContainSingle("*/*");
+        capturedRequest.Headers.UserAgent.ToString().Should().Be("curl/8.0");
+        capturedRequest.Headers.TryGetValues("ApiKey", out var apiKeyValues)
+            .Should()
+            .BeTrue();
+        apiKeyValues.Should().ContainSingle("test-gemma-key");
+        capturedBody.Should().Contain("\"model\":\"gemma3:12b-it-q8_0\"");
         capturedBody.Should().Contain("\"stream\":false");
-        capturedBody.Should().Contain("\"format\":\"json\"");
+        capturedBody.Should().NotContain("\"format\"");
+        capturedBody.Should().NotContain("\"options\"");
         result.RequiredSkills.Should().BeEquivalentTo("c#", "backend");
         result.AvailabilityRequirement.Should().Be(50);
     }
@@ -80,8 +91,13 @@ public class GemmaClientTests
             {
                 ["LLMProvider:Providers:Gemma:Endpoint"] =
                     "http://164.52.211.238/api/generate",
-                ["LLMProvider:Providers:Gemma:Model"] = "gemma-3-27b-it",
-                ["LLMProvider:Providers:Gemma:ApiKey"] = "YOUR_GEMMA_API_KEY"
+                ["LLMProvider:Providers:Gemma:Model"] = "gemma3:12b-it-q8_0",
+                ["LLMProvider:Providers:Gemma:ApiKey"] = " test-gemma-key ",
+                ["LLMProvider:Providers:Gemma:ApiKeyHeader"] = "ApiKey",
+                ["LLMProvider:Providers:Gemma:ContentType"] =
+                    "application/x-www-form-urlencoded",
+                ["LLMProvider:Providers:Gemma:Accept"] = "*/*",
+                ["LLMProvider:Providers:Gemma:UserAgent"] = "curl/8.0"
             })
             .Build();
 
