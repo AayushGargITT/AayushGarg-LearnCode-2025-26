@@ -20,7 +20,20 @@ public class ProjectHealthEmailProcessorTests
     public async Task ProcessAsync_WhenSavedHealthIsAttention_ShouldRequestNotification()
     {
         var project = CreateProject("ATTENTION");
+        var matchingResource = CreateResourceUnderManager(
+            project.Manager,
+            "Nisha Rao",
+            "QA Automation",
+            "SQL");
+        var unrelatedResource = CreateResourceUnderManager(
+            project.Manager,
+            "Ravi Kumar",
+            "React");
         SetupProjects(project);
+        SetupManagerResources(
+            project.ManagerId,
+            matchingResource,
+            unrelatedResource);
         var sut = CreateService();
 
         await sut.ProcessAsync(CancellationToken.None);
@@ -29,7 +42,10 @@ public class ProjectHealthEmailProcessorTests
             It.Is<ProjectHealthNotificationRequestDto>(request =>
                 request.ProjectId == project.Id
                 && request.ManagerId == project.ManagerId
-                && request.RiskSummary.OverallHealth == "ATTENTION"),
+                && request.RiskSummary.OverallHealth == "ATTENTION"
+                && request.MatchingResources.Count == 1
+                && request.MatchingResources[0].FullName == "Nisha Rao"
+                && request.MatchingResources[0].MatchedSkills.Contains("QA Automation")),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -98,14 +114,62 @@ public class ProjectHealthEmailProcessorTests
         _repository.Setup(x => x.GetProjectHealthNotificationCandidatesAsync(
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(projects);
+        _repository.Setup(x => x.GetActiveResourcesUnderManagerAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+    }
+
+    private void SetupManagerResources(Guid managerId, params User[] resources)
+    {
+        _repository.Setup(x => x.GetActiveResourcesUnderManagerAsync(
+                managerId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(resources);
     }
 
     private static Project CreateProject(string health, string name = "Apollo")
     {
         var manager = TestDataBuilder.User(Role.Manager);
         var project = TestDataBuilder.Project(manager, name: name);
+        var suggestedSkills = health == "ATTENTION"
+            ? new[] { "QA Automation" }
+            : [];
+        var summary = TestDataBuilder.RiskSummary(health);
         project.RiskFlagsJson = ProjectRiskSummarySerializer.Serialize(
-            TestDataBuilder.RiskSummary(health));
+            new ResourceMindAI.Application.DTOs.Manager.ProjectRiskSummaryDto
+            {
+                OverallHealth = summary.OverallHealth,
+                Summary = summary.Summary,
+                RiskPoints = summary.RiskPoints,
+                RecommendedActions = summary.RecommendedActions,
+                SuggestedSkills = suggestedSkills,
+                GeneratedAt = summary.GeneratedAt
+            });
         return project;
+    }
+
+    private static User CreateResourceUnderManager(
+        User manager,
+        string name,
+        params string[] skills)
+    {
+        var resource = TestDataBuilder.User(Role.Resource, name: name);
+        var profile = TestDataBuilder.Profile(resource, manager);
+        foreach (var skill in skills)
+        {
+            profile.Skills.Add(new Skill
+            {
+                Id = Guid.NewGuid(),
+                ResourceProfileId = profile.Id,
+                ResourceProfile = profile,
+                SkillName = skill,
+                Category = SkillCategory.Technical,
+                Proficiency = ProficiencyLevel.Intermediate,
+                AddedAt = DateTime.UtcNow
+            });
+        }
+
+        return resource;
     }
 }

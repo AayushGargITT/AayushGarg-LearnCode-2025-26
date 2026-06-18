@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonsModule } from '@progress/kendo-angular-buttons';
 import { GridModule } from '@progress/kendo-angular-grid';
@@ -50,11 +50,32 @@ export class AdminUsersComponent {
 
   drawerOpen = signal(false);
   rows = signal<User[]>([]);
+  searchTerm = signal('');
   isCreating = signal(false);
   resetPasswordUser = signal<User | null>(null);
   deactivateUser = signal<User | null>(null);
   deactivationBlockers = signal<ManagerDeactivationDetails | null>(null);
   createError = signal<string | null>(null);
+
+  filteredRows = computed(() => {
+    const term = this.searchTerm().trim().toLowerCase();
+    if (!term) {
+      return this.rows();
+    }
+
+    return this.rows().filter(user => {
+      const status = user.isActive ? 'active' : 'inactive';
+      return [
+        user.fullName,
+        user.email,
+        user.username,
+        user.role,
+        status
+      ]
+        .filter(Boolean)
+        .some(value => value.toLowerCase().includes(term));
+    });
+  });
 
   constructor() {
     this.loadUsers();

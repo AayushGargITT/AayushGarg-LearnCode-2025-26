@@ -33,7 +33,6 @@ import { PageStateService } from '../../../shared/services/page-state.service';
     ConfirmDialogComponent
   ],
   templateUrl: './timesheets.component.html',
-  styleUrl: './timesheets.component.css',
   providers: [PageStateService]
 })
 export class ManagerTimesheetsComponent {

@@ -58,4 +58,21 @@ public class SchedulerRepository : ISchedulerRepository
                     || project.Status == ProjectStatus.Planned))
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<User>> GetActiveResourcesUnderManagerAsync(
+        Guid managerId,
+        CancellationToken cancellationToken)
+    {
+        return await _dbContext.Users
+            .AsNoTracking()
+            .Include(user => user.ResourceProfile)
+                .ThenInclude(profile => profile!.Skills)
+            .Where(user =>
+                user.IsActive
+                && user.Role == Role.Resource
+                && user.ResourceProfile != null
+                && user.ResourceProfile.ManagerId == managerId)
+            .OrderBy(user => user.FullName)
+            .ToListAsync(cancellationToken);
+    }
 }

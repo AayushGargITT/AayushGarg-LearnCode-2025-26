@@ -5,8 +5,7 @@ import { CommonModule } from '@angular/common';
   selector: 'app-stat-card',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './stat-card.component.html',
-  styleUrl: './stat-card.component.css'
+  templateUrl: './stat-card.component.html'
 })
 export class StatCardComponent {
   @Input() label: string = '';

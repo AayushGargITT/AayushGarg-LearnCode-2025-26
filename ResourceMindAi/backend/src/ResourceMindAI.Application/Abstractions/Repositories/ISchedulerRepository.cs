@@ -13,4 +13,8 @@ public interface ISchedulerRepository
 
     Task<IReadOnlyList<Project>> GetProjectHealthNotificationCandidatesAsync(
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<User>> GetActiveResourcesUnderManagerAsync(
+        Guid managerId,
+        CancellationToken cancellationToken);
 }

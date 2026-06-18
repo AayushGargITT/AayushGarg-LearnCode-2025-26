@@ -9,8 +9,7 @@ import { AuthShellComponent } from '../../../shared/components/auth-shell/auth-s
   selector: 'app-change-password',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, AuthShellComponent],
-  templateUrl: './change-password.component.html',
-  styleUrl: './change-password.component.css'
+  templateUrl: './change-password.component.html'
 })
 export class ChangePasswordComponent {
   private readonly authService = inject(AuthService);

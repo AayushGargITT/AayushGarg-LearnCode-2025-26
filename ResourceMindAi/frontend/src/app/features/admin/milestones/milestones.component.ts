@@ -8,7 +8,6 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
   selector: 'app-milestones',
   standalone: true,
   imports: [CommonModule, AppLayoutComponent, PageHeaderComponent, StatusBadgeComponent],
-  templateUrl: './milestones.component.html',
-  styleUrl: './milestones.component.css'
+  templateUrl: './milestones.component.html'
 })
 export class AdminMilestonesComponent {}

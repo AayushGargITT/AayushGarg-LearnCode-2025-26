@@ -7,9 +7,9 @@ export enum ProjectStatus {
 }
 
 export enum HealthStatus {
-  GREEN = 'Green',
-  AMBER = 'Amber',
-  RED = 'Red'
+  HEALTHY = 'Healthy',
+  AT_RISK = 'AtRisk',
+  CRITICAL = 'Critical'
 }
 
 export enum MilestoneStatus {

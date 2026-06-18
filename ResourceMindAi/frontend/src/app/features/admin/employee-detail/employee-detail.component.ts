@@ -8,7 +8,6 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
   selector: 'app-employee-detail',
   standalone: true,
   imports: [CommonModule, RouterModule, AppLayoutComponent, StatusBadgeComponent],
-  templateUrl: './employee-detail.component.html',
-  styleUrl: './employee-detail.component.css'
+  templateUrl: './employee-detail.component.html'
 })
 export class AdminEmployeeDetailComponent {}

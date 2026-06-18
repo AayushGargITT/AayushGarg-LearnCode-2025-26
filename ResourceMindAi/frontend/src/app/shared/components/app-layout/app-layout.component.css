@@ -1,0 +1,9 @@
+header {
+  box-shadow: 0 1px 0 hsl(var(--border) / 0.65);
+}
+
+main {
+  background:
+    linear-gradient(180deg, hsl(var(--muted) / 0.18), transparent 18rem),
+    hsl(var(--background));
+}

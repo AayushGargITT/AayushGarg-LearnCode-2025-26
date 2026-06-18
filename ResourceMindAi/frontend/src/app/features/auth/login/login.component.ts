@@ -9,8 +9,7 @@ import { AuthShellComponent } from '../../../shared/components/auth-shell/auth-s
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, RouterModule, ReactiveFormsModule, AuthShellComponent],
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.css'
+  templateUrl: './login.component.html'
 })
 export class LoginComponent {
   show = signal(false);

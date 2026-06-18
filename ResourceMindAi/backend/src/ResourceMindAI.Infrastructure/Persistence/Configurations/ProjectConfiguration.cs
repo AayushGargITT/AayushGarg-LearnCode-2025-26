@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ResourceMindAI.Domain.Entities;
+using ResourceMindAI.Domain.Enums;
 
 namespace ResourceMindAI.Infrastructure.Persistence.Configurations;
 
@@ -29,11 +31,39 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
 
         builder.Property(x => x.HealthStatus)
                .IsRequired()
-               .HasConversion<string>();
+               .HasConversion(new ValueConverter<HealthStatus, string>(
+                   value => ToDatabaseValue(value),
+                   value => FromDatabaseValue(value)));
 
        builder.HasOne(p => p.Manager)
        .WithMany(u => u.ManagedProjects)
        .HasForeignKey(p => p.ManagerId)
        .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static string ToDatabaseValue(HealthStatus value)
+    {
+        return value switch
+        {
+            HealthStatus.Healthy => "Healthy",
+            HealthStatus.AtRisk => "At Risk",
+            HealthStatus.Critical => "Critical",
+            _ => "At Risk"
+        };
+    }
+
+    private static HealthStatus FromDatabaseValue(string value)
+    {
+        return value switch
+        {
+            "Healthy" => HealthStatus.Healthy,
+            "At Risk" => HealthStatus.AtRisk,
+            "AtRisk" => HealthStatus.AtRisk,
+            "Critical" => HealthStatus.Critical,
+            "Green" => HealthStatus.Healthy,
+            "Amber" => HealthStatus.AtRisk,
+            "Red" => HealthStatus.Critical,
+            _ => HealthStatus.AtRisk
+        };
     }
 }

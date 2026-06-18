@@ -46,7 +46,6 @@ type EmployeeActionItem = RowActionItem<EmployeeAction>;
     EmployeeSkillsDialogComponent
   ],
   templateUrl: './employees.component.html',
-  styleUrl: './employees.component.css',
   providers: [PageStateService]
 })
 export class AdminEmployeesComponent {

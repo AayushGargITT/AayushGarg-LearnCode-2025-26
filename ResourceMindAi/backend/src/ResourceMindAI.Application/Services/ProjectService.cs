@@ -51,7 +51,7 @@ public class ProjectService : IProjectService
             StartDate = request.StartDate.Value.Date,
             EndDate = request.EndDate.Value.Date,
             Status = request.Status!.Value,
-            HealthStatus = HealthStatus.Green,
+            HealthStatus = HealthStatus.Healthy,
             ManagerId = manager.Id,
             CreatedAt = DateTime.UtcNow,
         };

@@ -59,7 +59,7 @@ internal static class TestDataBuilder
             StartDate = DateTime.UtcNow.Date.AddMonths(-1),
             EndDate = DateTime.UtcNow.Date.AddMonths(3),
             Status = status,
-            HealthStatus = HealthStatus.Green,
+            HealthStatus = HealthStatus.Healthy,
             ManagerId = manager.Id,
             Manager = manager,
             CreatedAt = DateTime.UtcNow.AddMonths(-1)

@@ -34,20 +34,7 @@
             <span class="font-medium">{{ title }}</span>
           </div>
           <div class="flex items-center gap-2">
-            <button class="h-8 w-8 grid place-items-center rounded-md hover:bg-accent text-muted-foreground" aria-label="Search">
-              <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;">search</span>
-            </button>
-            <button class="h-8 w-8 grid place-items-center rounded-md hover:bg-accent text-muted-foreground relative" aria-label="Notifications">
-              <span class="material-symbols-outlined h-4 w-4" style="font-size: 16px; vertical-align: middle;">notifications</span>
-              <span class="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
-            </button>
-            <div class="h-6 w-px bg-border mx-1"></div>
-            <button class="flex items-center gap-2 rounded-md hover:bg-accent px-2 h-8">
-              <app-avatar [name]="user.name" [size]="24"></app-avatar>
-              <span class="text-sm hidden sm:inline">{{ user.name }}</span>
-              <span class="material-symbols-outlined h-3.5 w-3.5 text-muted-foreground" style="font-size: 16px; vertical-align: middle;">expand_more</span>
-            </button>
-            <a routerLink="/login" (click)="logout()" class="ml-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-md px-2 h-8 cursor-pointer">
+            <a routerLink="/login" (click)="logout()" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-md px-2 h-8 cursor-pointer">
               <span class="material-symbols-outlined h-3.5 w-3.5" style="font-size: 16px; vertical-align: middle;">logout</span> Logout
             </a>
           </div>

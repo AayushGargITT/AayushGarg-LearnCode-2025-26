@@ -25,8 +25,10 @@ export class AdminDashboardService {
         employeesOnBench: employees.filter(
           employee => employee.isActive && employee.allocationStatus === EmployeeStatus.BENCH
         ).length,
-        atRiskProjects: projects.filter(
-          project => project.healthStatus === HealthStatus.RED
+        atRiskProjects: projects.filter(project =>
+          project.healthStatus === HealthStatus.AT_RISK
+          || project.healthStatus === HealthStatus.CRITICAL
+          || project.healthStatus === 'At Risk'
         ).length,
         recentProjects: [...projects]
           .sort(

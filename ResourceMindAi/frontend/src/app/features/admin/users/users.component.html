@@ -9,14 +9,19 @@
   <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
 
   <div class="surface kendo-grid-shell">
-    <div class="toolbar-surface">
-      <div class="relative flex-1 max-w-sm">
-        <span class="material-symbols-outlined h-4 w-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" style="font-size: 16px; vertical-align: middle;">search</span>
-        <input kendoTextBox placeholder="Search by name or username..." class="w-full pl-8" />
+    <div class="toolbar-surface users-toolbar">
+      <div class="user-search">
+        <span class="material-symbols-outlined user-search__icon">search</span>
+        <input
+          kendoTextBox
+          placeholder="Search name, email, role, or status..."
+          class="user-search__input"
+          [value]="searchTerm()"
+          (input)="searchTerm.set($any($event.target).value)" />
       </div>
     </div>
 
-    <kendo-grid [data]="rows()" [height]="420" [resizable]="true" [loading]="pageState.isLoading()">
+    <kendo-grid [data]="filteredRows()" [height]="420" [resizable]="true" [loading]="pageState.isLoading()">
       <kendo-grid-column field="fullName" title="Full Name" class="font-medium"></kendo-grid-column>
       <kendo-grid-column field="email" title="Email" class="text-muted-foreground"></kendo-grid-column>
       <kendo-grid-column field="username" title="Username" class="font-mono text-xs"></kendo-grid-column>

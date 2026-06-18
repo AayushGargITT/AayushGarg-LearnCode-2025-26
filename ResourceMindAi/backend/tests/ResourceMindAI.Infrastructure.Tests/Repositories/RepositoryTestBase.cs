@@ -51,7 +51,7 @@ public abstract class RepositoryTestBase : IAsyncLifetime
             StartDate = DateTime.UtcNow.Date.AddMonths(-1),
             EndDate = DateTime.UtcNow.Date.AddMonths(2),
             Status = ProjectStatus.Active,
-            HealthStatus = HealthStatus.Green,
+            HealthStatus = HealthStatus.Healthy,
             ManagerId = manager.Id,
             Manager = manager,
             CreatedAt = DateTime.UtcNow

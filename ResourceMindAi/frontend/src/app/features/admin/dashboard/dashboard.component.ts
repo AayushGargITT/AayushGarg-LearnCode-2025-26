@@ -25,7 +25,6 @@ import { PageStateService } from '../../../shared/services/page-state.service';
     PageFeedbackComponent
   ],
   templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.css',
   providers: [PageStateService]
 })
 export class AdminDashboardComponent {

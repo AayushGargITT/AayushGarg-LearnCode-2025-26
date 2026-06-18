@@ -5,8 +5,7 @@ import { CommonModule } from '@angular/common';
   selector: 'app-page-header',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './page-header.component.html',
-  styleUrl: './page-header.component.css'
+  templateUrl: './page-header.component.html'
 })
 export class PageHeaderComponent {
   @Input() title: string = '';

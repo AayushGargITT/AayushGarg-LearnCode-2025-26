@@ -8,8 +8,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
   selector: 'app-ai-assistant',
   standalone: true,
   imports: [CommonModule, FormsModule, AppLayoutComponent, PageHeaderComponent],
-  templateUrl: './ai.component.html',
-  styleUrl: './ai.component.css'
+  templateUrl: './ai.component.html'
 })
 export class ManagerAiComponent {
   prompt = signal('');

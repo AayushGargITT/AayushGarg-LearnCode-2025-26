@@ -46,7 +46,6 @@ type ProjectActionItem = RowActionItem<ProjectAction>;
     ProjectManagerConflictDialogComponent
   ],
   templateUrl: './projects.component.html',
-  styleUrl: './projects.component.css',
   providers: [PageStateService]
 })
 export class AdminProjectsComponent {

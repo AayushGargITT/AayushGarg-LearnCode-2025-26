@@ -21,7 +21,6 @@ import { PageStateService } from '../../../shared/services/page-state.service';
     StatusBadgeComponent
   ],
   templateUrl: './allocations.component.html',
-  styleUrl: './allocations.component.css',
   providers: [PageStateService]
 })
 export class EmployeeAllocationsComponent {

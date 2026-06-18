@@ -63,6 +63,8 @@ public class ProjectRiskSummaryTests
             context.Project.Id);
 
         result.OverallHealth.Should().Be("ATTENTION");
+        context.Project.HealthStatus.Should().Be(HealthStatus.AtRisk);
+        context.Project.UpdatedAt.Should().NotBeNull();
         sentFacts.Should().NotBeNull();
         sentFacts!.ProjectName.Should().Be(context.Project.Name);
         sentFacts.ActiveAllocations.Should().ContainSingle();
@@ -89,6 +91,7 @@ public class ProjectRiskSummaryTests
         result.OverallHealth.Should().Be("ON_TRACK");
         result.Summary.Should().Be("Saved");
         context.Project.RiskFlagsJson.Should().Be(existingJson);
+        context.Project.HealthStatus.Should().Be(HealthStatus.Healthy);
         _repository.Verify(x => x.SaveChangesAsync(), Times.Never);
     }
 
@@ -126,6 +129,7 @@ public class ProjectRiskSummaryTests
             context.Project.Id);
 
         result.OverallHealth.Should().Be("AT_RISK");
+        context.Project.HealthStatus.Should().Be(HealthStatus.Critical);
         context.Project.RiskFlagsJson.Should().NotContain("lastNotificationSentAt");
         _repository.Verify(x => x.SaveChangesAsync(), Times.Once);
     }

@@ -7,7 +7,6 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
   selector: 'app-config',
   standalone: true,
   imports: [CommonModule, AppLayoutComponent, PageHeaderComponent],
-  templateUrl: './config.component.html',
-  styleUrl: './config.component.css'
+  templateUrl: './config.component.html'
 })
 export class AdminConfigComponent {}

@@ -6,8 +6,7 @@ import { ReplaceUnderscorePipe } from '../../pipes/replace-underscore.pipe';
   selector: 'app-status-badge',
   standalone: true,
   imports: [CommonModule, ReplaceUnderscorePipe],
-  templateUrl: './status-badge.component.html',
-  styleUrl: './status-badge.component.css'
+  templateUrl: './status-badge.component.html'
 })
 export class StatusBadgeComponent {
   @Input() status: string = '';

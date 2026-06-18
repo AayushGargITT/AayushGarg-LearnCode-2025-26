@@ -9,18 +9,25 @@
 
   <div *ngIf="pageState.isLoading()" class="hint-panel">Loading allocation data...</div>
 
-  <div *ngIf="!pageState.isLoading()" class="grid lg:grid-cols-2 gap-6">
-    <div class="rounded-lg border border-border bg-card p-6">
-      <h3 class="font-medium mb-4">Find Resource Using AI</h3>
-      <form [formGroup]="aiForm" class="space-y-4" (ngSubmit)="findMatches()">
-        <div class="space-y-1.5">
-          <label class="text-sm font-medium">Project</label>
+  <div *ngIf="!pageState.isLoading()" class="allocate-page">
+    <section class="ai-panel">
+      <div class="panel-header">
+        <div>
+          <p>AI assisted discovery</p>
+          <h3>Find Resource Using AI</h3>
+        </div>
+        <span class="panel-icon material-symbols-outlined">auto_awesome</span>
+      </div>
+
+      <form [formGroup]="aiForm" class="ai-form" (ngSubmit)="findMatches()">
+        <div class="field-stack">
+          <label>Project</label>
           <kendo-dropdownlist [data]="projects()" textField="name" valueField="id" [valuePrimitive]="true" formControlName="projectId"></kendo-dropdownlist>
         </div>
 
-        <div class="space-y-1.5">
-          <label class="text-sm font-medium">Requirement</label>
-          <textarea kendoTextArea rows="4" formControlName="requirement" placeholder="Need a senior backend developer with Java and Spring Boot for 50% allocation..."></textarea>
+        <div class="field-stack">
+          <label>Requirement</label>
+          <textarea kendoTextArea rows="5" formControlName="requirement" placeholder="Need a backend resource with Java and Spring Boot for 50% allocation from next week..."></textarea>
         </div>
 
         <button kendoButton themeColor="primary" class="w-full" [disabled]="aiForm.invalid || isFinding()" type="submit">
@@ -28,36 +35,44 @@
         </button>
       </form>
 
-      <div *ngIf="matches()" class="mt-6 space-y-4">
+      <div *ngIf="matches()" class="match-results">
+        <div class="results-title">
+          <h4>Recommended Matches</h4>
+          <span>{{ matches()!.matches.length }} found</span>
+        </div>
+
         <div *ngIf="matches()!.matches.length === 0" class="hint-panel">
           No eligible organization resources match the required skills and availability.
         </div>
 
-        <div *ngFor="let match of matches()!.matches" class="rounded-lg border border-emerald-500/30 bg-card p-4">
-          <div class="flex items-start gap-4">
+        <article *ngFor="let match of matches()!.matches" class="match-card">
+          <div class="match-card__main">
             <app-avatar [name]="match.employee.fullName"></app-avatar>
-            <div class="flex-1">
-              <div class="flex items-center justify-between">
+            <div class="match-card__content">
+              <div class="match-card__top">
                 <div>
-                  <div class="font-medium">{{ match.employee.fullName }}</div>
-                  <div class="text-xs text-muted-foreground">
-                    {{ match.isUnderCurrentManager ? 'Your team' : 'Outside your team' }}
-                  </div>
+                  <h4>{{ match.employee.fullName }}</h4>
+                  <p>{{ match.employee.designation || 'No designation' }} - {{ match.availablePercent }}% available</p>
                 </div>
-                <span class="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-300">{{ match.score }}% Match</span>
+                <span class="match-score">{{ match.score }}% Match</span>
               </div>
-              <div class="text-sm text-muted-foreground">{{ match.employee.designation }} · {{ match.availablePercent }}% available</div>
-              <div class="mt-3 text-sm bg-muted/40 p-3 rounded-md text-muted-foreground border border-border">
-                <div>{{ match.aiReason }}</div>
-                <div *ngIf="match.strengths.length > 0" class="mt-2 text-emerald-300">
+
+              <span [ngClass]="match.isUnderCurrentManager ? 'team-pill team-pill--own' : 'team-pill team-pill--outside'">
+                {{ match.isUnderCurrentManager ? 'Your team' : 'Outside your team' }}
+              </span>
+
+              <div class="match-reason">
+                <p>{{ match.aiReason }}</p>
+                <p *ngIf="match.strengths.length > 0" class="match-reason__positive">
                   Strengths: {{ match.strengths.join(', ') }}
-                </div>
-                <div *ngIf="match.concerns.length > 0" class="mt-1 text-amber-300">
+                </p>
+                <p *ngIf="match.concerns.length > 0" class="match-reason__warning">
                   Concerns: {{ match.concerns.join(', ') }}
-                </div>
-                <div *ngFor="let reason of match.reasons" class="mt-1 text-xs">{{ reason }}</div>
+                </p>
+                <p *ngFor="let reason of match.reasons" class="match-reason__note">{{ reason }}</p>
               </div>
-              <div class="flex flex-wrap gap-2 mt-4">
+
+              <div class="match-actions">
                 <button kendoButton (click)="viewMatchDetails(match)">View Details</button>
                 <button
                   *ngIf="match.isUnderCurrentManager"
@@ -70,41 +85,45 @@
               </div>
             </div>
           </div>
-        </div>
+        </article>
       </div>
-    </div>
+    </section>
 
-    <div class="space-y-6">
-      <div class="rounded-lg border border-border bg-card p-6">
-        <h3 class="font-medium mb-4">Allocate Directly</h3>
+    <aside class="side-panels">
+      <section class="action-panel">
+        <div class="panel-header">
+          <div>
+            <p>Manual allocation</p>
+            <h3>Allocate Directly</h3>
+          </div>
+          <span class="panel-icon material-symbols-outlined">person_add</span>
+        </div>
+
         <form [formGroup]="allocationForm" class="form-stack" (ngSubmit)="allocateDirectly()">
           <div class="field-stack">
-            <label class="text-sm font-medium">Project</label>
+            <label>Project</label>
             <kendo-dropdownlist [data]="projects()" textField="name" valueField="id" [valuePrimitive]="true" formControlName="projectId"></kendo-dropdownlist>
           </div>
           <div class="field-stack">
-            <label class="text-sm font-medium">Resource</label>
+            <label>Resource</label>
             <kendo-dropdownlist [data]="employees()" textField="fullName" valueField="id" [valuePrimitive]="true" formControlName="employeeId"></kendo-dropdownlist>
           </div>
-          <div class="grid grid-cols-3 gap-3">
+          <div class="allocation-grid">
             <div class="field-stack">
-              <label class="text-sm font-medium">Util %</label>
+              <label>Util %</label>
               <input kendoTextBox type="number" formControlName="utilisationPercent" />
             </div>
             <div class="field-stack">
-              <label class="text-sm font-medium">From</label>
+              <label>From</label>
               <kendo-datepicker formControlName="fromDate"></kendo-datepicker>
             </div>
             <div class="field-stack">
-              <label class="text-sm font-medium">To</label>
-              <kendo-datepicker
-                formControlName="toDate"
-                [max]="selectedProjectEndDate()">
-              </kendo-datepicker>
+              <label>To</label>
+              <kendo-datepicker formControlName="toDate" [max]="selectedProjectEndDate()"></kendo-datepicker>
             </div>
           </div>
-          <span *ngIf="hasAllocationDateError()" class="text-xs text-rose-400">From date must be before to date.</span>
-          <span *ngIf="hasProjectEndDateError()" class="text-xs text-rose-400">
+          <span *ngIf="hasAllocationDateError()" class="validation-text">From date must be before to date.</span>
+          <span *ngIf="hasProjectEndDateError()" class="validation-text">
             Allocation end date cannot be after the project end date.
           </span>
           <button
@@ -115,20 +134,27 @@
             Allocate
           </button>
         </form>
-      </div>
+      </section>
 
-      <div class="rounded-lg border border-border bg-card p-6">
-        <h3 class="font-medium mb-4">End Existing Allocation</h3>
-        <div *ngIf="activeAllocations().length === 0" class="hint-panel">No active allocations.</div>
-        <div *ngFor="let allocation of activeAllocations()" class="flex items-center justify-between py-2 border-b border-border/50">
+      <section class="action-panel">
+        <div class="panel-header">
           <div>
-            <div class="font-medium">{{ allocation.employeeName }}</div>
-            <div class="text-xs text-muted-foreground">{{ allocation.projectName }} · {{ allocation.utilisationPercent }}%</div>
+            <p>Active work</p>
+            <h3>End Existing Allocation</h3>
+          </div>
+          <span class="panel-icon material-symbols-outlined">event_busy</span>
+        </div>
+
+        <div *ngIf="activeAllocations().length === 0" class="hint-panel">No active allocations.</div>
+        <div *ngFor="let allocation of activeAllocations()" class="allocation-row">
+          <div>
+            <strong>{{ allocation.employeeName }}</strong>
+            <span>{{ allocation.projectName }} - {{ allocation.utilisationPercent }}%</span>
           </div>
           <button kendoButton size="small" [disabled]="isSubmitting()" (click)="endAllocation(allocation)">End</button>
         </div>
-      </div>
-    </div>
+      </section>
+    </aside>
   </div>
 
   <kendo-dialog
@@ -137,45 +163,39 @@
     [width]="620"
     [minWidth]="320"
     (close)="closeMatchDetails()">
-    <div class="form-stack">
-      <div class="grid grid-cols-2 gap-4 text-sm">
+    <div class="match-detail">
+      <div class="detail-grid">
         <div>
-          <span class="text-muted-foreground">Department</span>
-          <div class="font-medium">{{ selectedMatch()!.employee.department || '-' }}</div>
+          <span>Department</span>
+          <strong>{{ selectedMatch()!.employee.department || '-' }}</strong>
         </div>
         <div>
-          <span class="text-muted-foreground">Designation</span>
-          <div class="font-medium">{{ selectedMatch()!.employee.designation || '-' }}</div>
+          <span>Designation</span>
+          <strong>{{ selectedMatch()!.employee.designation || '-' }}</strong>
         </div>
         <div>
-          <span class="text-muted-foreground">Availability</span>
-          <div class="font-mono">{{ selectedMatch()!.availablePercent }}%</div>
+          <span>Availability</span>
+          <strong>{{ selectedMatch()!.availablePercent }}%</strong>
         </div>
         <div>
-          <span class="text-muted-foreground">Team ownership</span>
-          <div class="font-medium">
-            {{ selectedMatch()!.isUnderCurrentManager ? 'Your team' : 'Another manager or unassigned' }}
-          </div>
+          <span>Team ownership</span>
+          <strong>{{ selectedMatch()!.isUnderCurrentManager ? 'Your team' : 'Another manager or unassigned' }}</strong>
         </div>
       </div>
 
       <section>
-        <h3 class="text-sm font-semibold mb-2">Skills</h3>
+        <h3>Skills</h3>
         <div *ngIf="selectedMatch()!.employee.skills.length === 0" class="hint-panel">
           No profile skills available.
         </div>
-        <div class="flex flex-wrap gap-1">
-          <span
-            *ngFor="let skill of selectedMatch()!.employee.skills"
-            class="inline-flex rounded-md border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-            {{ skill }}
-          </span>
+        <div class="skill-list">
+          <span *ngFor="let skill of selectedMatch()!.employee.skills">{{ skill }}</span>
         </div>
       </section>
 
       <section>
-        <h3 class="text-sm font-semibold mb-2">Match explanation</h3>
-        <p class="text-sm text-muted-foreground">{{ selectedMatch()!.aiReason }}</p>
+        <h3>Match explanation</h3>
+        <p>{{ selectedMatch()!.aiReason }}</p>
       </section>
     </div>
 

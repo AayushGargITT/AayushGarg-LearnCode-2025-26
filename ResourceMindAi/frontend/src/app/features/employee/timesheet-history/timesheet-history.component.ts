@@ -28,7 +28,6 @@ import { PageStateService } from '../../../shared/services/page-state.service';
     StatusBadgeComponent
   ],
   templateUrl: './timesheet-history.component.html',
-  styleUrl: './timesheet-history.component.css',
   providers: [PageStateService]
 })
 export class EmployeeTimesheetHistoryComponent {

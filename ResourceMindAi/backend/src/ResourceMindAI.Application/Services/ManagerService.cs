@@ -90,7 +90,7 @@ public class ManagerService : IManagerService
     public async Task<ManagerProjectDetailDto> GetProjectDetailAsync(Guid managerId, Guid projectId)
     {
         var project = await GetOwnedProjectAsync(managerId, projectId);
-        var health = CalculateHealth(project);
+        var health = GetEffectiveHealth(project);
 
         return new ManagerProjectDetailDto
         {
@@ -371,6 +371,8 @@ public class ManagerService : IManagerService
         var validated = ValidateRiskSummary(generated);
 
         project.RiskFlagsJson = ProjectRiskSummarySerializer.Serialize(validated);
+        project.HealthStatus = MapAiHealthStatus(validated.OverallHealth);
+        project.UpdatedAt = DateTime.UtcNow;
         await _managerRepository.SaveChangesAsync();
 
         return validated;
@@ -448,7 +450,7 @@ public class ManagerService : IManagerService
 
     private static ManagerProjectDto MapProject(Project project)
     {
-        var health = CalculateHealth(project);
+        var health = GetEffectiveHealth(project);
 
         return new ManagerProjectDto
         {
@@ -460,6 +462,33 @@ public class ManagerService : IManagerService
             Status = project.Status,
             HealthStatus = health.Health,
             TeamSize = project.Allocations.Where(IsActiveAllocation).Select(x => x.UserId).Distinct().Count(),
+        };
+    }
+
+    private static (HealthStatus Health, IReadOnlyList<string> Flags, IReadOnlyList<string> Summary) GetEffectiveHealth(Project project)
+    {
+        var savedSummary = ProjectRiskSummarySerializer.Deserialize(project.RiskFlagsJson);
+        if (savedSummary is not null)
+        {
+            return (
+                MapAiHealthStatus(savedSummary.OverallHealth),
+                savedSummary.RiskPoints
+                    .Select(point => $"{point.Title}: {point.Description}")
+                    .ToList(),
+                [savedSummary.Summary]);
+        }
+
+        return CalculateHealth(project);
+    }
+
+    private static HealthStatus MapAiHealthStatus(string health)
+    {
+        return health?.Trim().ToUpperInvariant() switch
+        {
+            "ON_TRACK" => HealthStatus.Healthy,
+            "ATTENTION" => HealthStatus.AtRisk,
+            "AT_RISK" => HealthStatus.Critical,
+            _ => HealthStatus.AtRisk
         };
     }
 
@@ -1073,7 +1102,7 @@ public class ManagerService : IManagerService
             flags.Add("Project end date has passed but project is not completed.");
         }
 
-        var health = score >= 80 ? HealthStatus.Green : score >= 50 ? HealthStatus.Amber : HealthStatus.Red;
+        var health = score >= 80 ? HealthStatus.Healthy : score >= 50 ? HealthStatus.AtRisk : HealthStatus.Critical;
         var summary = flags.Count == 0
             ? new List<string> { "No major delivery risks detected from current milestones and allocations." }
             : flags.Select(flag => $"Risk: {flag}").ToList();

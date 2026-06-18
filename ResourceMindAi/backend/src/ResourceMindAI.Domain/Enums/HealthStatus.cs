@@ -1,2 +1,2 @@
 ﻿namespace ResourceMindAI.Domain.Enums;
-public enum HealthStatus { Green, Amber, Red }
+public enum HealthStatus { Healthy, AtRisk, Critical }
