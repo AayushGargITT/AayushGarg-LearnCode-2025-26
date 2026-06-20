@@ -16,6 +16,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { PageStateService } from '../../../shared/services/page-state.service';
+import { formatDateOnly, toDateOnlyString } from '../../../shared/utils/date-only.util';
 
 @Component({
   selector: 'app-manager-timesheets',
@@ -116,6 +117,7 @@ export class ManagerTimesheetsComponent {
         this.loadTimesheets();
       },
       error: err => {
+        this.restoreCandidate.set(null);
         this.pageState.stopAction();
         this.pageState.setError(
           err.error?.message ?? 'Unable to restore timesheet submission access.'
@@ -124,8 +126,11 @@ export class ManagerTimesheetsComponent {
     });
   }
 
+  formatWeekStart(value: Date | string): string {
+    return formatDateOnly(value);
+  }
+
   private toDateKey(value: Date | string): string {
-    const date = new Date(value);
-    return `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
+    return toDateOnlyString(value);
   }
 }

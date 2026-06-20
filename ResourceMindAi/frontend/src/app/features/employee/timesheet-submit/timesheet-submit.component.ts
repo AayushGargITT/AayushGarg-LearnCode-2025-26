@@ -15,6 +15,7 @@ import { AppLayoutComponent } from '../../../shared/components/app-layout/app-la
 import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { PageStateService } from '../../../shared/services/page-state.service';
+import { toDateOnlyString } from '../../../shared/utils/date-only.util';
 
 @Component({
   selector: 'app-employee-timesheet-submit',
@@ -65,7 +66,7 @@ export class EmployeeTimesheetSubmitComponent {
       this.pageState.clearFeedback();
     }
     this.pageState.startLoading();
-    this.employeeService.getTimesheetWeek(this.toDateOnly(selectedDate)).subscribe({
+    this.employeeService.getTimesheetWeek(toDateOnlyString(selectedDate)).subscribe({
       next: week => {
         this.week.set(week);
         this.rebuildEntries(week);
@@ -106,7 +107,7 @@ export class EmployeeTimesheetSubmitComponent {
     this.pageState.clearFeedback();
     this.pageState.startSubmitting();
     this.employeeService.submitTimesheet({
-      weekStartDate: this.toDateOnly(weekStartDate),
+      weekStartDate: toDateOnlyString(weekStartDate),
       entries
     }).subscribe({
       next: () => {
@@ -145,12 +146,5 @@ export class EmployeeTimesheetSubmitComponent {
     const today = new Date();
     const daysSinceMonday = (today.getDay() + 6) % 7;
     return new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysSinceMonday);
-  }
-
-  private toDateOnly(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
   }
 }

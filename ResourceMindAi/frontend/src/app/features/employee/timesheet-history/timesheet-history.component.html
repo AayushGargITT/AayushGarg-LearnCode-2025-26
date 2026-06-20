@@ -16,7 +16,7 @@
       [resizable]="true">
       <kendo-grid-column title="Week Starting">
         <ng-template kendoGridCellTemplate let-dataItem>
-          <span class="font-mono text-xs">{{ dataItem.weekStartDate | date:'dd-MM-yyyy':'UTC' }}</span>
+          <span class="font-mono text-xs">{{ formatWeekStart(dataItem.weekStartDate) }}</span>
         </ng-template>
       </kendo-grid-column>
       <kendo-grid-column title="Total Hours" [width]="140">
@@ -49,7 +49,7 @@
       <div class="flex flex-wrap justify-between gap-3">
         <div>
           <div class="text-xs text-muted-foreground">Week Starting</div>
-          <div class="font-mono">{{ selectedWeek()!.weekStartDate | date:'dd-MM-yyyy':'UTC' }}</div>
+          <div class="font-mono">{{ formatWeekStart(selectedWeek()!.weekStartDate) }}</div>
         </div>
         <app-status-badge [status]="selectedWeek()!.status"></app-status-badge>
       </div>

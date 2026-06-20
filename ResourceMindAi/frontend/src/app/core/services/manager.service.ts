@@ -16,6 +16,7 @@ import {
   BuildTeamRequest,
   TeamBuilderResponse
 } from '../models/manager.model';
+import { toDateOnlyString } from '../../shared/utils/date-only.util';
 
 @Injectable({ providedIn: 'root' })
 export class ManagerService {
@@ -57,7 +58,7 @@ export class ManagerService {
     employeeUserId: string,
     weekStartDate: Date | string
   ): Observable<void> {
-    const week = new Date(weekStartDate).toISOString().slice(0, 10);
+    const week = toDateOnlyString(weekStartDate);
     return this.http.patch<void>(
       `${this.apiUrl}/timesheets/${employeeUserId}/weeks/${week}/restore`,
       {}

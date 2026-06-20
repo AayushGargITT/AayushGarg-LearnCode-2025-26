@@ -13,6 +13,7 @@ import { PageFeedbackComponent } from '../../../shared/components/page-feedback/
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { PageStateService } from '../../../shared/services/page-state.service';
+import { formatDateOnly } from '../../../shared/utils/date-only.util';
 
 @Component({
   selector: 'app-employee-timesheet-history',
@@ -74,5 +75,9 @@ export class EmployeeTimesheetHistoryComponent {
 
   closeDetail(): void {
     this.selectedWeek.set(null);
+  }
+
+  formatWeekStart(value: Date | string): string {
+    return formatDateOnly(value);
   }
 }

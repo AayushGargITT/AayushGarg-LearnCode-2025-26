@@ -14,7 +14,7 @@
       <kendo-grid-column field="employeeName" title="Resource"></kendo-grid-column>
       <kendo-grid-column title="Week Starting" [width]="170">
         <ng-template kendoGridCellTemplate let-dataItem>
-          {{ dataItem.weekStartDate | date:'dd-MM-yyyy':'UTC' }}
+          {{ formatWeekStart(dataItem.weekStartDate) }}
         </ng-template>
       </kendo-grid-column>
       <kendo-grid-column title="Frozen On" [width]="180">
@@ -52,7 +52,7 @@
       </kendo-grid-column>
       <kendo-grid-column field="projectName" title="Project" class="text-indigo-400 font-medium"></kendo-grid-column>
       <kendo-grid-column title="Week" [width]="150">
-        <ng-template kendoGridCellTemplate let-dataItem>{{ dataItem.weekStartDate | date:'mediumDate' }}</ng-template>
+        <ng-template kendoGridCellTemplate let-dataItem>{{ formatWeekStart(dataItem.weekStartDate) }}</ng-template>
       </kendo-grid-column>
       <kendo-grid-column title="Hours" [width]="100">
         <ng-template kendoGridCellTemplate let-dataItem><span class="font-mono">{{ dataItem.hoursLogged }}h</span></ng-template>
@@ -91,7 +91,7 @@
         </div>
         <div>
           <div class="text-xs text-muted-foreground">Week Starting</div>
-          <div class="font-mono">{{ selectedTimesheet()!.weekStartDate | date:'dd-MM-yyyy':'UTC' }}</div>
+          <div class="font-mono">{{ formatWeekStart(selectedTimesheet()!.weekStartDate) }}</div>
         </div>
         <app-status-badge [status]="selectedTimesheet()!.status"></app-status-badge>
       </div>
@@ -124,7 +124,7 @@
   <app-confirm-dialog
     *ngIf="restoreCandidate()"
     title="Restore Timesheet Access"
-    [message]="'Restore submission access for ' + restoreCandidate()!.employeeName + ' for the week of ' + (restoreCandidate()!.weekStartDate | date:'dd-MM-yyyy':'UTC') + '?'"
+    [message]="'Restore submission access for ' + restoreCandidate()!.employeeName + ' for the week of ' + formatWeekStart(restoreCandidate()!.weekStartDate) + '?'"
     confirmText="Restore Access"
     [isBusy]="pageState.activeActionId() === restoreCandidate()!.employeeUserId"
     (cancelled)="cancelRestore()"
