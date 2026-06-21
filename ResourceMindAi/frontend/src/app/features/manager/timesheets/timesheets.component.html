@@ -1,0 +1,133 @@
+<app-layout role="manager" title="Timesheets">
+  <app-page-header title="Team Timesheets" subtitle="Review submitted hours and activity tags"></app-page-header>
+
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+  <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
+
+  <div *ngIf="!pageState.isLoading() && frozenSubmissions().length > 0" class="surface kendo-grid-shell mb-5">
+    <div class="px-4 py-3 border-b border-border">
+      <h3 class="font-semibold">Frozen Timesheet Submissions</h3>
+      <p class="text-sm text-muted-foreground">Review missed weeks before restoring resource access.</p>
+    </div>
+
+    <kendo-grid [data]="frozenSubmissions()" [resizable]="true">
+      <kendo-grid-column field="resourceName" title="Resource"></kendo-grid-column>
+      <kendo-grid-column title="Week Starting" [width]="170">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          {{ formatWeekStart(dataItem.weekStartDate) }}
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Frozen On" [width]="180">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          {{ dataItem.frozenAtUtc | date:'dd-MM-yyyy HH:mm':'UTC' }}
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Actions" [width]="150">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <button
+            kendoButton
+            themeColor="primary"
+            fillMode="flat"
+            [disabled]="pageState.activeActionId() === dataItem.resourceUserId"
+            (click)="requestRestore(dataItem)">
+            Restore Access
+          </button>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
+
+  <div class="surface kendo-grid-shell">
+    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading timesheets...</div>
+    <div *ngIf="!pageState.isLoading() && rows().length === 0" class="hint-panel">No submitted timesheets found.</div>
+
+    <kendo-grid *ngIf="!pageState.isLoading() && rows().length > 0" [data]="rows()" [height]="420" [resizable]="true">
+      <kendo-grid-column title="Resource">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <div class="flex items-center gap-3">
+            <app-avatar [name]="dataItem.resourceName" [size]="28"></app-avatar>
+            <div class="font-medium">{{ dataItem.resourceName }}</div>
+          </div>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="projectName" title="Project" class="text-indigo-400 font-medium"></kendo-grid-column>
+      <kendo-grid-column title="Week" [width]="150">
+        <ng-template kendoGridCellTemplate let-dataItem>{{ formatWeekStart(dataItem.weekStartDate) }}</ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Hours" [width]="100">
+        <ng-template kendoGridCellTemplate let-dataItem><span class="font-mono">{{ dataItem.hoursLogged }}h</span></ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Activity Tags">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <div class="flex flex-wrap gap-1">
+            <span *ngFor="let tag of dataItem.tags" class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border border-border">{{ tag }}</span>
+          </div>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="status" title="Status" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.status"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Actions" [width]="100">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <button kendoButton fillMode="flat" (click)="openDetail(dataItem)">View</button>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
+
+  <kendo-dialog
+    *ngIf="selectedTimesheet()"
+    title="Timesheet Details"
+    [width]="680"
+    [minWidth]="320"
+    (close)="closeDetail()">
+    <div class="space-y-5">
+      <div class="flex flex-wrap justify-between gap-4">
+        <div>
+          <div class="text-xs text-muted-foreground">Resource</div>
+          <div class="font-medium">{{ selectedTimesheet()!.resourceName }}</div>
+        </div>
+        <div>
+          <div class="text-xs text-muted-foreground">Week Starting</div>
+          <div class="font-mono">{{ formatWeekStart(selectedTimesheet()!.weekStartDate) }}</div>
+        </div>
+        <app-status-badge [status]="selectedTimesheet()!.status"></app-status-badge>
+      </div>
+
+      <div *ngFor="let entry of selectedWeekEntries()" class="border-b border-border pb-4">
+        <div class="flex justify-between gap-3">
+          <span class="font-medium">{{ entry.projectName }}</span>
+          <span class="font-mono">{{ entry.hoursLogged }}h</span>
+        </div>
+        <div class="flex flex-wrap gap-1 mt-2">
+          <span
+            *ngFor="let tag of entry.tags"
+            class="inline-flex rounded-md border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+            {{ tag }}
+          </span>
+        </div>
+      </div>
+
+      <div class="flex justify-between font-semibold">
+        <span>Total Hours</span>
+        <span class="font-mono">{{ selectedWeekTotal() }}h</span>
+      </div>
+    </div>
+
+    <kendo-dialog-actions>
+      <button kendoButton (click)="closeDetail()">Close</button>
+    </kendo-dialog-actions>
+  </kendo-dialog>
+
+  <app-confirm-dialog
+    *ngIf="restoreCandidate()"
+    title="Restore Timesheet Access"
+    [message]="'Restore submission access for ' + restoreCandidate()!.resourceName + ' for the week of ' + formatWeekStart(restoreCandidate()!.weekStartDate) + '?'"
+    confirmText="Restore Access"
+    [isBusy]="pageState.activeActionId() === restoreCandidate()!.resourceUserId"
+    (cancelled)="cancelRestore()"
+    (confirmed)="confirmRestore()">
+  </app-confirm-dialog>
+</app-layout>

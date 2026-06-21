@@ -1,0 +1,83 @@
+<app-layout role="admin" title="Manage Users">
+  <app-page-header title="User Accounts" subtitle="Create, deactivate and reset credentials for system users">
+    <button kendoButton themeColor="primary" (click)="openDrawer()">
+      <span class="material-symbols-outlined h-4 w-4 mr-1" style="font-size: 16px; vertical-align: middle;">add</span> Create User
+    </button>
+  </app-page-header>
+
+  <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div class="surface kendo-grid-shell">
+    <div class="toolbar-surface users-toolbar">
+      <div class="user-search">
+        <span class="material-symbols-outlined user-search__icon">search</span>
+        <input
+          kendoTextBox
+          placeholder="Search name, email, role, or status..."
+          class="user-search__input"
+          [value]="searchTerm()"
+          (input)="searchTerm.set($any($event.target).value)" />
+      </div>
+    </div>
+
+    <kendo-grid [data]="filteredRows()" [height]="420" [resizable]="true" [loading]="pageState.isLoading()">
+      <kendo-grid-column field="fullName" title="Full Name" class="font-medium"></kendo-grid-column>
+      <kendo-grid-column field="email" title="Email" class="text-muted-foreground"></kendo-grid-column>
+      <kendo-grid-column field="username" title="Username" class="font-mono text-xs"></kendo-grid-column>
+      <kendo-grid-column field="role" title="Role" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.role"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="isActive" title="Status" [width]="120">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.isActive ? 'Active' : 'Inactive'"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Actions" [width]="110" class="text-right">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-row-action-menu
+            [actions]="actionsFor(dataItem)"
+            [disabled]="pageState.activeActionId() === dataItem.id"
+            (actionSelected)="onUserAction(dataItem, $event)">
+          </app-row-action-menu>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
+
+  <app-create-user-dialog
+    *ngIf="drawerOpen()"
+    [error]="createError()"
+    [isSaving]="isCreating()"
+    (cancelled)="closeDrawer()"
+    (submitted)="createUser($event)">
+  </app-create-user-dialog>
+
+  <app-confirm-dialog
+    *ngIf="resetPasswordUser()"
+    title="Reset Password"
+    [message]="'Reset password for ' + resetPasswordUser()?.username + '? The temporary password will match the username and the user will be forced to change it on next login.'"
+    confirmText="Reset Password"
+    [isBusy]="pageState.activeActionId() === resetPasswordUser()?.id"
+    (cancelled)="closeResetPasswordDialog()"
+    (confirmed)="confirmResetPassword()">
+  </app-confirm-dialog>
+
+  <app-confirm-dialog
+    *ngIf="deactivateUser()"
+    title="Deactivate User"
+    [message]="deactivationMessage(deactivateUser()!)"
+    confirmText="Deactivate"
+    [isBusy]="pageState.activeActionId() === deactivateUser()?.id"
+    (cancelled)="closeDeactivateDialog()"
+    (confirmed)="confirmDeactivate()">
+  </app-confirm-dialog>
+
+  <app-deactivation-blocked-dialog
+    *ngIf="deactivationBlockers()"
+    [details]="deactivationBlockers()"
+    (closed)="closeDeactivationBlockers()">
+  </app-deactivation-blocked-dialog>
+</app-layout>

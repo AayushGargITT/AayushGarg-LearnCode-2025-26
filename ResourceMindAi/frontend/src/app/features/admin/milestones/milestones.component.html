@@ -1,0 +1,40 @@
+<app-layout role="admin" title="Project Milestones">
+      <app-page-header title="Milestones" subtitle="Manage milestones for project P-101"></app-page-header>
+      
+      <div class="rounded-lg border border-border bg-card">
+        <div class="flex items-center justify-between p-4 border-b border-border">
+          <div class="font-medium">Atlas Payments</div>
+          <button class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white h-8 px-3">Add Milestone</button>
+        </div>
+        <div class="p-4 space-y-4">
+          <div class="flex items-center justify-between border-b border-border/50 pb-4">
+            <div>
+              <div class="font-medium">Requirements Sign-off</div>
+              <div class="text-xs font-mono text-muted-foreground mt-1">Due: Feb 15, 2024</div>
+            </div>
+            <app-status-badge status="DONE"></app-status-badge>
+          </div>
+          <div class="flex items-center justify-between border-b border-border/50 pb-4">
+            <div>
+              <div class="font-medium">Architecture Review</div>
+              <div class="text-xs font-mono text-muted-foreground mt-1">Due: Mar 10, 2024</div>
+            </div>
+            <app-status-badge status="DONE"></app-status-badge>
+          </div>
+          <div class="flex items-center justify-between border-b border-border/50 pb-4">
+            <div>
+              <div class="font-medium">Alpha Release</div>
+              <div class="text-xs font-mono text-rose-300 mt-1">Due: Jun 30, 2024 (Overdue)</div>
+            </div>
+            <app-status-badge status="IN_PROGRESS"></app-status-badge>
+          </div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">Beta Release</div>
+              <div class="text-xs font-mono text-muted-foreground mt-1">Due: Sep 30, 2024</div>
+            </div>
+            <app-status-badge status="NOT_STARTED"></app-status-badge>
+          </div>
+        </div>
+      </div>
+    </app-layout>

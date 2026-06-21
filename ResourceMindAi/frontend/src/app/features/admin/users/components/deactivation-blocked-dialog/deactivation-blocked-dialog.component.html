@@ -1,0 +1,23 @@
+<kendo-dialog title="Deactivation Not Possible" [width]="520" (close)="closed.emit()">
+  <p class="text-sm text-muted-foreground mb-4">
+    Reassign the following projects and employees manually before deactivating this manager.
+  </p>
+
+  <div *ngIf="details?.projects?.length" class="mb-5">
+    <h3 class="text-sm font-semibold mb-2">Assigned active or planned projects</h3>
+    <ul class="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+      <li *ngFor="let project of details!.projects">{{ project }}</li>
+    </ul>
+  </div>
+
+  <div *ngIf="details?.employees?.length">
+    <h3 class="text-sm font-semibold mb-2">Assigned active resources</h3>
+    <ul class="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+      <li *ngFor="let employee of details!.employees">{{ employee }}</li>
+    </ul>
+  </div>
+
+  <kendo-dialog-actions>
+    <button kendoButton themeColor="primary" (click)="closed.emit()">Close</button>
+  </kendo-dialog-actions>
+</kendo-dialog>

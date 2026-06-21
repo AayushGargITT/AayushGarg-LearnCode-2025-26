@@ -1,0 +1,63 @@
+<kendo-dialog title="Create Project" [width]="560" (close)="cancelled.emit()">
+  <form [formGroup]="form" class="form-stack" (ngSubmit)="submit()">
+    <app-page-feedback type="error" [message]="error"></app-page-feedback>
+
+    <div class="field-stack">
+      <label class="text-sm font-medium">Project Name</label>
+      <input kendoTextBox formControlName="name" />
+      <span *ngIf="form.controls.name.touched && form.controls.name.invalid" class="text-xs text-rose-400">
+        Project name is required.
+      </span>
+    </div>
+
+    <div class="field-stack">
+      <label class="text-sm font-medium">Description</label>
+      <textarea kendoTextArea rows="4" formControlName="description"></textarea>
+      <span *ngIf="form.controls.description.touched && form.controls.description.invalid" class="text-xs text-rose-400">
+        Description is required.
+      </span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div class="field-stack">
+        <label class="text-sm font-medium">Start Date</label>
+        <kendo-datepicker formControlName="startDate"></kendo-datepicker>
+      </div>
+
+      <div class="field-stack">
+        <label class="text-sm font-medium">End Date</label>
+        <kendo-datepicker formControlName="endDate"></kendo-datepicker>
+      </div>
+    </div>
+
+    <span *ngIf="hasDateRangeError()" class="text-xs text-rose-400">
+      Start date cannot be after end date.
+    </span>
+
+    <div class="field-stack">
+      <label class="text-sm font-medium">Status</label>
+      <kendo-dropdownlist [data]="statuses" formControlName="status"></kendo-dropdownlist>
+    </div>
+
+    <div class="field-stack">
+      <label class="text-sm font-medium">Manager</label>
+      <kendo-dropdownlist
+        [data]="managers"
+        textField="fullName"
+        valueField="id"
+        [valuePrimitive]="true"
+        formControlName="managerId">
+      </kendo-dropdownlist>
+      <span *ngIf="form.controls.managerId.touched && form.controls.managerId.invalid" class="text-xs text-rose-400">
+        Manager is required.
+      </span>
+    </div>
+  </form>
+
+  <kendo-dialog-actions>
+    <button kendoButton [disabled]="isSubmitting" (click)="cancelled.emit()">Cancel</button>
+    <button kendoButton themeColor="primary" [disabled]="isSubmitting || form.invalid || hasDateRangeError()" (click)="submit()">
+      {{ isSubmitting ? 'Creating...' : 'Create Project' }}
+    </button>
+  </kendo-dialog-actions>
+</kendo-dialog>

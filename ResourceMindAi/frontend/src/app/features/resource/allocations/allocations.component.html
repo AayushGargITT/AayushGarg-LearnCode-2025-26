@@ -1,0 +1,55 @@
+<app-layout role="resource" title="My Allocations">
+  <app-page-header title="My Allocations" subtitle="Projects assigned to you"></app-page-header>
+
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div class="surface p-5 mb-5">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <div class="text-sm text-muted-foreground">Current Utilisation</div>
+        <div class="text-2xl font-semibold font-mono">{{ totalCurrentUtilisation() }}%</div>
+      </div>
+      <div class="w-48 max-w-full h-2 rounded-full bg-muted overflow-hidden">
+        <div
+          class="h-full bg-indigo-500"
+          [style.width.%]="totalCurrentUtilisation() > 100 ? 100 : totalCurrentUtilisation()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="surface kendo-grid-shell">
+    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading allocations...</div>
+    <div *ngIf="!pageState.isLoading() && allocations().length === 0" class="hint-panel">
+      No allocations found.
+    </div>
+
+    <kendo-grid
+      *ngIf="!pageState.isLoading() && allocations().length > 0"
+      [data]="allocations()"
+      [height]="420"
+      [resizable]="true">
+      <kendo-grid-column field="projectName" title="Project" class="font-medium text-indigo-400"></kendo-grid-column>
+      <kendo-grid-column title="Allocation" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <span class="font-mono">{{ dataItem.utilisationPercent }}%</span>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Start Date" [width]="150">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          {{ dataItem.fromDate | date:'dd-MM-yyyy':'UTC' }}
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="End Date" [width]="150">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          {{ dataItem.toDate | date:'dd-MM-yyyy':'UTC' }}
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Status" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.status"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
+</app-layout>

@@ -1,0 +1,30 @@
+<kendo-dialog title="Confirm Manager Update" [width]="520" (close)="cancelled.emit()">
+  <p class="text-sm text-muted-foreground mb-4">
+    Update the manager for {{ employee?.fullName }}?
+  </p>
+
+  <app-page-feedback type="error" [message]="error"></app-page-feedback>
+
+  <ng-container *ngIf="preview?.activeProjects?.length; else noAllocations">
+    <p class="text-sm mb-2">This employee is currently allocated to:</p>
+    <ul class="list-disc pl-5 space-y-1 text-sm text-muted-foreground mb-4">
+      <li *ngFor="let project of preview!.activeProjects">{{ project }}</li>
+    </ul>
+    <p class="text-sm text-amber-300">
+      Changing the employee manager will end all active allocations as of today.
+    </p>
+  </ng-container>
+
+  <ng-template #noAllocations>
+    <p class="text-sm text-muted-foreground">
+      This employee has no active allocations. Their manager assignment will be updated.
+    </p>
+  </ng-template>
+
+  <kendo-dialog-actions>
+    <button kendoButton (click)="cancelled.emit()" [disabled]="isSaving">Cancel</button>
+    <button kendoButton themeColor="primary" (click)="confirmed.emit()" [disabled]="isSaving">
+      {{ isSaving ? 'Updating...' : 'Update Manager' }}
+    </button>
+  </kendo-dialog-actions>
+</kendo-dialog>

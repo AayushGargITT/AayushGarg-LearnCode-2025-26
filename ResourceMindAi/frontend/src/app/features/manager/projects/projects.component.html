@@ -1,0 +1,117 @@
+<app-layout role="manager" title="My Projects">
+  <app-page-header title="My Projects" subtitle="Track health, milestones, and risk for your projects"></app-page-header>
+
+  <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div class="surface kendo-grid-shell">
+    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading projects...</div>
+    <div *ngIf="!pageState.isLoading() && projects().length === 0" class="hint-panel">No projects found.</div>
+
+    <kendo-grid *ngIf="!pageState.isLoading() && projects().length > 0" [data]="projects()" [height]="420" [resizable]="true">
+      <kendo-grid-column field="name" title="Project Name">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <div class="font-medium cursor-pointer" (dblclick)="openProject(dataItem)">{{ dataItem.name }}</div>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="End Date" [width]="150">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <span (dblclick)="openProject(dataItem)">{{ dataItem.endDate | date:'mediumDate' }}</span>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="status" title="Status" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.status"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Health" [width]="140">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-health-dot [health]="dataItem.healthStatus"></app-health-dot>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="teamSize" title="Team" [width]="100"></kendo-grid-column>
+    </kendo-grid>
+  </div>
+
+  <div *ngIf="isDetailLoading()" class="hint-panel mt-4">Loading project detail...</div>
+
+  <kendo-dialog
+    *ngIf="selectedProject()"
+    [title]="selectedProject()!.name"
+    [width]="detailDialogWidth"
+    (close)="closeProject()">
+    <div class="form-stack project-detail-content">
+      <div class="grid grid-cols-3 gap-4 text-sm">
+        <div><span class="text-muted-foreground">Health</span><div><app-health-dot [health]="selectedProject()!.healthStatus"></app-health-dot></div></div>
+        <div><span class="text-muted-foreground">Status</span><div><app-status-badge [status]="selectedProject()!.status"></app-status-badge></div></div>
+        <div><span class="text-muted-foreground">Team</span><div class="font-medium">{{ selectedProject()!.teamSize }}</div></div>
+      </div>
+
+      <section>
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <h3 class="text-sm font-semibold">AI Risk Summary</h3>
+          <button
+            kendoButton
+            size="small"
+            themeColor="primary"
+            [disabled]="isRiskGenerating()"
+            (click)="generateRiskSummary()">
+            {{ isRiskGenerating() ? 'Generating...' : 'Get Risk Summary' }}
+          </button>
+        </div>
+
+        <div *ngIf="!selectedProject()!.riskSummary" class="hint-panel">
+          No AI risk summary generated yet. Click Get Risk Summary to generate one.
+        </div>
+
+        <div *ngIf="selectedProject()!.riskSummary as riskSummary" class="risk-summary">
+          <div class="flex items-center justify-between gap-3">
+            <span class="font-medium">{{ riskSummary.overallHealth }}</span>
+            <span class="text-xs text-muted-foreground">
+              {{ riskSummary.generatedAt | date:'medium' }}
+            </span>
+          </div>
+          <p class="text-sm text-muted-foreground mt-2">{{ riskSummary.summary }}</p>
+
+          <div *ngFor="let risk of riskSummary.riskPoints" class="risk-point">
+            <div class="flex items-center gap-2">
+              <app-status-badge [status]="risk.severity"></app-status-badge>
+              <span class="font-medium text-sm">{{ risk.title }}</span>
+            </div>
+            <p class="text-sm text-muted-foreground mt-1">{{ risk.description }}</p>
+          </div>
+
+          <div *ngIf="riskSummary.recommendedActions.length > 0" class="mt-3">
+            <div class="text-sm font-medium mb-1">Recommended Actions</div>
+            <div *ngFor="let action of riskSummary.recommendedActions" class="text-sm text-muted-foreground">
+              - {{ action }}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h3 class="text-sm font-semibold mb-2">Milestones</h3>
+        <div *ngFor="let milestone of selectedProject()!.milestones" class="flex items-center justify-between py-2 border-b border-border/50">
+          <div>
+            <div class="font-medium">{{ milestone.title }}</div>
+            <div class="text-xs text-muted-foreground">{{ milestone.dueDate | date:'mediumDate' }}</div>
+          </div>
+          <app-status-badge [status]="milestone.status"></app-status-badge>
+        </div>
+      </section>
+
+      <section>
+        <h3 class="text-sm font-semibold mb-2">Allocated Resources</h3>
+        <div *ngIf="selectedProject()!.allocatedResources.length === 0" class="hint-panel">No active allocations.</div>
+        <div *ngFor="let allocation of selectedProject()!.allocatedResources" class="flex items-center justify-between py-2 border-b border-border/50">
+          <div>
+            <div class="font-medium">{{ allocation.resourceName }}</div>
+            <div class="text-xs text-muted-foreground">{{ allocation.fromDate | date:'mediumDate' }} - {{ allocation.toDate | date:'mediumDate' }}</div>
+          </div>
+          <span class="font-mono text-xs">{{ allocation.utilisationPercent }}%</span>
+        </div>
+      </section>
+    </div>
+  </kendo-dialog>
+</app-layout>

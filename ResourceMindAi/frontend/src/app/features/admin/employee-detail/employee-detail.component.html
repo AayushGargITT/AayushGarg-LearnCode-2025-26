@@ -1,0 +1,86 @@
+<app-layout role="admin" title="Employee Profile">
+      <div class="mb-4">
+        <a routerLink="/admin/employees" class="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+          <span class="material-symbols-outlined mr-1 h-4 w-4" style="font-size: 16px; vertical-align: middle;">arrow_back</span> Back to Employees
+        </a>
+      </div>
+      
+      <div class="rounded-lg border border-border bg-card p-6 mb-6">
+        <div class="flex flex-col sm:flex-row gap-6 items-start">
+          <div class="h-20 w-20 rounded-full bg-gradient-to-br from-indigo-500/40 to-indigo-700/40 grid place-items-center text-2xl font-bold text-indigo-100 ring-2 ring-indigo-500/30">
+            EP
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 class="text-2xl font-semibold tracking-tight">Elena Patel</h1>
+                <div class="text-muted-foreground mt-1">Senior Backend Engineer &middot; Engineering</div>
+                <div class="flex items-center gap-2 mt-3">
+                  <app-status-badge status="ALLOCATED"></app-status-badge>
+                  <app-status-badge status="Active"></app-status-badge>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="inline-flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 text-sm font-medium transition-colors">Edit Profile</button>
+                <button class="inline-flex items-center justify-center rounded-md border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 h-9 px-4 py-2 text-sm font-medium transition-colors">Deactivate</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="grid lg:grid-cols-2 gap-6">
+        <!-- Skills -->
+        <div class="rounded-lg border border-border bg-card">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div class="text-sm font-medium">Skills Inventory</div>
+            <button class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-8 px-3">Manage</button>
+          </div>
+          <div class="p-4 space-y-4">
+            <div class="flex items-center justify-between pb-4 border-b border-border/50">
+              <div>
+                <div class="font-medium">C# / .NET Core</div>
+                <div class="text-xs text-muted-foreground mt-0.5">Backend</div>
+              </div>
+              <app-status-badge status="Advanced"></app-status-badge>
+            </div>
+            <div class="flex items-center justify-between pb-4 border-b border-border/50">
+              <div>
+                <div class="font-medium">SQL Server</div>
+                <div class="text-xs text-muted-foreground mt-0.5">Backend</div>
+              </div>
+              <app-status-badge status="Advanced"></app-status-badge>
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="font-medium">Azure DevOps</div>
+                <div class="text-xs text-muted-foreground mt-0.5">DevOps</div>
+              </div>
+              <app-status-badge status="Intermediate"></app-status-badge>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Allocations -->
+        <div class="rounded-lg border border-border bg-card">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div class="text-sm font-medium">Current Allocations</div>
+            <button class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-8 px-3">View All</button>
+          </div>
+          <div class="p-4">
+            <div class="rounded-md border border-border bg-muted/20 p-4">
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="font-medium text-indigo-400">Atlas Payments</div>
+                  <div class="text-sm text-muted-foreground mt-1">100% Utilisation</div>
+                </div>
+                <div class="text-xs font-mono text-muted-foreground">Jan 10 &rarr; Dec 31</div>
+              </div>
+              <div class="mt-4 h-2 w-full bg-muted overflow-hidden rounded-full">
+                <div class="h-full bg-indigo-500 w-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </app-layout>

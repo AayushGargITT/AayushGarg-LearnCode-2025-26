@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ResourceMindAI.API/ResourceMindAI.API.csproj" />
+    <Project Path="src/ResourceMindAI.Application/ResourceMindAI.Application.csproj" />
+    <Project Path="src/ResourceMindAI.Domain/ResourceMindAI.Domain.csproj" />
+    <Project Path="src/ResourceMindAI.Infrastructure/ResourceMindAI.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ResourceMindAI.Application.Tests/ResourceMindAI.Application.Tests.csproj" />
+    <Project Path="tests/ResourceMindAI.Infrastructure.Tests/ResourceMindAI.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>

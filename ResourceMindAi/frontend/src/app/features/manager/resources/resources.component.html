@@ -1,0 +1,143 @@
+<app-layout role="manager" title="Resource Dashboard">
+  <app-page-header title="Resource Capacity" subtitle="Monitor bench and active team allocations">
+    <button routerLink="/manager/allocate" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 text-white h-9 px-4 py-2">
+      <span class="material-symbols-outlined h-4 w-4 mr-2" style="font-size: 16px; vertical-align: middle;">auto_awesome</span>
+      Allocate Resource
+    </button>
+  </app-page-header>
+
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div *ngIf="pageState.isLoading()" class="hint-panel">Loading resources...</div>
+
+  <div *ngIf="!pageState.isLoading()" class="resource-dashboard">
+    <section class="resource-summary">
+      <div class="summary-card">
+        <span class="summary-card__label">Team resources</span>
+        <strong>{{ dashboard().onBench.length + dashboard().activeResources.length }}</strong>
+        <span>Visible resources assigned to you</span>
+      </div>
+      <div class="summary-card summary-card--bench">
+        <span class="summary-card__label">On bench</span>
+        <strong>{{ dashboard().onBench.length }}</strong>
+        <span>Ready for new allocation</span>
+      </div>
+      <div class="summary-card summary-card--active">
+        <span class="summary-card__label">Allocated</span>
+        <strong>{{ dashboard().activeResources.length }}</strong>
+        <span>Currently contributing to projects</span>
+      </div>
+    </section>
+
+    <div class="resource-columns">
+      <section class="resource-panel">
+        <header class="resource-panel__header">
+          <div>
+            <p>Availability</p>
+            <h3>On Bench</h3>
+          </div>
+          <span class="count-pill count-pill--bench">{{ dashboard().onBench.length }}</span>
+        </header>
+
+        <div *ngIf="dashboard().onBench.length === 0" class="empty-card">No bench resources found.</div>
+
+        <button *ngFor="let emp of dashboard().onBench" class="resource-row" type="button" (click)="openDetails(emp)">
+          <app-avatar [name]="emp.fullName"></app-avatar>
+          <span class="resource-row__content">
+            <span class="resource-row__top">
+              <strong>{{ emp.fullName }}</strong>
+              <app-status-badge [status]="emp.currentStatus"></app-status-badge>
+            </span>
+            <span class="resource-row__meta">{{ emp.designation || 'No designation' }} - {{ emp.department || 'No department' }}</span>
+            <span class="resource-row__skills">
+              <span *ngFor="let skill of emp.skills.slice(0, 4)" class="skill-chip">{{ skill }}</span>
+              <span *ngIf="emp.skills.length > 4" class="skill-chip skill-chip--muted">+{{ emp.skills.length - 4 }}</span>
+            </span>
+          </span>
+        </button>
+      </section>
+
+      <section class="resource-panel">
+        <header class="resource-panel__header">
+          <div>
+            <p>Utilisation</p>
+            <h3>Active Resources</h3>
+          </div>
+          <span class="count-pill count-pill--active">{{ dashboard().activeResources.length }}</span>
+        </header>
+
+        <div *ngIf="dashboard().activeResources.length === 0" class="empty-card">No active resources found.</div>
+
+        <button *ngFor="let emp of dashboard().activeResources" class="resource-row" type="button" (click)="openDetails(emp)">
+          <app-avatar [name]="emp.fullName"></app-avatar>
+          <span class="resource-row__content">
+            <span class="resource-row__top">
+              <strong>{{ emp.fullName }}</strong>
+              <span class="util-text" [ngClass]="emp.allocationPercent >= 100 ? 'util-text--full' : 'util-text--partial'">
+                {{ emp.allocationPercent }}% utilised
+              </span>
+            </span>
+            <span class="resource-row__meta">{{ emp.designation || 'No designation' }} - {{ emp.department || 'No department' }}</span>
+            <span class="util-bar">
+              <span
+                [ngClass]="emp.allocationPercent >= 100 ? 'util-bar__fill util-bar__fill--full' : 'util-bar__fill util-bar__fill--partial'"
+                [style.width.%]="emp.allocationPercent">
+              </span>
+            </span>
+          </span>
+        </button>
+      </section>
+    </div>
+  </div>
+
+  <kendo-dialog *ngIf="selectedResource()" [title]="selectedResource()!.fullName" [width]="680" (close)="closeDetails()">
+    <div class="resource-detail">
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span>Department</span>
+          <strong>{{ selectedResource()!.department || '-' }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Designation</span>
+          <strong>{{ selectedResource()!.designation || '-' }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Status</span>
+          <app-status-badge [status]="selectedResource()!.currentStatus"></app-status-badge>
+        </div>
+        <div class="detail-item">
+          <span>Utilisation</span>
+          <strong>{{ selectedResource()!.allocationPercent }}%</strong>
+        </div>
+      </div>
+
+      <section class="detail-section">
+        <h3>Profile Skills</h3>
+        <div *ngIf="selectedResource()!.skills.length === 0" class="empty-card">No profile skills available.</div>
+        <div class="chip-list">
+          <span *ngFor="let skill of selectedResource()!.skills" class="skill-chip">{{ skill }}</span>
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <h3>Active Allocations</h3>
+        <div *ngIf="selectedResource()!.activeAllocations.length === 0" class="empty-card">No active allocations.</div>
+        <div *ngFor="let allocation of selectedResource()!.activeAllocations" class="allocation-line">
+          <div>
+            <strong>{{ allocation.projectName }}</strong>
+            <span>{{ allocation.fromDate | date:'mediumDate' }} - {{ allocation.toDate | date:'mediumDate' }}</span>
+          </div>
+          <span>{{ allocation.utilisationPercent }}%</span>
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <h3>Recent Activity</h3>
+        <div *ngIf="selectedResource()!.recentActivityTags.length === 0" class="empty-card">No recent activity tags.</div>
+        <div class="chip-list">
+          <span *ngFor="let tag of selectedResource()!.recentActivityTags" class="skill-chip skill-chip--muted">{{ tag }}</span>
+        </div>
+      </section>
+    </div>
+  </kendo-dialog>
+</app-layout>

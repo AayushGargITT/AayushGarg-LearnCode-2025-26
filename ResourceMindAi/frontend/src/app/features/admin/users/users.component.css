@@ -1,0 +1,25 @@
+.users-toolbar {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.user-search {
+  position: relative;
+  width: min(100%, 24rem);
+}
+
+.user-search__icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: hsl(var(--muted-foreground));
+  font-size: 18px;
+  pointer-events: none;
+}
+
+.user-search__input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding-left: 2.5rem !important;
+}

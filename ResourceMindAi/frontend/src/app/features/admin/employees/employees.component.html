@@ -1,0 +1,120 @@
+<app-layout role="admin" title="Manage Employees">
+  <app-page-header title="Employees" subtitle="Maintain employee records, departments and skills"></app-page-header>
+
+  <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div class="surface kendo-grid-shell">
+    <div class="toolbar-surface">
+      <div class="flex items-center gap-1 rounded-md bg-muted p-1">
+        <button
+          *ngFor="let p of ['All', 'Bench', 'Allocated']"
+          (click)="setFilter(p)"
+          [ngClass]="filter() === p ? 'bg-indigo-600 text-white' : 'text-muted-foreground hover:text-foreground'"
+          class="px-3 py-1 text-xs rounded-md">
+          {{ p }}
+        </button>
+      </div>
+
+      <div class="relative flex-1 max-w-sm ml-auto">
+        <span
+          class="material-symbols-outlined h-4 w-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+          style="font-size: 16px; vertical-align: middle;">
+          search
+        </span>
+        <input
+          kendoTextBox
+          placeholder="Search employees..."
+          class="w-full pl-8"
+          [value]="searchTerm()"
+          (input)="setSearchTerm($any($event.target).value)" />
+      </div>
+    </div>
+
+    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading employees...</div>
+
+    <div *ngIf="!pageState.isLoading() && filteredRows().length === 0" class="hint-panel">
+      No employees found.
+    </div>
+
+    <kendo-grid
+      *ngIf="!pageState.isLoading() && filteredRows().length > 0"
+      [data]="filteredRows()"
+      [height]="420"
+      [resizable]="true">
+      <kendo-grid-column field="fullName" title="Name">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <a [routerLink]="['/admin/employees', dataItem.userId]" class="font-medium hover:text-indigo-300">
+            {{ dataItem.fullName }}
+          </a>
+        </ng-template>
+      </kendo-grid-column>
+
+      <kendo-grid-column field="role" title="Role" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.role"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+
+      <kendo-grid-column field="allocationStatus" title="Status" [width]="135">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <span *ngIf="dataItem.role === Role.MANAGER; else employeeStatus">-</span>
+          <ng-template #employeeStatus>
+            <app-status-badge [status]="dataItem.allocationStatus"></app-status-badge>
+          </ng-template>
+        </ng-template>
+      </kendo-grid-column>
+
+      <kendo-grid-column field="department" title="Department" class="text-muted-foreground"></kendo-grid-column>
+      <kendo-grid-column field="designation" title="Designation" class="text-muted-foreground"></kendo-grid-column>
+      <kendo-grid-column title="Manager" class="text-muted-foreground">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          {{ managerDisplay(dataItem) }}
+        </ng-template>
+      </kendo-grid-column>
+
+      <kendo-grid-column title="Actions" [width]="110" class="text-right">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-row-action-menu
+            *ngIf="actionsFor(dataItem).length > 0"
+            [actions]="actionsFor(dataItem)"
+            [disabled]="isSkillLoading() || isSkillSaving() || isManagerLoading() || isManagerSaving()"
+            (actionSelected)="onEmployeeAction(dataItem, $event)">
+          </app-row-action-menu>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
+
+  <app-employee-skills-dialog
+    [employee]="selectedEmployee()"
+    [skills]="selectedEmployeeSkills()"
+    [isLoading]="isSkillLoading()"
+    [isSaving]="isSkillSaving()"
+    [error]="skillError()"
+    (closed)="closeSkills()"
+    (skillAdded)="addSkill($event)"
+    (proficiencyUpdated)="updateSkillProficiency($event)">
+  </app-employee-skills-dialog>
+
+  <app-assign-manager-dialog
+    *ngIf="selectedManagerEmployee() && !managerUpdatePreview()"
+    [employee]="selectedManagerEmployee()"
+    [managers]="availableManagers()"
+    [isLoading]="isManagerLoading()"
+    [isSaving]="isManagerSaving()"
+    [error]="managerError()"
+    (cancelled)="closeManagerDialog()"
+    (submitted)="prepareManagerUpdate($event)">
+  </app-assign-manager-dialog>
+
+  <app-employee-manager-confirm-dialog
+    *ngIf="managerUpdatePreview()"
+    [employee]="selectedManagerEmployee()"
+    [preview]="managerUpdatePreview()"
+    [isSaving]="isManagerSaving()"
+    [error]="managerError()"
+    (cancelled)="closeManagerDialog()"
+    (confirmed)="confirmManagerUpdate()">
+  </app-employee-manager-confirm-dialog>
+</app-layout>

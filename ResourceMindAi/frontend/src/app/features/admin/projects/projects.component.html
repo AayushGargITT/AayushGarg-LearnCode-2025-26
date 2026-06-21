@@ -1,0 +1,84 @@
+<app-layout role="admin" title="Manage Projects">
+  <app-page-header title="Projects" subtitle="Create new projects and manage milestones">
+    <button kendoButton themeColor="primary" (click)="openCreateDialog()">
+      <span class="material-symbols-outlined h-4 w-4 mr-1" style="font-size: 16px; vertical-align: middle;">add</span>
+      Create Project
+    </button>
+  </app-page-header>
+
+  <app-page-feedback type="success" [message]="pageState.successMessage()"></app-page-feedback>
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div class="surface kendo-grid-shell">
+    <div *ngIf="pageState.isLoading()" class="hint-panel">Loading projects...</div>
+
+    <div *ngIf="!pageState.isLoading() && rows().length === 0" class="hint-panel">
+      No projects found.
+    </div>
+
+    <kendo-grid
+      *ngIf="!pageState.isLoading() && rows().length > 0"
+      [data]="rows()"
+      [height]="380"
+      [resizable]="true">
+      <kendo-grid-column field="managerName" title="Manager Name" class="text-muted-foreground"></kendo-grid-column>
+      <kendo-grid-column field="name" title="Project Name" class="font-medium"></kendo-grid-column>
+      <kendo-grid-column title="Start Date" [width]="140">
+        <ng-template kendoGridCellTemplate let-dataItem>{{ dataItem.startDate | date:'mediumDate' }}</ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="End Date" [width]="140">
+        <ng-template kendoGridCellTemplate let-dataItem>{{ dataItem.endDate | date:'mediumDate' }}</ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column field="status" title="Status" [width]="130">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-status-badge [status]="dataItem.status"></app-status-badge>
+        </ng-template>
+      </kendo-grid-column>
+      <kendo-grid-column title="Actions" [width]="110" class="text-right">
+        <ng-template kendoGridCellTemplate let-dataItem>
+          <app-row-action-menu
+            [actions]="actionsFor()"
+            [disabled]="isMilestoneLoading() || isMilestoneSaving() || isManagerSaving()"
+            (actionSelected)="onProjectAction(dataItem, $event)">
+          </app-row-action-menu>
+        </ng-template>
+      </kendo-grid-column>
+    </kendo-grid>
+  </div>
+
+  <app-create-project-dialog
+    *ngIf="createDialogOpen()"
+    [managers]="managers()"
+    [isSubmitting]="isCreating()"
+    [error]="createError()"
+    (cancelled)="closeCreateDialog()"
+    (submitted)="createProject($event)">
+  </app-create-project-dialog>
+
+  <app-milestones-dialog
+    [project]="selectedProject()"
+    [milestones]="milestones()"
+    [isLoading]="isMilestoneLoading()"
+    [isSaving]="isMilestoneSaving()"
+    [error]="milestoneError()"
+    (closed)="closeMilestones()"
+    (milestoneAdded)="addMilestone($event)"
+    (milestoneUpdated)="updateMilestone($event)">
+  </app-milestones-dialog>
+
+  <app-update-project-manager-dialog
+    *ngIf="managerProject()"
+    [project]="managerProject()"
+    [managers]="availableProjectManagers()"
+    [isSaving]="isManagerSaving()"
+    [error]="managerError()"
+    (cancelled)="closeManagerDialog()"
+    (submitted)="updateManager($event)">
+  </app-update-project-manager-dialog>
+
+  <app-project-manager-conflict-dialog
+    *ngIf="managerConflicts()"
+    [details]="managerConflicts()"
+    (closed)="closeManagerConflicts()">
+  </app-project-manager-conflict-dialog>
+</app-layout>

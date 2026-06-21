@@ -1,0 +1,1032 @@
+@import '@progress/kendo-theme-default/dist/default-main-dark.css';
+
+/*
+ * ResourceMindAI design system.
+ * The app is dark-first and uses CSS custom properties directly instead of
+ * Tailwind build directives. The small utility layer below keeps legacy
+ * templates stable while feature templates move to semantic CSS and Kendo UI.
+ */
+
+:root {
+    --radius: 0.625rem;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.129 0.042 264.695);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.129 0.042 264.695);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.129 0.042 264.695);
+    --primary: oklch(0.208 0.042 265.755);
+    --primary-foreground: oklch(0.984 0.003 247.858);
+    --secondary: oklch(0.968 0.007 247.896);
+    --secondary-foreground: oklch(0.208 0.042 265.755);
+    --muted: oklch(0.968 0.007 247.896);
+    --muted-foreground: oklch(0.554 0.046 257.417);
+    --accent: oklch(0.968 0.007 247.896);
+    --accent-foreground: oklch(0.208 0.042 265.755);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.984 0.003 247.858);
+    --border: oklch(0.929 0.013 255.508);
+    --input: oklch(0.929 0.013 255.508);
+    --ring: oklch(0.704 0.04 256.788);
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --sidebar: oklch(0.984 0.003 247.858);
+    --sidebar-foreground: oklch(0.129 0.042 264.695);
+    --sidebar-primary: oklch(0.208 0.042 265.755);
+    --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+    --sidebar-accent: oklch(0.968 0.007 247.896);
+    --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
+    --sidebar-border: oklch(0.929 0.013 255.508);
+    --sidebar-ring: oklch(0.704 0.04 256.788);
+}
+
+/* Dark-first design tokens. We force .dark globally. */
+:root,
+.dark {
+    --radius: 0.5rem;
+    /* Deep navy background, slate panels */
+    --background: oklch(0.18 0.03 265);
+    /* #0A0F1E vibe */
+    --foreground: oklch(0.96 0.01 250);
+    --card: oklch(0.23 0.03 265);
+    /* #111827 */
+    --card-foreground: oklch(0.96 0.01 250);
+    --popover: oklch(0.23 0.03 265);
+    --popover-foreground: oklch(0.96 0.01 250);
+    /* Electric indigo */
+    --primary: oklch(0.62 0.21 280);
+    /* #6366F1 */
+    --primary-foreground: oklch(0.99 0 0);
+    --secondary: oklch(0.28 0.03 265);
+    --secondary-foreground: oklch(0.96 0.01 250);
+    --muted: oklch(0.27 0.03 265);
+    --muted-foreground: oklch(0.7 0.02 260);
+    --accent: oklch(0.3 0.04 270);
+    --accent-foreground: oklch(0.96 0.01 250);
+    --destructive: oklch(0.65 0.22 27);
+    /* #EF4444 */
+    --destructive-foreground: oklch(0.99 0 0);
+    --success: oklch(0.72 0.16 162);
+    /* #10B981 */
+    --warning: oklch(0.78 0.17 75);
+    /* #F59E0B */
+    --border: oklch(0.3 0.03 265);
+    /* #1F2937 */
+    --input: oklch(0.3 0.03 265);
+    --ring: oklch(0.62 0.21 280);
+    --sidebar: oklch(0.2 0.03 265);
+    --sidebar-foreground: oklch(0.92 0.01 250);
+    --sidebar-primary: oklch(0.62 0.21 280);
+    --sidebar-primary-foreground: oklch(0.99 0 0);
+    --sidebar-accent: oklch(0.27 0.03 265);
+    --sidebar-accent-foreground: oklch(0.96 0.01 250);
+    --sidebar-border: oklch(0.3 0.03 265);
+    --sidebar-ring: oklch(0.62 0.21 280);
+}
+
+html,
+body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    border-color: var(--border);
+}
+
+/* Subtle grid texture for auth screens */
+.auth-grid-bg {
+    background-image:
+        radial-gradient(circle at 20% 10%, rgba(99, 102, 241, 0.12), transparent 40%),
+        radial-gradient(circle at 80% 90%, rgba(99, 102, 241, 0.08), transparent 45%),
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: auto, auto, 32px 32px, 32px 32px;
+}
+
+/* Status / health helpers */
+.dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+}
+
+.surface {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.toolbar-surface {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.icon-button {
+    display: inline-grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border: 0;
+    border-radius: calc(var(--radius) - 2px);
+    color: var(--muted-foreground);
+    background: transparent;
+    cursor: pointer;
+}
+
+.icon-button:hover {
+    color: var(--foreground);
+    background: var(--accent);
+}
+
+.field-stack {
+    display: grid;
+    gap: 0.375rem;
+}
+
+.form-stack {
+    display: grid;
+    gap: 1rem;
+    overflow-y: auto;
+}
+
+.hint-panel {
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 2px);
+    background: color-mix(in srgb, var(--muted) 38%, transparent);
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+}
+
+.kendo-grid-shell {
+    overflow: hidden;
+}
+
+.kendo-grid-shell .k-grid {
+    border: 0;
+    background: transparent;
+    color: var(--foreground);
+    font-size: 0.875rem;
+}
+
+.kendo-grid-shell .k-grid-header,
+.kendo-grid-shell .k-grid-header-wrap,
+.kendo-grid-shell .k-grouping-header,
+.kendo-grid-shell .k-grid-footer {
+    background: color-mix(in srgb, var(--card) 88%, #000 12%);
+    border-color: var(--border);
+}
+
+.kendo-grid-shell .k-grid th,
+.kendo-grid-shell .k-grid td {
+    padding: 0.85rem 1rem;
+    border-color: var(--border);
+    vertical-align: middle;
+}
+
+.kendo-grid-shell .k-grid th {
+    color: var(--muted-foreground);
+    font-weight: 500;
+}
+
+.kendo-grid-shell .k-master-row:hover,
+.kendo-grid-shell .k-alt:hover {
+    background: color-mix(in srgb, var(--accent) 48%, transparent);
+}
+
+.kendo-grid-shell .k-grid tr,
+.kendo-grid-shell .k-alt {
+    background: transparent;
+}
+
+.k-dialog-wrapper .k-window,
+.k-dialog {
+    background: var(--card);
+    border-color: var(--border);
+    color: var(--foreground);
+    border-radius: var(--radius);
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.45);
+}
+
+.k-window-titlebar,
+.k-dialog-titlebar {
+    background: var(--card);
+    border-color: var(--border);
+    color: var(--foreground);
+}
+
+.k-dialog-content,
+.k-window-content {
+    background: var(--card);
+    color: var(--foreground);
+}
+
+.k-actions,
+.k-dialog-actions {
+    border-color: var(--border);
+    background: var(--card);
+}
+
+.k-input,
+.k-picker,
+.k-textbox,
+.k-dropdownlist {
+    background: transparent;
+    border-color: var(--input);
+    color: var(--foreground);
+}
+
+.k-input:focus-within,
+.k-picker:focus-within,
+.k-textbox:focus-within,
+.k-dropdownlist:focus-within {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 1px var(--ring);
+}
+
+.k-button-solid-primary {
+    background: oklch(0.55 0.22 280);
+    border-color: oklch(0.55 0.22 280);
+    color: #fff;
+}
+
+.k-button-solid-primary:hover {
+    background: oklch(0.62 0.21 280);
+    border-color: oklch(0.62 0.21 280);
+}
+
+/* Thin Utility Layer (replaces Tailwind for commonly used classes in template) */
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.flex-1 {
+    flex: 1 1 0%;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.items-end {
+    align-items: flex-end;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.gap-1 {
+    gap: 0.25rem;
+}
+
+.gap-1\.5 {
+    gap: 0.375rem;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.gap-3 {
+    gap: 0.75rem;
+}
+
+.gap-4 {
+    gap: 1rem;
+}
+
+.gap-6 {
+    gap: 1.5rem;
+}
+
+.space-y-1\.5>*+* {
+    margin-top: 0.375rem;
+}
+
+.space-y-3>*+* {
+    margin-top: 0.75rem;
+}
+
+.space-y-4>*+* {
+    margin-top: 1rem;
+}
+
+.grid {
+    display: grid;
+}
+
+.place-items-center {
+    place-items: center;
+}
+
+.grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.block {
+    display: block;
+}
+
+.inline-flex {
+    display: inline-flex;
+}
+
+.inline-block {
+    display: inline-block;
+}
+
+.hidden {
+    display: none;
+}
+
+.min-h-screen {
+    min-height: 100vh;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.max-w-md {
+    max-width: 28rem;
+}
+
+.max-w-sm {
+    max-width: 24rem;
+}
+
+.w-12 {
+    width: 3rem;
+}
+
+.w-60 {
+    width: 15rem;
+}
+
+.h-4 {
+    height: 1rem;
+}
+
+.w-4 {
+    width: 1rem;
+}
+
+.h-8 {
+    height: 2rem;
+}
+
+.w-8 {
+    width: 2rem;
+}
+
+.h-12 {
+    height: 3rem;
+}
+
+.h-14 {
+    height: 3.5rem;
+}
+
+.h-1\.5 {
+    height: 0.375rem;
+}
+
+.min-w-0 {
+    min-width: 0;
+}
+
+.p-2 {
+    padding: 0.5rem;
+}
+
+.p-3 {
+    padding: 0.75rem;
+}
+
+.p-4 {
+    padding: 1rem;
+}
+
+.p-6 {
+    padding: 1.5rem;
+}
+
+.px-1\.5 {
+    padding-left: 0.375rem;
+    padding-right: 0.375rem;
+}
+
+.py-0\.5 {
+    padding-top: 0.125rem;
+    padding-bottom: 0.125rem;
+}
+
+.px-2 {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+.py-1 {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+}
+
+.px-3 {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+
+.py-2 {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.px-4 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.py-3 {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+.px-5 {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+}
+
+.py-4 {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.py-12 {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+}
+
+.m-0 {
+    margin: 0;
+}
+
+.mt-1 {
+    margin-top: 0.25rem;
+}
+
+.mt-2 {
+    margin-top: 0.5rem;
+}
+
+.mt-3 {
+    margin-top: 0.75rem;
+}
+
+.mt-4 {
+    margin-top: 1rem;
+}
+
+.mt-6 {
+    margin-top: 1.5rem;
+}
+
+.mb-1 {
+    margin-bottom: 0.25rem;
+}
+
+.mb-3 {
+    margin-bottom: 0.75rem;
+}
+
+.mb-4 {
+    margin-bottom: 1rem;
+}
+
+.mb-5 {
+    margin-bottom: 1.25rem;
+}
+
+.mb-6 {
+    margin-bottom: 1.5rem;
+}
+
+.ml-1 {
+    margin-left: 0.25rem;
+}
+
+.mr-1 {
+    margin-right: 0.25rem;
+}
+
+.mx-1 {
+    margin-left: 0.25rem;
+    margin-right: 0.25rem;
+}
+
+.ml-auto {
+    margin-left: auto;
+}
+
+.text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+.text-base {
+    font-size: 1rem;
+    line-height: 1.5rem;
+}
+
+.text-lg {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+}
+
+.text-xl {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+}
+
+.text-2xl {
+    font-size: 1.5rem;
+    line-height: 2rem;
+}
+
+.text-7xl {
+    font-size: 4.5rem;
+    line-height: 1;
+}
+
+.text-\[10px\] {
+    font-size: 10px;
+}
+
+.text-\[11px\] {
+    font-size: 11px;
+}
+
+.font-medium {
+    font-weight: 500;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.font-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.tracking-tight {
+    letter-spacing: -0.025em;
+}
+
+.tracking-wide {
+    letter-spacing: 0.025em;
+}
+
+.tracking-wider {
+    letter-spacing: 0.05em;
+}
+
+.leading-tight {
+    line-height: 1.25;
+}
+
+.uppercase {
+    text-transform: uppercase;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-foreground {
+    color: var(--foreground);
+}
+
+.text-muted-foreground {
+    color: var(--muted-foreground);
+}
+
+.text-primary {
+    color: var(--primary);
+}
+
+.text-primary-foreground {
+    color: var(--primary-foreground);
+}
+
+/* Custom colors from original */
+.text-white {
+    color: #fff;
+}
+
+.text-indigo-100 {
+    color: oklch(0.9 0.05 280);
+}
+
+.text-indigo-300 {
+    color: oklch(0.75 0.15 280);
+}
+
+.text-indigo-400 {
+    color: oklch(0.65 0.2 280);
+}
+
+.text-emerald-300 {
+    color: oklch(0.8 0.15 162);
+}
+
+.text-amber-300 {
+    color: oklch(0.85 0.15 75);
+}
+
+.text-rose-200 {
+    color: oklch(0.9 0.05 27);
+}
+
+.text-rose-300 {
+    color: oklch(0.8 0.15 27);
+}
+
+.bg-background {
+    background-color: var(--background);
+}
+
+.bg-card {
+    background-color: var(--card);
+}
+
+.bg-muted {
+    background-color: var(--muted);
+}
+
+.bg-accent {
+    background-color: var(--accent);
+}
+
+.bg-primary {
+    background-color: var(--primary);
+}
+
+.bg-sidebar {
+    background-color: var(--sidebar);
+}
+
+.bg-indigo-600 {
+    background-color: oklch(0.55 0.22 280);
+}
+
+.bg-indigo-500 {
+    background-color: oklch(0.62 0.21 280);
+}
+
+.bg-emerald-500 {
+    background-color: oklch(0.72 0.16 162);
+}
+
+.bg-amber-500 {
+    background-color: oklch(0.78 0.17 75);
+}
+
+.bg-rose-500 {
+    background-color: oklch(0.65 0.22 27);
+}
+
+.hover\:bg-accent:hover {
+    background-color: var(--accent);
+}
+
+.hover\:text-foreground:hover {
+    color: var(--foreground);
+}
+
+.hover\:bg-indigo-500:hover {
+    background-color: oklch(0.62 0.21 280);
+}
+
+.hover\:text-indigo-300:hover {
+    color: oklch(0.75 0.15 280);
+}
+
+.bg-gradient-to-br {
+    background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+}
+
+.from-indigo-500 {
+    --tw-gradient-from: oklch(0.62 0.21 280);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(99, 102, 241, 0));
+}
+
+.to-indigo-700 {
+    --tw-gradient-to: oklch(0.4 0.15 280);
+}
+
+.rounded {
+    border-radius: 0.25rem;
+}
+
+.rounded-md {
+    border-radius: calc(var(--radius) - 2px);
+}
+
+.rounded-lg {
+    border-radius: var(--radius);
+}
+
+.rounded-xl {
+    border-radius: calc(var(--radius) + 4px);
+}
+
+.rounded-full {
+    border-radius: 9999px;
+}
+
+.border {
+    border-width: 1px;
+}
+
+.border-b {
+    border-bottom-width: 1px;
+}
+
+.border-t {
+    border-top-width: 1px;
+}
+
+.border-l-2 {
+    border-left-width: 2px;
+}
+
+.border-r {
+    border-right-width: 1px;
+}
+
+.border-border {
+    border-color: var(--border);
+}
+
+.border-transparent {
+    border-color: transparent;
+}
+
+.border-rose-500\/30 {
+    border-color: color-mix(in srgb, oklch(0.65 0.22 27) 30%, transparent);
+}
+
+.bg-rose-500\/10 {
+    background-color: color-mix(in srgb, oklch(0.65 0.22 27) 10%, transparent);
+}
+
+.border-amber-500\/30 {
+    border-color: color-mix(in srgb, oklch(0.78 0.17 75) 30%, transparent);
+}
+
+.bg-amber-500\/10 {
+    background-color: color-mix(in srgb, oklch(0.78 0.17 75) 10%, transparent);
+}
+
+.ring-1 {
+    box-shadow: inset 0 0 0 1px var(--tw-ring-color);
+}
+
+.ring-indigo-400\/30 {
+    --tw-ring-color: color-mix(in srgb, oklch(0.65 0.2 280) 30%, transparent);
+}
+
+.ring-indigo-500\/30 {
+    --tw-ring-color: color-mix(in srgb, oklch(0.62 0.21 280) 30%, transparent);
+}
+
+.ring-emerald-500\/30 {
+    --tw-ring-color: color-mix(in srgb, oklch(0.72 0.16 162) 30%, transparent);
+}
+
+.ring-amber-500\/30 {
+    --tw-ring-color: color-mix(in srgb, oklch(0.78 0.17 75) 30%, transparent);
+}
+
+.ring-rose-500\/30 {
+    --tw-ring-color: color-mix(in srgb, oklch(0.65 0.22 27) 30%, transparent);
+}
+
+.shadow-lg {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.shadow-2xl {
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+.relative {
+    position: relative;
+}
+
+.absolute {
+    position: absolute;
+}
+
+.sticky {
+    position: sticky;
+}
+
+.top-0 {
+    top: 0;
+}
+
+.top-1\/2 {
+    top: 50%;
+}
+
+.right-2 {
+    right: 0.5rem;
+}
+
+.-translate-y-1\/2 {
+    transform: translateY(-50%);
+}
+
+.overflow-hidden {
+    overflow: hidden;
+}
+
+.overflow-y-auto {
+    overflow-y: auto;
+}
+
+.z-20 {
+    z-index: 20;
+}
+
+.backdrop-blur {
+    backdrop-filter: blur(8px);
+}
+
+.transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+.transition-colors {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+.group:hover .group-hover\:text-foreground {
+    color: var(--foreground);
+}
+
+.truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.outline-none {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+}
+
+/* Status Badge mapping */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    border-width: 1px;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    padding-top: 0.125rem;
+    padding-bottom: 0.125rem;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.025em;
+}
+
+.status-badge.muted {
+    background-color: var(--muted);
+    color: var(--muted-foreground);
+    border-color: var(--border);
+}
+
+.status-badge.indigo {
+    background-color: color-mix(in srgb, oklch(0.62 0.21 280) 15%, transparent);
+    color: oklch(0.75 0.15 280);
+    border-color: color-mix(in srgb, oklch(0.62 0.21 280) 30%, transparent);
+}
+
+.status-badge.emerald {
+    background-color: color-mix(in srgb, oklch(0.72 0.16 162) 15%, transparent);
+    color: oklch(0.8 0.15 162);
+    border-color: color-mix(in srgb, oklch(0.72 0.16 162) 30%, transparent);
+}
+
+.status-badge.amber {
+    background-color: color-mix(in srgb, oklch(0.78 0.17 75) 15%, transparent);
+    color: oklch(0.85 0.15 75);
+    border-color: color-mix(in srgb, oklch(0.78 0.17 75) 30%, transparent);
+}
+
+.status-badge.slate {
+    background-color: color-mix(in srgb, #64748b 15%, transparent);
+    color: #94a3b8;
+    border-color: color-mix(in srgb, #64748b 30%, transparent);
+}
+
+.status-badge.sky {
+    background-color: color-mix(in srgb, #0ea5e9 15%, transparent);
+    color: #7dd3fc;
+    border-color: color-mix(in srgb, #0ea5e9 30%, transparent);
+}
+
+.status-badge.rose {
+    background-color: color-mix(in srgb, oklch(0.65 0.22 27) 15%, transparent);
+    color: oklch(0.8 0.15 27);
+    border-color: color-mix(in srgb, oklch(0.65 0.22 27) 30%, transparent);
+}
+
+@media (min-width: 640px) {
+    .sm\:inline {
+        display: inline;
+    }
+}
+
+@media (min-width: 768px) {
+    .md\:flex {
+        display: flex;
+    }
+
+    .md\:px-6 {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+
+    .md\:p-6 {
+        padding: 1.5rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .lg\:grid-cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .lg\:col-span-2 {
+        grid-column: span 2 / span 2;
+    }
+
+    .lg\:p-8 {
+        padding: 2rem;
+    }
+}

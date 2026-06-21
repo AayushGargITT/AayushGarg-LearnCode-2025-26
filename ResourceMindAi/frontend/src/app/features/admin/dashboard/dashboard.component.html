@@ -1,0 +1,43 @@
+<app-layout role="admin" title="Dashboard">
+  <app-page-header title="System Overview" subtitle="Snapshot of users, employees and project health"></app-page-header>
+
+  <app-page-feedback type="error" [message]="pageState.errorMessage()"></app-page-feedback>
+
+  <div *ngIf="pageState.isLoading()" class="hint-panel">Loading dashboard...</div>
+
+  <ng-container *ngIf="!pageState.isLoading() && dashboard() as data">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <app-stat-card label="Total Users" [value]="data.totalUsers" accent="indigo"></app-stat-card>
+      <app-stat-card label="Active Projects" [value]="data.activeProjects" accent="emerald"></app-stat-card>
+      <app-stat-card label="Resources on Bench" [value]="data.employeesOnBench" accent="amber"></app-stat-card>
+      <app-stat-card label="At-Risk Projects" [value]="data.atRiskProjects" accent="rose"></app-stat-card>
+    </div>
+
+    <div class="surface kendo-grid-shell">
+      <div class="px-4 py-3 border-b border-border text-sm font-medium">Recent Projects</div>
+
+      <div *ngIf="data.recentProjects.length === 0" class="hint-panel">
+        No projects found.
+      </div>
+
+      <kendo-grid
+        *ngIf="data.recentProjects.length > 0"
+        [data]="data.recentProjects"
+        [height]="320"
+        [resizable]="true">
+        <kendo-grid-column field="name" title="Name" class="font-medium"></kendo-grid-column>
+        <kendo-grid-column field="managerName" title="Manager" class="text-muted-foreground"></kendo-grid-column>
+        <kendo-grid-column field="status" title="Status" [width]="130">
+          <ng-template kendoGridCellTemplate let-dataItem>
+            <app-status-badge [status]="dataItem.status"></app-status-badge>
+          </ng-template>
+        </kendo-grid-column>
+        <kendo-grid-column field="healthStatus" title="Health" [width]="170">
+          <ng-template kendoGridCellTemplate let-dataItem>
+            <app-health-dot [health]="dataItem.healthStatus"></app-health-dot>
+          </ng-template>
+        </kendo-grid-column>
+      </kendo-grid>
+    </div>
+  </ng-container>
+</app-layout>
