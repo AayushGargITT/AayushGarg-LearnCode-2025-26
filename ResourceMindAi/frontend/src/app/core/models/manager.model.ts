@@ -3,8 +3,8 @@ import { TimesheetStatus } from './timesheet.model';
 
 export interface ManagerAllocation {
   id: string;
-  employeeId: string;
-  employeeName: string;
+  resourceId: string;
+  resourceName: string;
   projectId: string;
   projectName: string;
   utilisationPercent: number;
@@ -28,7 +28,7 @@ export interface ManagerResource {
 
 export interface ManagerResourceDashboard {
   onBench: ManagerResource[];
-  activeEmployees: ManagerResource[];
+  activeResources: ManagerResource[];
 }
 
 export interface ManagerProject {
@@ -73,8 +73,8 @@ export interface ProjectRiskPoint {
 
 export interface ManagerTimesheet {
   id: string;
-  employeeId: string;
-  employeeName: string;
+  resourceId: string;
+  resourceName: string;
   projectName: string;
   weekStartDate: Date | string;
   hoursLogged: number;
@@ -83,15 +83,15 @@ export interface ManagerTimesheet {
 }
 
 export interface FrozenTimesheetSubmission {
-  employeeUserId: string;
-  employeeName: string;
+  resourceUserId: string;
+  resourceName: string;
   weekStartDate: Date | string;
   frozenAtUtc: Date | string;
 }
 
 export interface CreateManagerAllocationRequest {
   projectId: string;
-  employeeId: string;
+  resourceId: string;
   utilisationPercent: number;
   fromDate: Date | string;
   toDate: Date | string | null;
@@ -114,7 +114,7 @@ export interface ResourceIntent {
 }
 
 export interface ResourceMatch {
-  employee: ManagerResource;
+  resource: ManagerResource;
   score: number;
   availablePercent: number;
   isUnderCurrentManager: boolean;
@@ -136,14 +136,14 @@ export interface BuildTeamRequest {
 }
 
 export interface TeamBuilderMember {
-  employee: ManagerResource;
+  resource: ManagerResource;
   suggestedRole: string;
   reason: string;
   matchedSkills: string[];
 }
 
 export interface TeamBuilderUnavailableMember {
-  employee: ManagerResource;
+  resource: ManagerResource;
   matchedRole: string;
   reason: string;
   matchedSkills: string[];

@@ -8,7 +8,7 @@ public class CreateManagerAllocationDto
     public Guid? ProjectId { get; set; }
 
     [Required]
-    public Guid? EmployeeId { get; set; }
+    public Guid? ResourceId { get; set; }
 
     [Required]
     [Range(1, 100)]

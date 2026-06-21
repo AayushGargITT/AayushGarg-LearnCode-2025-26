@@ -19,9 +19,9 @@ public class TimesheetSubmissionEscalationServiceTests
     [Fact]
     public async Task ProcessAsync_OnMonday_ShouldCreateIssueAndSendFirstReminderOnce()
     {
-        var employee = EmployeeWithManager();
+        var Resource = ResourceWithManager();
         var monday = new DateTime(2026, 6, 15, 9, 0, 0, DateTimeKind.Utc);
-        SetupEmployees(employee);
+        SetupResources(Resource);
         var sut = CreateService();
 
         await sut.ProcessAsync(monday, CancellationToken.None);
@@ -31,7 +31,7 @@ public class TimesheetSubmissionEscalationServiceTests
         createdIssue.Status.Should().Be(TimesheetSubmissionIssueStatus.FirstReminderSent);
         createdIssue.WeekStartDate.Should().Be(new DateTime(2026, 6, 8));
         _notifications.Verify(x => x.SendFirstReminderAsync(
-            employee,
+            Resource,
             createdIssue.WeekStartDate,
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -39,10 +39,10 @@ public class TimesheetSubmissionEscalationServiceTests
     [Fact]
     public async Task ProcessAsync_OnTuesday_ShouldSendSecondReminderOnlyOnce()
     {
-        var employee = EmployeeWithManager();
-        var issue = Issue(employee, TimesheetSubmissionIssueStatus.FirstReminderSent);
+        var Resource = ResourceWithManager();
+        var issue = Issue(Resource, TimesheetSubmissionIssueStatus.FirstReminderSent);
         var tuesday = new DateTime(2026, 6, 16, 9, 0, 0, DateTimeKind.Utc);
-        SetupEmployees(employee);
+        SetupResources(Resource);
         SetupIssue(issue);
         var sut = CreateService();
 
@@ -51,7 +51,7 @@ public class TimesheetSubmissionEscalationServiceTests
 
         issue.Status.Should().Be(TimesheetSubmissionIssueStatus.SecondReminderSent);
         _notifications.Verify(x => x.SendSecondReminderAsync(
-            employee,
+            Resource,
             issue.WeekStartDate,
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -59,10 +59,10 @@ public class TimesheetSubmissionEscalationServiceTests
     [Fact]
     public async Task ProcessAsync_OnWednesday_ShouldFreezeAndEscalate()
     {
-        var employee = EmployeeWithManager();
-        var issue = Issue(employee, TimesheetSubmissionIssueStatus.SecondReminderSent);
+        var Resource = ResourceWithManager();
+        var issue = Issue(Resource, TimesheetSubmissionIssueStatus.SecondReminderSent);
         var wednesday = new DateTime(2026, 6, 17, 9, 0, 0, DateTimeKind.Utc);
-        SetupEmployees(employee);
+        SetupResources(Resource);
         SetupIssue(issue);
         var sut = CreateService();
 
@@ -71,14 +71,14 @@ public class TimesheetSubmissionEscalationServiceTests
         issue.Status.Should().Be(TimesheetSubmissionIssueStatus.Frozen);
         issue.FrozenAtUtc.Should().Be(wednesday);
         _notifications.Verify(x => x.SendFrozenEscalationAsync(
-            employee,
-            employee.ResourceProfile!.Manager,
+            Resource,
+            Resource.ResourceProfile!.Manager,
             issue.WeekStartDate,
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task ProcessAsync_OnThursday_ShouldNotLoadEmployees()
+    public async Task ProcessAsync_OnThursday_ShouldNotLoadresources()
     {
         var sut = CreateService();
 
@@ -86,26 +86,26 @@ public class TimesheetSubmissionEscalationServiceTests
             new DateTime(2026, 6, 18, 9, 0, 0, DateTimeKind.Utc),
             CancellationToken.None);
 
-        _repository.Verify(x => x.GetActiveEmployeesWithManagersAsync(
+        _repository.Verify(x => x.GetActiveResourcesWithManagersAsync(
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task RestoreAccessAsync_WhenManagerOwnsEmployee_ShouldRestoreFrozenIssue()
     {
-        var employee = EmployeeWithManager();
-        var manager = employee.ResourceProfile!.Manager!;
-        var issue = Issue(employee, TimesheetSubmissionIssueStatus.Frozen);
-        _repository.Setup(x => x.GetEmployeeWithManagerAsync(
-                employee.Id,
+        var Resource = ResourceWithManager();
+        var manager = Resource.ResourceProfile!.Manager!;
+        var issue = Issue(Resource, TimesheetSubmissionIssueStatus.Frozen);
+        _repository.Setup(x => x.GetResourceWithManagerAsync(
+                Resource.Id,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(employee);
+            .ReturnsAsync(Resource);
         SetupIssue(issue);
         var sut = CreateService();
 
         await sut.RestoreAccessAsync(
             manager.Id,
-            employee.Id,
+            Resource.Id,
             issue.WeekStartDate,
             CancellationToken.None);
 
@@ -117,16 +117,16 @@ public class TimesheetSubmissionEscalationServiceTests
     [Fact]
     public async Task RestoreAccessAsync_WhenEmployeeBelongsToAnotherManager_ShouldReject()
     {
-        var employee = EmployeeWithManager();
-        _repository.Setup(x => x.GetEmployeeWithManagerAsync(
-                employee.Id,
+        var Resource = ResourceWithManager();
+        _repository.Setup(x => x.GetResourceWithManagerAsync(
+                Resource.Id,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(employee);
+            .ReturnsAsync(Resource);
         var sut = CreateService();
 
         var act = () => sut.RestoreAccessAsync(
             Guid.NewGuid(),
-            employee.Id,
+            Resource.Id,
             PreviousMonday(),
             CancellationToken.None);
 
@@ -142,13 +142,13 @@ public class TimesheetSubmissionEscalationServiceTests
             Mock.Of<ILogger<TimesheetSubmissionEscalationService>>());
     }
 
-    private void SetupEmployees(User employee)
+    private void SetupResources(User Resource)
     {
-        _repository.Setup(x => x.GetActiveEmployeesWithManagersAsync(
+        _repository.Setup(x => x.GetActiveResourcesWithManagersAsync(
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync([employee]);
+            .ReturnsAsync([Resource]);
         _repository.Setup(x => x.HasSubmittedTimesheetAsync(
-                employee.Id,
+                Resource.Id,
                 It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
@@ -157,7 +157,7 @@ public class TimesheetSubmissionEscalationServiceTests
     private void SetupIssue(TimesheetSubmissionIssue issue)
     {
         _repository.Setup(x => x.GetAsync(
-                issue.EmployeeUserId,
+                issue.ResourceUserId,
                 issue.WeekStartDate,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(issue);
@@ -172,23 +172,23 @@ public class TimesheetSubmissionEscalationServiceTests
         return issue;
     }
 
-    private static User EmployeeWithManager()
+    private static User ResourceWithManager()
     {
-        var employee = TestDataBuilder.User();
+        var Resource = TestDataBuilder.User();
         var manager = TestDataBuilder.User(Role.Manager);
-        TestDataBuilder.Profile(employee, manager);
-        return employee;
+        TestDataBuilder.Profile(Resource, manager);
+        return Resource;
     }
 
     private static TimesheetSubmissionIssue Issue(
-        User employee,
+        User Resource,
         TimesheetSubmissionIssueStatus status)
     {
         return new TimesheetSubmissionIssue
         {
             Id = Guid.NewGuid(),
-            EmployeeUserId = employee.Id,
-            ManagerUserId = employee.ResourceProfile?.ManagerId,
+            ResourceUserId = Resource.Id,
+            ManagerUserId = Resource.ResourceProfile?.ManagerId,
             WeekStartDate = PreviousMonday(),
             Status = status,
             CreatedAtUtc = DateTime.UtcNow.AddDays(-2)

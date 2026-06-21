@@ -72,7 +72,7 @@ export interface UpdateProjectManagerRequest {
 }
 
 export interface ProjectManagerConflict {
-  employeeName: string;
+  resourceName: string;
   projectNames: string[];
 }
 
@@ -82,6 +82,6 @@ export interface ProjectManagerUpdateValidation {
 
 export interface ProjectManagerUpdateResult {
   project: Project;
-  updatedEmployees: string[];
+  updatedResources: string[];
   message: string;
 }

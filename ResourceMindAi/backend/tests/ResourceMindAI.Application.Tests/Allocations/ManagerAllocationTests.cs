@@ -33,7 +33,7 @@ public class ManagerAllocationTests
     {
         var context = SetupAllocationContext();
         _repository.Setup(x => x.GetOverlappingAllocationPercentAsync(
-                context.Employee.Id,
+                context.Resource.Id,
                 context.From,
                 context.To,
                 null))
@@ -48,7 +48,7 @@ public class ManagerAllocationTests
         result.UtilisationPercent.Should().Be(60);
         _repository.Verify(x => x.AddAllocationAsync(
             It.Is<Allocation>(allocation =>
-                allocation.UserId == context.Employee.Id
+                allocation.UserId == context.Resource.Id
                 && allocation.ProjectId == context.Project.Id)), Times.Once);
     }
 
@@ -99,7 +99,7 @@ public class ManagerAllocationTests
     {
         var context = SetupAllocationContext();
         _repository.Setup(x => x.GetOverlappingAllocationPercentAsync(
-                context.Employee.Id,
+                context.Resource.Id,
                 context.From,
                 context.To,
                 null))
@@ -118,7 +118,7 @@ public class ManagerAllocationTests
     {
         var context = SetupAllocationContext();
         _repository.Setup(x => x.GetOverlappingAllocationPercentAsync(
-                context.Employee.Id,
+                context.Resource.Id,
                 context.From,
                 context.To,
                 null))
@@ -137,7 +137,7 @@ public class ManagerAllocationTests
     public async Task EndAllocationAsync_WhenAllocationExists_ShouldEndItToday()
     {
         var context = SetupAllocationContext();
-        var allocation = TestDataBuilder.Allocation(context.Employee, context.Project);
+        var allocation = TestDataBuilder.Allocation(context.Resource, context.Project);
         _repository.Setup(x => x.GetAllocationAsync(context.Manager.Id, allocation.Id))
             .ReturnsAsync(allocation);
 
@@ -152,15 +152,15 @@ public class ManagerAllocationTests
         ProjectStatus status = ProjectStatus.Active)
     {
         var manager = TestDataBuilder.User(Role.Manager);
-        var employee = TestDataBuilder.User();
-        var profile = TestDataBuilder.Profile(employee, manager);
+        var resource = TestDataBuilder.User();
+        var profile = TestDataBuilder.Profile(resource, manager);
         var project = TestDataBuilder.Project(manager, status);
         var from = DateTime.UtcNow.Date.AddDays(1);
         var to = from.AddDays(10);
         _repository.Setup(x => x.GetProjectAsync(manager.Id, project.Id)).ReturnsAsync(project);
-        _repository.Setup(x => x.GetTeamEmployeeAsync(manager.Id, employee.Id))
+        _repository.Setup(x => x.GetTeamResourceAsync(manager.Id, resource.Id))
             .ReturnsAsync(profile);
-        return new AllocationContext(manager, employee, project, from, to);
+        return new AllocationContext(manager, resource, project, from, to);
     }
 
     private static CreateManagerAllocationDto Request(
@@ -170,7 +170,7 @@ public class ManagerAllocationTests
         return new CreateManagerAllocationDto
         {
             ProjectId = context.Project.Id,
-            EmployeeId = context.Employee.Id,
+            ResourceId = context.Resource.Id,
             UtilisationPercent = utilisation,
             FromDate = context.From,
             ToDate = context.To
@@ -179,7 +179,7 @@ public class ManagerAllocationTests
 
     private sealed record AllocationContext(
         User Manager,
-        User Employee,
+        User Resource,
         Project Project,
         DateTime From,
         DateTime To);

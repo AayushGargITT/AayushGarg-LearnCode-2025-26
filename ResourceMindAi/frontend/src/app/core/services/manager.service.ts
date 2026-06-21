@@ -27,8 +27,8 @@ export class ManagerService {
     return this.http.get<ManagerResourceDashboard>(`${this.apiUrl}/resources`);
   }
 
-  getResourceDetail(employeeId: string): Observable<ManagerResource> {
-    return this.http.get<ManagerResource>(`${this.apiUrl}/resources/${employeeId}`);
+  getResourceDetail(resourceId: string): Observable<ManagerResource> {
+    return this.http.get<ManagerResource>(`${this.apiUrl}/resources/${resourceId}`);
   }
 
   getProjects(): Observable<ManagerProject[]> {
@@ -55,12 +55,12 @@ export class ManagerService {
   }
 
   restoreTimesheetSubmissionAccess(
-    employeeUserId: string,
+    resourceUserId: string,
     weekStartDate: Date | string
   ): Observable<void> {
     const week = toDateOnlyString(weekStartDate);
     return this.http.patch<void>(
-      `${this.apiUrl}/timesheets/${employeeUserId}/weeks/${week}/restore`,
+      `${this.apiUrl}/timesheets/${resourceUserId}/weeks/${week}/restore`,
       {}
     );
   }

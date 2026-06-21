@@ -47,12 +47,12 @@
 
         <article *ngFor="let match of matches()!.matches" class="match-card">
           <div class="match-card__main">
-            <app-avatar [name]="match.employee.fullName"></app-avatar>
+            <app-avatar [name]="match.resource.fullName"></app-avatar>
             <div class="match-card__content">
               <div class="match-card__top">
                 <div>
-                  <h4>{{ match.employee.fullName }}</h4>
-                  <p>{{ match.employee.designation || 'No designation' }} - {{ match.availablePercent }}% available</p>
+                  <h4>{{ match.resource.fullName }}</h4>
+                  <p>{{ match.resource.designation || 'No designation' }} - {{ match.availablePercent }}% available</p>
                 </div>
                 <span class="match-score">{{ match.score }}% Match</span>
               </div>
@@ -106,7 +106,7 @@
           </div>
           <div class="field-stack">
             <label>Resource</label>
-            <kendo-dropdownlist [data]="employees()" textField="fullName" valueField="id" [valuePrimitive]="true" formControlName="employeeId"></kendo-dropdownlist>
+            <kendo-dropdownlist [data]="resources()" textField="fullName" valueField="id" [valuePrimitive]="true" formControlName="resourceId"></kendo-dropdownlist>
           </div>
           <div class="allocation-grid">
             <div class="field-stack">
@@ -148,7 +148,7 @@
         <div *ngIf="activeAllocations().length === 0" class="hint-panel">No active allocations.</div>
         <div *ngFor="let allocation of activeAllocations()" class="allocation-row">
           <div>
-            <strong>{{ allocation.employeeName }}</strong>
+            <strong>{{ allocation.resourceName }}</strong>
             <span>{{ allocation.projectName }} - {{ allocation.utilisationPercent }}%</span>
           </div>
           <button kendoButton size="small" [disabled]="isSubmitting()" (click)="endAllocation(allocation)">End</button>
@@ -159,7 +159,7 @@
 
   <kendo-dialog
     *ngIf="selectedMatch()"
-    [title]="selectedMatch()!.employee.fullName"
+    [title]="selectedMatch()!.resource.fullName"
     [width]="620"
     [minWidth]="320"
     (close)="closeMatchDetails()">
@@ -167,11 +167,11 @@
       <div class="detail-grid">
         <div>
           <span>Department</span>
-          <strong>{{ selectedMatch()!.employee.department || '-' }}</strong>
+          <strong>{{ selectedMatch()!.resource.department || '-' }}</strong>
         </div>
         <div>
           <span>Designation</span>
-          <strong>{{ selectedMatch()!.employee.designation || '-' }}</strong>
+          <strong>{{ selectedMatch()!.resource.designation || '-' }}</strong>
         </div>
         <div>
           <span>Availability</span>
@@ -185,11 +185,11 @@
 
       <section>
         <h3>Skills</h3>
-        <div *ngIf="selectedMatch()!.employee.skills.length === 0" class="hint-panel">
+        <div *ngIf="selectedMatch()!.resource.skills.length === 0" class="hint-panel">
           No profile skills available.
         </div>
         <div class="skill-list">
-          <span *ngFor="let skill of selectedMatch()!.employee.skills">{{ skill }}</span>
+          <span *ngFor="let skill of selectedMatch()!.resource.skills">{{ skill }}</span>
         </div>
       </section>
 

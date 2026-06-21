@@ -35,11 +35,11 @@ public class ManagerController : ControllerBase
         return Ok(dashboard);
     }
 
-    [HttpGet("resources/{employeeId:guid}")]
-    public async Task<ActionResult<ManagerResourceDto>> GetResourceDetail(Guid employeeId)
+    [HttpGet("resources/{resourceId:guid}")]
+    public async Task<ActionResult<ManagerResourceDto>> GetResourceDetail(Guid resourceId)
     {
         var managerId = GetCurrentUserId();
-        var resource = await _managerService.GetResourceDetailAsync(managerId, employeeId);
+        var resource = await _managerService.GetResourceDetailAsync(managerId, resourceId);
         return Ok(resource);
     }
 
@@ -75,15 +75,15 @@ public class ManagerController : ControllerBase
         return Ok(timesheets);
     }
 
-    [HttpPatch("timesheets/{employeeUserId:guid}/weeks/{weekStartDate:datetime}/restore")]
+    [HttpPatch("timesheets/{resourceUserId:guid}/weeks/{weekStartDate:datetime}/restore")]
     public async Task<IActionResult> RestoreTimesheetSubmissionAccess(
-        Guid employeeUserId,
+        Guid resourceUserId,
         DateTime weekStartDate,
         CancellationToken cancellationToken)
     {
         await _timesheetEscalationService.RestoreAccessAsync(
             GetCurrentUserId(),
-            employeeUserId,
+            resourceUserId,
             weekStartDate,
             cancellationToken);
         return NoContent();

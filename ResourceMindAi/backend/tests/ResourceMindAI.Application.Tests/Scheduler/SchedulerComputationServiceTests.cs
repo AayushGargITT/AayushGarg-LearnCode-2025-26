@@ -29,7 +29,7 @@ public class SchedulerComputationServiceTests
         var allocated = TestDataBuilder.User(name: "Allocated Employee");
         var bench = TestDataBuilder.User(name: "Bench Employee");
         TestDataBuilder.Allocation(allocated, TestDataBuilder.Project(manager));
-        _repository.Setup(x => x.GetActiveEmployeesAsync(
+        _repository.Setup(x => x.GetActiveResourcesAsync(
                 It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([allocated, bench]);

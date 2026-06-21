@@ -5,7 +5,7 @@ namespace ResourceMindAI.Application.Abstractions.Services;
 public interface IManagerService
 {
     Task<ManagerResourceDashboardDto> GetResourceDashboardAsync(Guid managerId);
-    Task<ManagerResourceDto> GetResourceDetailAsync(Guid managerId, Guid employeeId);
+    Task<ManagerResourceDto> GetResourceDetailAsync(Guid managerId, Guid resourceId);
     Task<IReadOnlyList<ManagerProjectDto>> GetProjectsAsync(Guid managerId);
     Task<ManagerProjectDetailDto> GetProjectDetailAsync(Guid managerId, Guid projectId);
     Task<ProjectRiskSummaryDto> GenerateProjectRiskSummaryAsync(Guid managerId, Guid projectId);

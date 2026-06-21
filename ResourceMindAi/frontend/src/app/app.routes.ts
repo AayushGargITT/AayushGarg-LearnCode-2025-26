@@ -21,7 +21,7 @@ export const routes: Routes = [
         path: 'resource',
         canActivate: [authGuard],
         data: { roles: ['Resource'] },
-        loadChildren: () => import('./features/employee/employee.routes').then(m => m.resourceRoutes)
+        loadChildren: () => import('./features/resource/resource.routes').then(m => m.resourceRoutes)
     },
     { path: '**', component: NotFoundComponent }
 ];

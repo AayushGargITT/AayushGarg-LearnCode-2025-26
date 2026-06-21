@@ -48,16 +48,16 @@ public class TeamBuilderTests
 
         aiRequest!.Candidates.Should().HaveCount(2);
         aiRequest.Candidates.Should().ContainSingle(candidate =>
-            candidate.EmployeeId == bench.Id
+            candidate.ResourceId == bench.Id
             && candidate.IsEligible
             && candidate.Status == ResourceStatus.Bench);
         aiRequest.Candidates.Should().ContainSingle(candidate =>
-            candidate.EmployeeId == allocated.Id
+            candidate.ResourceId == allocated.Id
             && !candidate.IsEligible
             && candidate.Status == ResourceStatus.Allocated);
-        result.Members.Should().ContainSingle(member => member.Employee.Id == bench.Id);
+        result.Members.Should().ContainSingle(member => member.Resource.Id == bench.Id);
         result.UnavailableMatches.Should().ContainSingle(member =>
-            member.Employee.Id == allocated.Id);
+            member.Resource.Id == allocated.Id);
         _repository.Verify(x => x.GetOrganizationSearchCandidatesAsync(), Times.Once);
     }
 
@@ -114,7 +114,7 @@ public class TeamBuilderTests
                 [
                     new TeamBuilderAiUnavailableMemberDto
                     {
-                        EmployeeId = allocated.Id,
+                        ResourceId = allocated.Id,
                         MatchedRole = "Backend Developer",
                         Reason = "Matches Java requirements but is not on bench.",
                         MatchedSkills = ["Java"]
@@ -127,7 +127,7 @@ public class TeamBuilderTests
 
         result.Members.Should().BeEmpty();
         result.UnavailableMatches.Should().ContainSingle();
-        result.UnavailableMatches[0].Employee.CurrentStatus.Should()
+        result.UnavailableMatches[0].Resource.CurrentStatus.Should()
             .Be(ResourceStatus.Allocated);
     }
 
@@ -176,8 +176,8 @@ public class TeamBuilderTests
     }
 
     private static TeamBuilderAiResponseDto TeamResponse(
-        Guid employeeId,
-        Guid? unavailableEmployeeId = null)
+        Guid ResourceId,
+        Guid? unavailableResourceId = null)
     {
         return new TeamBuilderAiResponseDto
         {
@@ -186,18 +186,18 @@ public class TeamBuilderTests
             [
                 new TeamBuilderAiMemberDto
                 {
-                    EmployeeId = employeeId,
+                    ResourceId = ResourceId,
                     SuggestedRole = "Backend Developer",
                     Reason = "Strong Java skills.",
                     MatchedSkills = ["Java"]
                 }
             ],
-            UnavailableMatches = unavailableEmployeeId.HasValue
+            UnavailableMatches = unavailableResourceId.HasValue
                 ?
                 [
                     new TeamBuilderAiUnavailableMemberDto
                     {
-                        EmployeeId = unavailableEmployeeId.Value,
+                        ResourceId = unavailableResourceId.Value,
                         MatchedRole = "Backend Developer",
                         Reason = "Strong Java match but currently allocated.",
                         MatchedSkills = ["Java"]

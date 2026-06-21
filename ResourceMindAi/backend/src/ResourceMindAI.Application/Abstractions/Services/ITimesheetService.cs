@@ -1,12 +1,12 @@
-using ResourceMindAI.Application.DTOs.Employee;
+using ResourceMindAI.Application.DTOs.Resource;
 
 namespace ResourceMindAI.Application.Abstractions.Services;
 
 public interface ITimesheetService
 {
-    Task<EmployeeAllocationsDto> GetAllocationsAsync(Guid userId);
+    Task<ResourceAllocationsDto> GetAllocationsAsync(Guid userId);
     Task<TimesheetWeekDto> GetWeekAsync(Guid userId, DateTime? weekStartDate);
-    Task SubmitAsync(Guid userId, SubmitEmployeeTimesheetDto request);
-    Task<IReadOnlyList<EmployeeTimesheetSummaryDto>> GetHistoryAsync(Guid userId);
-    Task<EmployeeTimesheetDetailDto> GetWeekDetailAsync(Guid userId, DateTime weekStartDate);
+    Task SubmitAsync(Guid userId, SubmitResourceTimesheetDto request);
+    Task<IReadOnlyList<ResourceTimesheetSummaryDto>> GetHistoryAsync(Guid userId);
+    Task<ResourceTimesheetDetailDto> GetWeekDetailAsync(Guid userId, DateTime weekStartDate);
 }

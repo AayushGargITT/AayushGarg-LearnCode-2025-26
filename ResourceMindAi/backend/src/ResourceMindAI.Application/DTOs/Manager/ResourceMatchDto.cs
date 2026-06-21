@@ -2,7 +2,7 @@ namespace ResourceMindAI.Application.DTOs.Manager;
 
 public class ResourceMatchDto
 {
-    public ManagerResourceDto Employee { get; set; } = null!;
+    public ManagerResourceDto Resource { get; set; } = null!;
     public int Score { get; set; }
     public decimal AvailablePercent { get; set; }
     public bool IsUnderCurrentManager { get; set; }

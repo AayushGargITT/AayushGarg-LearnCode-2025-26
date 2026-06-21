@@ -4,7 +4,7 @@ namespace ResourceMindAI.Application.Abstractions.Repositories;
 
 public interface ISchedulerRepository
 {
-    Task<IReadOnlyList<User>> GetActiveEmployeesAsync(
+    Task<IReadOnlyList<User>> GetActiveResourcesAsync(
         DateTime evaluationDate,
         CancellationToken cancellationToken);
 

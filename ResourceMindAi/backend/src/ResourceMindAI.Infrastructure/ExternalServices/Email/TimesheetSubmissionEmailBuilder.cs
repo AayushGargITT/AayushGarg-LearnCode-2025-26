@@ -7,33 +7,33 @@ namespace ResourceMindAI.Infrastructure.ExternalServices.Email;
 internal static class TimesheetSubmissionEmailBuilder
 {
     internal static EmailMessageDto FirstReminder(
-        User employee,
+        User Resource,
         DateTime weekStartDate)
     {
         return Build(
-            employee,
+            Resource,
             $"Timesheet Reminder - Missing Submission for Week of {weekStartDate:dd-MM-yyyy}",
             "You missed last week's timesheet submission. Please submit it as soon as possible.");
     }
 
     internal static EmailMessageDto SecondReminder(
-        User employee,
+        User Resource,
         DateTime weekStartDate)
     {
         return Build(
-            employee,
+            Resource,
             $"Second Reminder - Missing Timesheet for Week of {weekStartDate:dd-MM-yyyy}",
             "This is the second reminder for your missed timesheet submission.");
     }
 
     internal static EmailMessageDto Frozen(
         User recipient,
-        User employee,
+        User Resource,
         DateTime weekStartDate)
     {
-        var employeeContext = recipient.Id == employee.Id
+        var employeeContext = recipient.Id == Resource.Id
             ? string.Empty
-            : $" for {employee.FullName}";
+            : $" for {Resource.FullName}";
         return Build(
             recipient,
             "Timesheet Frozen - Manager Review Required",

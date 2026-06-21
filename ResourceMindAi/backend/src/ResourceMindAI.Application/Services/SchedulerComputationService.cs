@@ -28,17 +28,17 @@ public class SchedulerComputationService : ISchedulerComputationService
         DateTime evaluationDate,
         CancellationToken cancellationToken)
     {
-        var employees = await _schedulerRepository.GetActiveEmployeesAsync(
+        var resources = await _schedulerRepository.GetActiveResourcesAsync(
             evaluationDate,
             cancellationToken);
         var allocatedCount = 0;
         var benchCount = 0;
 
-        foreach (var employee in employees)
+        foreach (var resource in resources)
         {
             try
             {
-                var status = employee.Allocations.Count > 0
+                var status = resource.Allocations.Count > 0
                     ? ResourceStatus.Allocated
                     : ResourceStatus.Bench;
 
@@ -54,7 +54,7 @@ public class SchedulerComputationService : ISchedulerComputationService
                 _logger.LogDebug(
                     "Computed resource status {ResourceStatus} for user {UserId} on {EvaluationDate}",
                     status,
-                    employee.Id,
+                    resource.Id,
                     evaluationDate);
             }
             catch (Exception exception)
@@ -62,7 +62,7 @@ public class SchedulerComputationService : ISchedulerComputationService
                 _logger.LogError(
                     exception,
                     "Resource status computation failed for user {UserId}",
-                    employee.Id);
+                    resource.Id);
             }
         }
 

@@ -2,20 +2,20 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-  EmployeeAllocations,
-  EmployeeTimesheetDetail,
-  EmployeeTimesheetSummary,
-  SubmitEmployeeTimesheet,
+  ResourceAllocations,
+  ResourceTimesheetDetail,
+  ResourceTimesheetSummary,
+  SubmitResourceTimesheet,
   TimesheetWeek
-} from '../models/employee-self.model';
+} from '../models/resource-self.model';
 
 @Injectable({ providedIn: 'root' })
-export class EmployeeService {
+export class ResourceService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = 'https://localhost:44374/api/v1/resource';
 
-  getAllocations(): Observable<EmployeeAllocations> {
-    return this.http.get<EmployeeAllocations>(`${this.apiUrl}/allocations`);
+  getAllocations(): Observable<ResourceAllocations> {
+    return this.http.get<ResourceAllocations>(`${this.apiUrl}/allocations`);
   }
 
   getTimesheetWeek(weekStartDate?: string): Observable<TimesheetWeek> {
@@ -25,16 +25,16 @@ export class EmployeeService {
     return this.http.get<TimesheetWeek>(`${this.apiUrl}/timesheets/week`, { params });
   }
 
-  submitTimesheet(request: SubmitEmployeeTimesheet): Observable<void> {
+  submitTimesheet(request: SubmitResourceTimesheet): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/timesheets`, request);
   }
 
-  getTimesheetHistory(): Observable<EmployeeTimesheetSummary[]> {
-    return this.http.get<EmployeeTimesheetSummary[]>(`${this.apiUrl}/timesheets`);
+  getTimesheetHistory(): Observable<ResourceTimesheetSummary[]> {
+    return this.http.get<ResourceTimesheetSummary[]>(`${this.apiUrl}/timesheets`);
   }
 
-  getTimesheetDetail(weekStartDate: string): Observable<EmployeeTimesheetDetail> {
-    return this.http.get<EmployeeTimesheetDetail>(
+  getTimesheetDetail(weekStartDate: string): Observable<ResourceTimesheetDetail> {
+    return this.http.get<ResourceTimesheetDetail>(
       `${this.apiUrl}/timesheets/${weekStartDate.slice(0, 10)}`
     );
   }

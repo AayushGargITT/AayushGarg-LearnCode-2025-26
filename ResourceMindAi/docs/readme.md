@@ -5,9 +5,9 @@ each HTTP endpoint, follows the controller into the application service, traces
 every repository call, identifies the EF Core entities and tables involved, and
 ends with the response returned to the Angular frontend.
 
-The purpose is understanding, not redesign. Names such as `EmployeeController`
-and `EmployeeId` are retained where they exist in the current code, even though
-the corresponding application role is now `Resource`.
+The purpose is understanding, not redesign. Admin employee-management names are
+retained where they describe admin user/employee operations; resource-facing
+flows use Resource terminology.
 
 ## How A Request Moves Through The Application
 
@@ -518,7 +518,7 @@ ProjectController.UpdateManager
 └── ProjectService.UpdateManagerAsync
     ├── ProjectRepository.GetForManagerUpdateAsync
     ├── UserRepository.GetByIdAsync
-    ├── ProjectRepository.GetActiveAllocationsForEmployeesUnderManagerAsync
+    ├── ProjectRepository.GetActiveAllocationsForResourcesUnderManagerAsync
     └── ProjectRepository.SaveManagerUpdateAsync
         └── Projects + ResourceProfiles transaction
             └── 200 ProjectManagerUpdateResultDto
@@ -533,7 +533,7 @@ ProjectController.UpdateManager
 5. For those users, the service loads other active allocations on active or
    planned projects under the current manager.
 6. If a user is also allocated to another such project, the update is blocked
-   with employee and conflicting-project details.
+   with resource and conflicting-project details.
 7. Otherwise the project manager changes.
 8. Every currently allocated user's profile is created if necessary and moved
    to the new manager.
@@ -577,7 +577,7 @@ performance concern, but the current behavior is a complete list.
 
 ---
 
-# 6. Resource Self-Service (`EmployeeController`)
+# 6. Resource Self-Service (`ResourceController`)
 
 **Route:** `/api/v1/resource`  
 **Authorization:** Resource role
@@ -587,12 +587,12 @@ The controller always derives the resource user ID from the JWT claim.
 ## GET `/api/v1/resource/allocations`
 
 ```text
-EmployeeController.GetAllocations
+ResourceController.GetAllocations
 └── TimesheetService.GetAllocationsAsync
-    ├── TimesheetRepository.GetEmployeeUserAsync
+    ├── TimesheetRepository.GetResourceUserAsync
     └── TimesheetRepository.GetAllocationsAsync
         └── Users validation + Allocations/Projects read
-            └── 200 EmployeeAllocationsDto
+            └── 200 ResourceAllocationsDto
 ```
 
 The user must be active and have Resource role. Allocations are classified as
@@ -604,9 +604,9 @@ Both repository queries use `AsNoTracking`, appropriate for a read-only screen.
 ## GET `/api/v1/resource/timesheets/week?weekStartDate=...`
 
 ```text
-EmployeeController.GetTimesheetWeek
+ResourceController.GetTimesheetWeek
 └── TimesheetService.GetWeekAsync
-    ├── TimesheetRepository.GetEmployeeUserAsync
+    ├── TimesheetRepository.GetResourceUserAsync
     ├── SystemConfigRepository.GetMaxWeeklyHoursAsync
     └── TimesheetRepository.GetAllocationsForWeekAsync
         └── Users + SystemConfigs + Allocations/Projects read
@@ -626,9 +626,9 @@ The default maximum is 40 when no positive system configuration exists.
 ## POST `/api/v1/resource/timesheets`
 
 ```text
-EmployeeController.SubmitTimesheet
+ResourceController.SubmitTimesheet
 └── TimesheetService.SubmitAsync
-    ├── TimesheetRepository.GetEmployeeUserAsync
+    ├── TimesheetRepository.GetResourceUserAsync
     ├── TimesheetSubmissionIssueRepository.IsFrozenAsync
     ├── TimesheetRepository.HasTimesheetForWeekAsync
     ├── SystemConfigRepository.GetMaxWeeklyHoursAsync
@@ -659,13 +659,13 @@ timesheet/tag-name row.
 ## GET `/api/v1/resource/timesheets`
 
 ```text
-EmployeeController.GetTimesheets
+ResourceController.GetTimesheets
 └── TimesheetService.GetHistoryAsync
-    ├── TimesheetRepository.GetEmployeeUserAsync
+    ├── TimesheetRepository.GetResourceUserAsync
     ├── TimesheetRepository.GetTimesheetsAsync
     └── TimesheetRepository.GetAllocationsAsync
         └── Timesheets + Tags + Projects + Allocations read
-            └── 200 EmployeeTimesheetSummaryDto[]
+            └── 200 ResourceTimesheetSummaryDto[]
 ```
 
 Submitted rows are grouped by week and summed. The service then walks completed
@@ -701,7 +701,7 @@ Every action derives `managerId` from the JWT.
 ```text
 ManagerController.GetResourceDashboard
 └── ManagerService.GetResourceDashboardAsync
-    └── ManagerRepository.GetTeamEmployeesAsync
+    └── ManagerRepository.GetTeamResourcesAsync
         └── ResourceProfiles + Users + Allocations + Projects + Timesheets
             + ActivityTags + Skills
             └── 200 ManagerResourceDashboardDto
@@ -711,9 +711,9 @@ Only profiles with `ManagerId == logged-in manager`, active users, and Resource
 role are loaded. The repository uses split queries to avoid a cartesian
 explosion across several collections. The service dynamically calculates
 allocation percentage and separates resources into `OnBench` and
-`ActiveEmployees`.
+`ActiveResources`.
 
-## GET `/api/v1/manager/resources/{employeeId}`
+## GET `/api/v1/manager/resources/{resourceId}`
 
 Uses the same graph but constrains it by manager and resource ID. A resource
 outside the manager's team appears as not found. The DTO includes department,
@@ -789,15 +789,15 @@ ManagerController.GetFrozenTimesheetSubmissions
 ```
 
 The repository verifies current ownership through
-`EmployeeUser.ResourceProfile.ManagerId`, so stale stored manager IDs on the
+`ResourceUser.ResourceProfile.ManagerId`, so stale stored manager IDs on the
 issue are not the access boundary.
 
-## PATCH `/api/v1/manager/timesheets/{employeeUserId}/weeks/{week}/restore`
+## PATCH `/api/v1/manager/timesheets/{resourceUserId}/weeks/{week}/restore`
 
 ```text
 ManagerController.RestoreTimesheetSubmissionAccess
 └── TimesheetSubmissionEscalationService.RestoreAccessAsync
-    ├── TimesheetSubmissionIssueRepository.GetEmployeeWithManagerAsync
+    ├── TimesheetSubmissionIssueRepository.GetResourceWithManagerAsync
     ├── TimesheetSubmissionIssueRepository.GetAsync
     └── TimesheetSubmissionIssueRepository.SaveChangesAsync
         └── TimesheetSubmissionIssues update
@@ -881,7 +881,7 @@ No allocation is created by this endpoint.
 ManagerController.Allocate
 └── ManagerService.AllocateAsync
     ├── ManagerRepository.GetProjectAsync
-    ├── ManagerRepository.GetTeamEmployeeAsync
+    ├── ManagerRepository.GetTeamResourceAsync
     ├── ManagerRepository.GetOverlappingAllocationPercentAsync
     └── ManagerRepository.AddAllocationAsync
         └── Allocations insert
@@ -955,7 +955,7 @@ and application services are scoped.
 Application starts
 └── ResourceSchedulerService waits 15 seconds
     └── SchedulerComputationService.ExecuteAsync
-        └── SchedulerRepository.GetActiveEmployeesAsync
+        └── SchedulerRepository.GetActiveResourcesAsync
             └── Users + current Allocations read
                 └── Compute Allocated or Bench in memory
 ```
@@ -1007,7 +1007,7 @@ Tables: `Projects`, manager `Users`, and `NotificationLogs`.
 Configured initial delay
 └── Runs only Monday, Tuesday, Wednesday
     └── TimesheetSubmissionEscalationService.ProcessAsync
-        ├── TimesheetSubmissionIssueRepository.GetActiveEmployeesWithManagersAsync
+        ├── TimesheetSubmissionIssueRepository.GetActiveResourcesWithManagersAsync
         ├── HasSubmittedTimesheetAsync
         ├── GetAsync / AddAsync / SaveChangesAsync
         └── TimesheetSubmissionNotificationService
@@ -1017,7 +1017,7 @@ Configured initial delay
 - Monday creates a missing issue if needed and sends the first reminder.
 - Tuesday sends a second reminder only if not already sent.
 - Wednesday marks the issue Frozen, then emails the resource and active manager.
-- A unique index on `(EmployeeUserId, WeekStartDate)` prevents duplicate issue
+- A unique index on `(ResourceUserId, WeekStartDate)` prevents duplicate issue
   rows.
 - Per-resource errors are logged and processing continues.
 
@@ -1143,7 +1143,7 @@ manual and scheduled project-risk generation both use `ManagerService`.
 ## Why repositories are used
 
 Repositories describe persistence operations in business-oriented terms:
-`GetTeamEmployeesAsync`, `GetForManagerUpdateAsync`, or
+`GetTeamResourcesAsync`, `GetForManagerUpdateAsync`, or
 `GetAllocationsForWeekAsync`. Application services do not need EF Core include
 syntax or `DbContext`.
 

@@ -22,9 +22,9 @@ public sealed class TimesheetSubmissionIssueConfiguration
         builder.Property(issue => issue.CreatedAtUtc)
             .IsRequired();
 
-        builder.HasOne(issue => issue.EmployeeUser)
+        builder.HasOne(issue => issue.ResourceUser)
             .WithMany()
-            .HasForeignKey(issue => issue.EmployeeUserId)
+            .HasForeignKey(issue => issue.ResourceUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(issue => issue.ManagerUser)
@@ -39,7 +39,7 @@ public sealed class TimesheetSubmissionIssueConfiguration
 
         builder.HasIndex(issue => new
         {
-            issue.EmployeeUserId,
+            issue.ResourceUserId,
             issue.WeekStartDate
         }).IsUnique();
     }

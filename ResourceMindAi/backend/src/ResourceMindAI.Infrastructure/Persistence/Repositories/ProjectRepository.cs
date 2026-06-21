@@ -46,8 +46,8 @@ public class ProjectRepository : IProjectRepository
             .FirstOrDefaultAsync(project => project.Id == id);
     }
 
-    public async Task<IReadOnlyList<Allocation>> GetActiveAllocationsForEmployeesUnderManagerAsync(
-        IReadOnlyCollection<Guid> employeeIds,
+    public async Task<IReadOnlyList<Allocation>> GetActiveAllocationsForResourcesUnderManagerAsync(
+        IReadOnlyCollection<Guid> resourceIds,
         Guid managerId)
     {
         return await _dbContext.Allocations
@@ -56,7 +56,7 @@ public class ProjectRepository : IProjectRepository
             .Include(allocation => allocation.User)
             .Where(allocation =>
                 allocation.IsActive
-                && employeeIds.Contains(allocation.UserId)
+                && resourceIds.Contains(allocation.UserId)
                 && allocation.Project.ManagerId == managerId
                 && (allocation.Project.Status == ProjectStatus.Active
                     || allocation.Project.Status == ProjectStatus.Planned))

@@ -44,7 +44,7 @@ public class ManagerResourceSearchTests
             context.Request.Requirement,
             It.IsAny<CancellationToken>()), Times.Once);
         _repository.Verify(x => x.GetOrganizationSearchCandidatesAsync(), Times.Once);
-        _repository.Verify(x => x.GetTeamEmployeesAsync(It.IsAny<Guid>()), Times.Never);
+        _repository.Verify(x => x.GetTeamResourcesAsync(It.IsAny<Guid>()), Times.Never);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class ManagerResourceSearchTests
         var result = await _sut.FindResourcesAsync(manager.Id, request);
 
         result.Intent.RequiredSkills.Should().ContainSingle("angular");
-        result.Matches.Should().ContainSingle(match => match.Employee.Id == employee.Id);
+        result.Matches.Should().ContainSingle(match => match.Resource.Id == employee.Id);
     }
 
     [Fact]
@@ -130,7 +130,7 @@ public class ManagerResourceSearchTests
 
         aiRequest.Should().NotBeNull();
         aiRequest!.Candidates.Should().ContainSingle(candidate =>
-            candidate.EmployeeId == matching.Id);
+            candidate.ResourceId == matching.Id);
     }
 
     [Fact]
@@ -223,15 +223,15 @@ public class ManagerResourceSearchTests
         return employee;
     }
 
-    private void SetupSuccessfulExplanation(Guid employeeId)
+    private void SetupSuccessfulExplanation(Guid ResourceId)
     {
         _llm.Setup(x => x.ExplainResourceMatchesAsync(
                 It.IsAny<ResourceCandidateExplanationRequestDto>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Explanation(employeeId));
+            .ReturnsAsync(Explanation(ResourceId));
     }
 
-    private static ResourceCandidateExplanationResponseDto Explanation(Guid employeeId)
+    private static ResourceCandidateExplanationResponseDto Explanation(Guid ResourceId)
     {
         return new ResourceCandidateExplanationResponseDto
         {
@@ -239,7 +239,7 @@ public class ManagerResourceSearchTests
             [
                 new ResourceCandidateExplanationDto
                 {
-                    EmployeeId = employeeId,
+                    ResourceId = ResourceId,
                     AiRank = 1,
                     AiReason = "Strong Java match.",
                     Strengths = ["Java"],

@@ -31,12 +31,12 @@ public class ManagerReadModelTests
         var employee = TestDataBuilder.User();
         var profile = TestDataBuilder.Profile(employee, manager);
         TestDataBuilder.Allocation(employee, TestDataBuilder.Project(manager));
-        _repository.Setup(x => x.GetTeamEmployeesAsync(manager.Id)).ReturnsAsync([profile]);
+        _repository.Setup(x => x.GetTeamResourcesAsync(manager.Id)).ReturnsAsync([profile]);
 
         var result = await _sut.GetResourceDashboardAsync(manager.Id);
 
-        result.ActiveEmployees.Should().ContainSingle();
-        result.ActiveEmployees[0].CurrentStatus.Should().Be(ResourceStatus.Allocated);
+        result.ActiveResources.Should().ContainSingle();
+        result.ActiveResources[0].CurrentStatus.Should().Be(ResourceStatus.Allocated);
         result.OnBench.Should().BeEmpty();
     }
 
@@ -46,13 +46,13 @@ public class ManagerReadModelTests
         var manager = TestDataBuilder.User(Role.Manager);
         var employee = TestDataBuilder.User();
         var profile = TestDataBuilder.Profile(employee, manager);
-        _repository.Setup(x => x.GetTeamEmployeesAsync(manager.Id)).ReturnsAsync([profile]);
+        _repository.Setup(x => x.GetTeamResourcesAsync(manager.Id)).ReturnsAsync([profile]);
 
         var result = await _sut.GetResourceDashboardAsync(manager.Id);
 
         result.OnBench.Should().ContainSingle();
         result.OnBench[0].CurrentStatus.Should().Be(ResourceStatus.Bench);
-        result.ActiveEmployees.Should().BeEmpty();
+        result.ActiveResources.Should().BeEmpty();
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class ManagerReadModelTests
         var result = await _sut.GetSubmittedTimesheetsAsync(manager.Id);
 
         result.Should().ContainSingle();
-        result[0].EmployeeName.Should().Be(employee.FullName);
+        result[0].ResourceName.Should().Be(employee.FullName);
         result[0].ProjectName.Should().Be(project.Name);
         result[0].Tags.Should().ContainSingle("Backend API Development");
     }

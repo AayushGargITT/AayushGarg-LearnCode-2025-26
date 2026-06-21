@@ -22,7 +22,7 @@ public static class PromptBuilder
             $"""
             Analyze the manager's resource requirement and extract only structured intent.
             Today's date is {currentDate:yyyy-MM-dd}. Resolve relative dates using this date.
-            Do not recommend employees and do not add facts that are not present.
+            Do not recommend resources and do not add facts that are not present.
             Always return only the intent JSON matching the supplied schema.
             There is no requiredRole field. Convert role-like phrases into requiredSkills.
             Remove generic job words such as developer, engineer, specialist, resource, and person.
@@ -83,7 +83,7 @@ public static class PromptBuilder
             """
             Rank and explain only the supplied resource candidates for the manager's requirement.
             Candidate eligibility and backend scores are authoritative.
-            Do not add, remove, or invent employees. Return each supplied employeeId at most once.
+            Do not add, remove, or invent resources. Return each supplied ResourceId at most once.
             Use backend facts only. Keep reasons brief, factual, and useful to a manager.
             Return strict JSON matching the supplied schema.
             """;
@@ -104,13 +104,13 @@ public static class PromptBuilder
                             type = "object",
                             properties = new
                             {
-                                employeeId = new { type = "string" },
+                                ResourceId = new { type = "string" },
                                 aiRank = new { type = "integer", minimum = 1 },
                                 aiReason = new { type = "string" },
                                 strengths = StringArray(),
                                 concerns = StringArray()
                             },
-                            required = new[] { "employeeId", "aiRank", "aiReason", "strengths", "concerns" }
+                            required = new[] { "ResourceId", "aiRank", "aiReason", "strengths", "concerns" }
                         }
                     }
                 },
@@ -124,20 +124,20 @@ public static class PromptBuilder
             """
             Analyze all supplied active resources for the requested project team.
             Use the manager requirement, extracted intent, and candidate facts.
-            Do not invent employees and do not return an employeeId outside the supplied list.
-            Return each employeeId at most once.
+            Do not invent resources and do not return an ResourceId outside the supplied list.
+            Return each ResourceId at most once.
             Recommend members only when isEligible is true and status is Bench.
-            Never recommend an Allocated employee as a team member.
+            Never recommend an Allocated Resource as a team member.
             If an allocated resource matches a requested role or skill, return that resource in
             unavailableMatches and clearly explain that the match exists but is not eligible
-            because Team Builder allows only bench employees.
+            because Team Builder allows only bench resources.
             Do not place the same resource in members and unavailableMatches.
             Select only useful bench members; do not force a candidate for every requirement.
             Clearly report uncovered capabilities in missingSkills.
-            If matching employees exist but all are allocated, return an empty members array,
+            If matching resources exist but all are allocated, return an empty members array,
             include those matches in unavailableMatches, and explain this in teamSummary.
             If no resource matches, return empty members and unavailableMatches arrays and
-            explain that no matching employees were found.
+            explain that no matching resources were found.
             Keep suggested roles and reasons concise and factual.
             Return strict JSON matching the supplied schema.
             """;
@@ -159,14 +159,14 @@ public static class PromptBuilder
                             type = "object",
                             properties = new
                             {
-                                employeeId = new { type = "string" },
+                                ResourceId = new { type = "string" },
                                 suggestedRole = new { type = "string" },
                                 reason = new { type = "string" },
                                 matchedSkills = StringArray()
                             },
                             required = new[]
                             {
-                                "employeeId",
+                                "ResourceId",
                                 "suggestedRole",
                                 "reason",
                                 "matchedSkills"
@@ -181,14 +181,14 @@ public static class PromptBuilder
                             type = "object",
                             properties = new
                             {
-                                employeeId = new { type = "string" },
+                                ResourceId = new { type = "string" },
                                 matchedRole = new { type = "string" },
                                 reason = new { type = "string" },
                                 matchedSkills = StringArray()
                             },
                             required = new[]
                             {
-                                "employeeId",
+                                "ResourceId",
                                 "matchedRole",
                                 "reason",
                                 "matchedSkills"
@@ -212,7 +212,7 @@ public static class PromptBuilder
         const string instruction =
             """
             Generate a factual project risk summary from only the supplied project facts.
-            Do not invent blockers, dates, employees, milestones, or delivery claims.
+            Do not invent blockers, dates, resources, milestones, or delivery claims.
             overallHealth must be ON_TRACK, ATTENTION, or AT_RISK.
             Risk severity must be LOW, MEDIUM, or HIGH.
             Keep the summary concise and recommended actions practical.

@@ -39,17 +39,17 @@ public sealed class TimesheetSubmissionEscalationService
         }
 
         var targetWeek = StartOfWeek(today).AddDays(-7);
-        var employees = await _issueRepository.GetActiveEmployeesWithManagersAsync(
+        var resources = await _issueRepository.GetActiveResourcesWithManagersAsync(
             cancellationToken);
 
-        foreach (var employee in employees)
+        foreach (var Resource in resources)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             try
             {
-                await ProcessEmployeeAsync(
-                    employee,
+                await ProcessResourceAsync(
+                    Resource,
                     targetWeek,
                     utcNow,
                     cancellationToken);
@@ -62,8 +62,8 @@ public sealed class TimesheetSubmissionEscalationService
             {
                 _logger.LogError(
                     exception,
-                    "Timesheet submission escalation failed for employee {EmployeeUserId} and week {WeekStartDate}",
-                    employee.Id,
+                    "Timesheet submission escalation failed for Resource {ResourceUserId} and week {WeekStartDate}",
+                    Resource.Id,
                     targetWeek);
             }
         }
@@ -71,24 +71,24 @@ public sealed class TimesheetSubmissionEscalationService
 
     public async Task RestoreAccessAsync(
         Guid managerUserId,
-        Guid employeeUserId,
+        Guid ResourceUserId,
         DateTime weekStartDate,
         CancellationToken cancellationToken = default)
     {
         var normalizedWeek = StartOfWeek(weekStartDate);
-        var employee = await _issueRepository.GetEmployeeWithManagerAsync(
-            employeeUserId,
+        var Resource = await _issueRepository.GetResourceWithManagerAsync(
+            ResourceUserId,
             cancellationToken)
-            ?? throw new EntityNotFoundException("Active employee", employeeUserId);
+            ?? throw new EntityNotFoundException("Active Resource", ResourceUserId);
 
-        if (employee.ResourceProfile?.ManagerId != managerUserId)
+        if (Resource.ResourceProfile?.ManagerId != managerUserId)
         {
             throw new ForbiddenException(
-                "Only the employee's current manager can restore timesheet submission access.");
+                "Only the Resource's current manager can restore timesheet submission access.");
         }
 
         var issue = await _issueRepository.GetAsync(
-            employeeUserId,
+            ResourceUserId,
             normalizedWeek,
             cancellationToken)
             ?? throw new EntityNotFoundException(
@@ -108,9 +108,9 @@ public sealed class TimesheetSubmissionEscalationService
         await _issueRepository.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
-            "Timesheet submission access restored by manager {ManagerUserId} for employee {EmployeeUserId} and week {WeekStartDate}",
+            "Timesheet submission access restored by manager {ManagerUserId} for Resource {ResourceUserId} and week {WeekStartDate}",
             managerUserId,
-            employeeUserId,
+            ResourceUserId,
             normalizedWeek);
     }
 
@@ -124,21 +124,21 @@ public sealed class TimesheetSubmissionEscalationService
 
         return issues.Select(issue => new FrozenTimesheetSubmissionDto
         {
-            EmployeeUserId = issue.EmployeeUserId,
-            EmployeeName = issue.EmployeeUser.FullName,
+            ResourceUserId = issue.ResourceUserId,
+            ResourceName = issue.ResourceUser.FullName,
             WeekStartDate = issue.WeekStartDate,
             FrozenAtUtc = issue.FrozenAtUtc!.Value
         }).ToList();
     }
 
-    private async Task ProcessEmployeeAsync(
-        User employee,
+    private async Task ProcessResourceAsync(
+        User Resource,
         DateTime targetWeek,
         DateTime utcNow,
         CancellationToken cancellationToken)
     {
         if (await _issueRepository.HasSubmittedTimesheetAsync(
-                employee.Id,
+                Resource.Id,
                 targetWeek,
                 cancellationToken))
         {
@@ -146,7 +146,7 @@ public sealed class TimesheetSubmissionEscalationService
         }
 
         var issue = await _issueRepository.GetAsync(
-            employee.Id,
+            Resource.Id,
             targetWeek,
             cancellationToken);
         if (issue?.Status == TimesheetSubmissionIssueStatus.Restored)
@@ -155,7 +155,7 @@ public sealed class TimesheetSubmissionEscalationService
         }
 
         issue ??= await CreateIssueAsync(
-            employee,
+            Resource,
             targetWeek,
             utcNow,
             cancellationToken);
@@ -163,19 +163,19 @@ public sealed class TimesheetSubmissionEscalationService
         switch (utcNow.DayOfWeek)
         {
             case DayOfWeek.Monday:
-                await SendFirstReminderAsync(employee, issue, utcNow, cancellationToken);
+                await SendFirstReminderAsync(Resource, issue, utcNow, cancellationToken);
                 break;
             case DayOfWeek.Tuesday:
-                await SendSecondReminderAsync(employee, issue, utcNow, cancellationToken);
+                await SendSecondReminderAsync(Resource, issue, utcNow, cancellationToken);
                 break;
             case DayOfWeek.Wednesday:
-                await FreezeAndEscalateAsync(employee, issue, utcNow, cancellationToken);
+                await FreezeAndEscalateAsync(Resource, issue, utcNow, cancellationToken);
                 break;
         }
     }
 
     private async Task<TimesheetSubmissionIssue> CreateIssueAsync(
-        User employee,
+        User Resource,
         DateTime targetWeek,
         DateTime utcNow,
         CancellationToken cancellationToken)
@@ -183,8 +183,8 @@ public sealed class TimesheetSubmissionEscalationService
         var issue = new TimesheetSubmissionIssue
         {
             Id = Guid.NewGuid(),
-            EmployeeUserId = employee.Id,
-            ManagerUserId = employee.ResourceProfile?.ManagerId,
+            ResourceUserId = Resource.Id,
+            ManagerUserId = Resource.ResourceProfile?.ManagerId,
             WeekStartDate = targetWeek,
             Status = TimesheetSubmissionIssueStatus.Missing,
             CreatedAtUtc = utcNow
@@ -196,7 +196,7 @@ public sealed class TimesheetSubmissionEscalationService
     }
 
     private async Task SendFirstReminderAsync(
-        User employee,
+        User Resource,
         TimesheetSubmissionIssue issue,
         DateTime utcNow,
         CancellationToken cancellationToken)
@@ -208,7 +208,7 @@ public sealed class TimesheetSubmissionEscalationService
         }
 
         await _notificationService.SendFirstReminderAsync(
-            employee,
+            Resource,
             issue.WeekStartDate,
             cancellationToken);
 
@@ -218,13 +218,13 @@ public sealed class TimesheetSubmissionEscalationService
         await _issueRepository.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
-            "First missed-timesheet reminder sent to employee {EmployeeUserId} for week {WeekStartDate}",
-            employee.Id,
+            "First missed-timesheet reminder sent to Resource {ResourceUserId} for week {WeekStartDate}",
+            Resource.Id,
             issue.WeekStartDate);
     }
 
     private async Task SendSecondReminderAsync(
-        User employee,
+        User Resource,
         TimesheetSubmissionIssue issue,
         DateTime utcNow,
         CancellationToken cancellationToken)
@@ -237,7 +237,7 @@ public sealed class TimesheetSubmissionEscalationService
         }
 
         await _notificationService.SendSecondReminderAsync(
-            employee,
+            Resource,
             issue.WeekStartDate,
             cancellationToken);
 
@@ -247,13 +247,13 @@ public sealed class TimesheetSubmissionEscalationService
         await _issueRepository.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
-            "Second missed-timesheet reminder sent to employee {EmployeeUserId} for week {WeekStartDate}",
-            employee.Id,
+            "Second missed-timesheet reminder sent to Resource {ResourceUserId} for week {WeekStartDate}",
+            Resource.Id,
             issue.WeekStartDate);
     }
 
     private async Task FreezeAndEscalateAsync(
-        User employee,
+        User Resource,
         TimesheetSubmissionIssue issue,
         DateTime utcNow,
         CancellationToken cancellationToken)
@@ -263,7 +263,7 @@ public sealed class TimesheetSubmissionEscalationService
             return;
         }
 
-        var manager = employee.ResourceProfile?.Manager is { IsActive: true } activeManager
+        var manager = Resource.ResourceProfile?.Manager is { IsActive: true } activeManager
             ? activeManager
             : null;
         issue.Status = TimesheetSubmissionIssueStatus.Frozen;
@@ -273,12 +273,12 @@ public sealed class TimesheetSubmissionEscalationService
         await _issueRepository.SaveChangesAsync(cancellationToken);
 
         _logger.LogWarning(
-            "Timesheet submission frozen for employee {EmployeeUserId} and week {WeekStartDate}",
-            employee.Id,
+            "Timesheet submission frozen for Resource {ResourceUserId} and week {WeekStartDate}",
+            Resource.Id,
             issue.WeekStartDate);
 
         await _notificationService.SendFrozenEscalationAsync(
-            employee,
+            Resource,
             manager,
             issue.WeekStartDate,
             cancellationToken);

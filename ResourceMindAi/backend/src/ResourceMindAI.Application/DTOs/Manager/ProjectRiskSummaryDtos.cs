@@ -21,7 +21,7 @@ public sealed class ProjectRiskMilestoneFactDto
 
 public sealed class ProjectRiskAllocationFactDto
 {
-    public string EmployeeName { get; init; } = null!;
+    public string ResourceName { get; init; } = null!;
     public decimal AllocationPercent { get; init; }
     public DateTime FromDate { get; init; }
     public DateTime? ToDate { get; init; }
@@ -30,7 +30,7 @@ public sealed class ProjectRiskAllocationFactDto
 
 public sealed class ProjectRiskTimesheetFactDto
 {
-    public string EmployeeName { get; init; } = null!;
+    public string ResourceName { get; init; } = null!;
     public DateTime WeekStart { get; init; }
     public decimal LoggedHours { get; init; }
     public decimal ExpectedHours { get; init; }

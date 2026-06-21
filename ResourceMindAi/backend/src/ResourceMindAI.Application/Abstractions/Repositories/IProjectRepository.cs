@@ -7,8 +7,8 @@ public interface IProjectRepository
     Task<IReadOnlyList<Project>> GetAllAsync();
     Task<Project?> GetByIdAsync(Guid id);
     Task<Project?> GetForManagerUpdateAsync(Guid id);
-    Task<IReadOnlyList<Allocation>> GetActiveAllocationsForEmployeesUnderManagerAsync(
-        IReadOnlyCollection<Guid> employeeIds,
+    Task<IReadOnlyList<Allocation>> GetActiveAllocationsForResourcesUnderManagerAsync(
+        IReadOnlyCollection<Guid> resourceIds,
         Guid managerId);
     Task<Project> CreateAsync(Project project);
     Task<IReadOnlyList<Milestone>> GetMilestonesAsync(Guid projectId);

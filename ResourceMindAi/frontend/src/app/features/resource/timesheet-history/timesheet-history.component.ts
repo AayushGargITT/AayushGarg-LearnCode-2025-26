@@ -4,10 +4,10 @@ import { ButtonsModule } from '@progress/kendo-angular-buttons';
 import { DialogModule } from '@progress/kendo-angular-dialog';
 import { GridModule } from '@progress/kendo-angular-grid';
 import {
-  EmployeeTimesheetDetail,
-  EmployeeTimesheetSummary
-} from '../../../core/models/employee-self.model';
-import { EmployeeService } from '../../../core/services/employee.service';
+  ResourceTimesheetDetail,
+  ResourceTimesheetSummary
+} from '../../../core/models/resource-self.model';
+import { ResourceService } from '../../../core/services/resource.service';
 import { AppLayoutComponent } from '../../../shared/components/app-layout/app-layout.component';
 import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -16,7 +16,7 @@ import { PageStateService } from '../../../shared/services/page-state.service';
 import { formatDateOnly } from '../../../shared/utils/date-only.util';
 
 @Component({
-  selector: 'app-employee-timesheet-history',
+  selector: 'app-resource-timesheet-history',
   standalone: true,
   imports: [
     CommonModule,
@@ -31,12 +31,12 @@ import { formatDateOnly } from '../../../shared/utils/date-only.util';
   templateUrl: './timesheet-history.component.html',
   providers: [PageStateService]
 })
-export class EmployeeTimesheetHistoryComponent {
-  private readonly employeeService = inject(EmployeeService);
+export class ResourceTimesheetHistoryComponent {
+  private readonly resourceService = inject(ResourceService);
   readonly pageState = inject(PageStateService);
 
-  readonly rows = signal<EmployeeTimesheetSummary[]>([]);
-  readonly selectedWeek = signal<EmployeeTimesheetDetail | null>(null);
+  readonly rows = signal<ResourceTimesheetSummary[]>([]);
+  readonly selectedWeek = signal<ResourceTimesheetDetail | null>(null);
   readonly isDetailLoading = signal(false);
 
   constructor() {
@@ -45,7 +45,7 @@ export class EmployeeTimesheetHistoryComponent {
 
   loadHistory(): void {
     this.pageState.startLoading();
-    this.employeeService.getTimesheetHistory().subscribe({
+    this.resourceService.getTimesheetHistory().subscribe({
       next: timesheets => {
         this.rows.set(timesheets);
         this.pageState.stopLoading();
@@ -58,10 +58,10 @@ export class EmployeeTimesheetHistoryComponent {
     });
   }
 
-  openDetail(timesheet: EmployeeTimesheetSummary): void {
+  openDetail(timesheet: ResourceTimesheetSummary): void {
     this.pageState.clearFeedback();
     this.isDetailLoading.set(true);
-    this.employeeService.getTimesheetDetail(timesheet.weekStartDate).subscribe({
+    this.resourceService.getTimesheetDetail(timesheet.weekStartDate).subscribe({
       next: detail => {
         this.selectedWeek.set(detail);
         this.isDetailLoading.set(false);

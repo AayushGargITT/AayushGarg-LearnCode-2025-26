@@ -1,4 +1,4 @@
-export const EMPLOYEE_ACTIVITY_TAGS = [
+export const RESOURCE_ACTIVITY_TAGS = [
   'Backend API Development',
   'Microservices / Architecture',
   'Database Design & Queries',
@@ -12,7 +12,7 @@ export const EMPLOYEE_ACTIVITY_TAGS = [
   'Other'
 ] as const;
 
-export interface EmployeeAllocation {
+export interface ResourceAllocation {
   id: string;
   projectId: string;
   projectName: string;
@@ -22,9 +22,9 @@ export interface EmployeeAllocation {
   status: 'Active' | 'Upcoming' | 'Ended';
 }
 
-export interface EmployeeAllocations {
+export interface ResourceAllocations {
   totalCurrentUtilisationPercent: number;
-  allocations: EmployeeAllocation[];
+  allocations: ResourceAllocation[];
 }
 
 export interface TimesheetWeekAllocation {
@@ -40,30 +40,30 @@ export interface TimesheetWeek {
   allocations: TimesheetWeekAllocation[];
 }
 
-export interface SubmitEmployeeTimesheetEntry {
+export interface SubmitResourceTimesheetEntry {
   projectId: string;
   hours: number;
   activityTags: string[];
 }
 
-export interface SubmitEmployeeTimesheet {
+export interface SubmitResourceTimesheet {
   weekStartDate: string;
-  entries: SubmitEmployeeTimesheetEntry[];
+  entries: SubmitResourceTimesheetEntry[];
 }
 
-export interface EmployeeTimesheetSummary {
+export interface ResourceTimesheetSummary {
   weekStartDate: string;
   totalHours: number;
   status: 'Submitted' | 'Missed';
 }
 
-export interface EmployeeTimesheetEntry {
+export interface ResourceTimesheetEntry {
   projectId: string;
   projectName: string;
   hours: number;
   activityTags: string[];
 }
 
-export interface EmployeeTimesheetDetail extends EmployeeTimesheetSummary {
-  entries: EmployeeTimesheetEntry[];
+export interface ResourceTimesheetDetail extends ResourceTimesheetSummary {
+  entries: ResourceTimesheetEntry[];
 }

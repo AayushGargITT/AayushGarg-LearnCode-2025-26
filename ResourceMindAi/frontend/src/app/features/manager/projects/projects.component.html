@@ -106,7 +106,7 @@
         <div *ngIf="selectedProject()!.allocatedResources.length === 0" class="hint-panel">No active allocations.</div>
         <div *ngFor="let allocation of selectedProject()!.allocatedResources" class="flex items-center justify-between py-2 border-b border-border/50">
           <div>
-            <div class="font-medium">{{ allocation.employeeName }}</div>
+            <div class="font-medium">{{ allocation.resourceName }}</div>
             <div class="text-xs text-muted-foreground">{{ allocation.fromDate | date:'mediumDate' }} - {{ allocation.toDate | date:'mediumDate' }}</div>
           </div>
           <span class="font-mono text-xs">{{ allocation.utilisationPercent }}%</span>

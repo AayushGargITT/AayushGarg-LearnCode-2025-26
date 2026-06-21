@@ -4,26 +4,26 @@ namespace ResourceMindAI.Application.Abstractions.Repositories;
 
 public interface ITimesheetSubmissionIssueRepository
 {
-    Task<IReadOnlyList<User>> GetActiveEmployeesWithManagersAsync(
+    Task<IReadOnlyList<User>> GetActiveResourcesWithManagersAsync(
         CancellationToken cancellationToken);
 
     Task<TimesheetSubmissionIssue?> GetAsync(
-        Guid employeeUserId,
+        Guid resourceUserId,
         DateTime weekStartDate,
         CancellationToken cancellationToken);
 
     Task<bool> HasSubmittedTimesheetAsync(
-        Guid employeeUserId,
+        Guid resourceUserId,
         DateTime weekStartDate,
         CancellationToken cancellationToken);
 
     Task<bool> IsFrozenAsync(
-        Guid employeeUserId,
+        Guid resourceUserId,
         DateTime weekStartDate,
         CancellationToken cancellationToken = default);
 
-    Task<User?> GetEmployeeWithManagerAsync(
-        Guid employeeUserId,
+    Task<User?> GetResourceWithManagerAsync(
+        Guid resourceUserId,
         CancellationToken cancellationToken);
 
     Task<IReadOnlyList<TimesheetSubmissionIssue>> GetFrozenForManagerAsync(

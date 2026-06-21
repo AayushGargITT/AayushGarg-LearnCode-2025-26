@@ -20,9 +20,9 @@ public class AllocationService : IAllocationService
         return allocations.Select(allocation => new AllocationDto
         {
             Id = allocation.Id,
-            EmployeeId = allocation.UserId,
-            EmployeeName = allocation.User.FullName,
-            EmployeeDesignation = allocation.User.Designation ?? string.Empty,
+            ResourceId = allocation.UserId,
+            ResourceName = allocation.User.FullName,
+            ResourceDesignation = allocation.User.Designation ?? string.Empty,
             ProjectId = allocation.ProjectId,
             ProjectName = allocation.Project.Name,
             ProjectManager = allocation.Project.Manager.FullName,

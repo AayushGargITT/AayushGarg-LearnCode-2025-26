@@ -121,48 +121,48 @@ public class ProjectService : IProjectService
             throw new ValidationException("Select a different manager.");
         }
 
-        var activeEmployees = project.Allocations
+        var activeResources = project.Allocations
             .Where(allocation =>
                 allocation.IsActive
                 && allocation.User.IsActive)
             .Select(allocation => allocation.User)
-            .DistinctBy(employee => employee.Id)
+            .DistinctBy(resource => resource.Id)
             .ToList();
 
-        await EnsureNoManagerUpdateConflictsAsync(project, activeEmployees);
+        await EnsureNoManagerUpdateConflictsAsync(project, activeResources);
 
         project.ManagerId = newManager.Id;
         project.Manager = newManager;
         project.UpdatedAt = DateTime.UtcNow;
 
-        var resourceProfiles = activeEmployees
-            .Select(employee =>
+        var resourceProfiles = activeResources
+            .Select(resource =>
             {
-                var profile = employee.ResourceProfile ?? new ResourceProfile
+                var profile = resource.ResourceProfile ?? new ResourceProfile
                 {
-                    Id = employee.Id,
-                    User = employee
+                    Id = resource.Id,
+                    User = resource
                 };
                 profile.ManagerId = newManager.Id;
                 profile.Manager = newManager;
-                employee.ResourceProfile = profile;
+                resource.ResourceProfile = profile;
                 return profile;
             })
             .ToList();
 
         await _projectRepository.SaveManagerUpdateAsync(project, resourceProfiles);
 
-        var employeeNames = activeEmployees
-            .Select(employee => employee.FullName)
+        var resourceNames = activeResources
+            .Select(resource => resource.FullName)
             .OrderBy(name => name)
             .ToList();
 
         return new ProjectManagerUpdateResultDto
         {
             Project = MapProject(project),
-            UpdatedEmployees = employeeNames,
-            Message = employeeNames.Count > 0
-                ? $"Project manager updated successfully. {employeeNames.Count} employee manager assignment(s) were updated."
+            UpdatedResources = resourceNames,
+            Message = resourceNames.Count > 0
+                ? $"Project manager updated successfully. {resourceNames.Count} resource manager assignment(s) were updated."
                 : "Project manager updated successfully."
         };
     }
@@ -194,17 +194,17 @@ public class ProjectService : IProjectService
 
     private async Task EnsureNoManagerUpdateConflictsAsync(
         Project project,
-        IReadOnlyCollection<User> activeEmployees)
+        IReadOnlyCollection<User> activeResources)
     {
-        if (activeEmployees.Count == 0)
+        if (activeResources.Count == 0)
         {
             return;
         }
 
-        var employeeIds = activeEmployees.Select(employee => employee.Id).ToList();
+        var resourceIds = activeResources.Select(resource => resource.Id).ToList();
         var allocations = await _projectRepository
-            .GetActiveAllocationsForEmployeesUnderManagerAsync(
-                employeeIds,
+            .GetActiveAllocationsForResourcesUnderManagerAsync(
+                resourceIds,
                 project.ManagerId);
 
         var conflicts = allocations
@@ -230,14 +230,14 @@ public class ProjectService : IProjectService
             .Where(item => item.OtherProjects.Count > 0)
             .Select(item => new ProjectManagerConflictDto
             {
-                EmployeeName = item.FullName,
+                ResourceName = item.FullName,
                 ProjectNames = new[] { project.Name }
                     .Concat(item.OtherProjects.Select(projectItem => projectItem.Name))
                     .Distinct()
                     .OrderBy(name => name)
                     .ToList()
             })
-            .OrderBy(conflict => conflict.EmployeeName)
+            .OrderBy(conflict => conflict.ResourceName)
             .ToList();
 
         if (conflicts.Count > 0)

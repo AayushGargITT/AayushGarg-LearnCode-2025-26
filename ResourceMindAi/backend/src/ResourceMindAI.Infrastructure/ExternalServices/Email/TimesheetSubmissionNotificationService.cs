@@ -19,46 +19,46 @@ public sealed class TimesheetSubmissionNotificationService
     }
 
     public Task SendFirstReminderAsync(
-        User employee,
+        User Resource,
         DateTime weekStartDate,
         CancellationToken cancellationToken)
     {
         return _emailService.SendAsync(
-            TimesheetSubmissionEmailBuilder.FirstReminder(employee, weekStartDate),
+            TimesheetSubmissionEmailBuilder.FirstReminder(Resource, weekStartDate),
             cancellationToken);
     }
 
     public Task SendSecondReminderAsync(
-        User employee,
+        User Resource,
         DateTime weekStartDate,
         CancellationToken cancellationToken)
     {
         return _emailService.SendAsync(
-            TimesheetSubmissionEmailBuilder.SecondReminder(employee, weekStartDate),
+            TimesheetSubmissionEmailBuilder.SecondReminder(Resource, weekStartDate),
             cancellationToken);
     }
 
     public async Task SendFrozenEscalationAsync(
-        User employee,
+        User Resource,
         User? manager,
         DateTime weekStartDate,
         CancellationToken cancellationToken)
     {
         await TrySendAsync(
-            TimesheetSubmissionEmailBuilder.Frozen(employee, employee, weekStartDate),
-            employee.Id,
+            TimesheetSubmissionEmailBuilder.Frozen(Resource, Resource, weekStartDate),
+            Resource.Id,
             cancellationToken);
 
         if (manager is null)
         {
             _logger.LogWarning(
-                "Timesheet frozen escalation has no manager recipient for employee {EmployeeUserId}",
-                employee.Id);
+                "Timesheet frozen escalation has no manager recipient for Resource {ResourceUserId}",
+                Resource.Id);
             return;
         }
 
         await TrySendAsync(
-            TimesheetSubmissionEmailBuilder.Frozen(manager, employee, weekStartDate),
+            TimesheetSubmissionEmailBuilder.Frozen(manager, Resource, weekStartDate),
             manager.Id,
             cancellationToken);
     }

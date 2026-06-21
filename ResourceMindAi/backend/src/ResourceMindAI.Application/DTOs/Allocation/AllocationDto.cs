@@ -3,9 +3,9 @@ namespace ResourceMindAI.Application.DTOs.Allocation;
 public class AllocationDto
 {
     public Guid Id { get; set; }
-    public Guid EmployeeId { get; set; }
-    public string EmployeeName { get; set; } = null!;
-    public string EmployeeDesignation { get; set; } = null!;
+    public Guid ResourceId { get; set; }
+    public string ResourceName { get; set; } = null!;
+    public string ResourceDesignation { get; set; } = null!;
     public Guid ProjectId { get; set; }
     public string ProjectName { get; set; } = null!;
     public string ProjectManager { get; set; } = null!;

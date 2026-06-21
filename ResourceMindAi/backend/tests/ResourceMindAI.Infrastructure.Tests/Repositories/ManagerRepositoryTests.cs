@@ -27,7 +27,7 @@ public class ManagerRepositoryTests : RepositoryTestBase
     }
 
     [Fact]
-    public async Task GetTeamEmployeesAsync_ShouldReturnOnlyEmployeesAssignedToManager()
+    public async Task GetTeamResourcesAsync_ShouldReturnOnlyResourcesAssignedToManager()
     {
         var manager = User(Role.Manager, true, "Current Manager");
         var otherManager = User(Role.Manager, true, "Other Manager");
@@ -52,7 +52,7 @@ public class ManagerRepositoryTests : RepositoryTestBase
         await DbContext.SaveChangesAsync();
         var sut = new ManagerRepository(DbContext, Mock.Of<ILogger<ManagerRepository>>());
 
-        var result = await sut.GetTeamEmployeesAsync(manager.Id);
+        var result = await sut.GetTeamResourcesAsync(manager.Id);
 
         result.Should().ContainSingle(profile => profile.Id == teamEmployee.Id);
     }

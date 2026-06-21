@@ -2,7 +2,7 @@ using FluentAssertions;
 using Moq;
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.Constants;
-using ResourceMindAI.Application.DTOs.Employee;
+using ResourceMindAI.Application.DTOs.Resource;
 using ResourceMindAI.Application.Services;
 using ResourceMindAI.Application.Tests.TestData;
 using ResourceMindAI.Domain.Entities;
@@ -29,21 +29,21 @@ public class TimesheetServiceTests
     [Fact]
     public async Task SubmitAsync_WithActiveAllocation_ShouldSaveSubmittedTimesheet()
     {
-        var employee = TestDataBuilder.User();
+        var resource = TestDataBuilder.User();
         var manager = TestDataBuilder.User(ResourceMindAI.Domain.Enums.Role.Manager);
         var project = TestDataBuilder.Project(manager);
         var week = PreviousMonday();
         var allocation = TestDataBuilder.Allocation(
-            employee,
+            resource,
             project,
             utilisation: 50,
             fromDate: week,
             toDate: week.AddDays(6));
-        SetupEmployee(employee);
-        _timesheets.Setup(x => x.GetAllocationsForWeekAsync(employee.Id, week, week.AddDays(6)))
+        SetupEmployee(resource);
+        _timesheets.Setup(x => x.GetAllocationsForWeekAsync(resource.Id, week, week.AddDays(6)))
             .ReturnsAsync([allocation]);
 
-        await _sut.SubmitAsync(employee.Id, Request(week, project.Id, 20));
+        await _sut.SubmitAsync(resource.Id, Request(week, project.Id, 20));
 
         _timesheets.Verify(x => x.AddRangeAsync(
             It.Is<IReadOnlyCollection<Timesheet>>(items =>
@@ -55,12 +55,12 @@ public class TimesheetServiceTests
     [Fact]
     public async Task SubmitAsync_WhenTimesheetAlreadyExists_ShouldThrowConflictException()
     {
-        var employee = TestDataBuilder.User();
+        var resource = TestDataBuilder.User();
         var week = PreviousMonday();
-        SetupEmployee(employee);
-        _timesheets.Setup(x => x.HasTimesheetForWeekAsync(employee.Id, week)).ReturnsAsync(true);
+        SetupEmployee(resource);
+        _timesheets.Setup(x => x.HasTimesheetForWeekAsync(resource.Id, week)).ReturnsAsync(true);
 
-        var act = () => _sut.SubmitAsync(employee.Id, Request(week, Guid.NewGuid(), 8));
+        var act = () => _sut.SubmitAsync(resource.Id, Request(week, Guid.NewGuid(), 8));
 
         await act.Should().ThrowAsync<ConflictException>()
             .WithMessage("*already been submitted*");
@@ -69,17 +69,17 @@ public class TimesheetServiceTests
     [Fact]
     public async Task SubmitAsync_WhenWeekIsFrozen_ShouldRejectSubmission()
     {
-        var employee = TestDataBuilder.User();
+        var resource = TestDataBuilder.User();
         var week = PreviousMonday();
-        SetupEmployee(employee);
+        SetupEmployee(resource);
         _submissionIssues.Setup(x => x.IsFrozenAsync(
-                employee.Id,
+                resource.Id,
                 week,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var act = () => _sut.SubmitAsync(
-            employee.Id,
+            resource.Id,
             Request(week, Guid.NewGuid(), 8));
 
         await act.Should().ThrowAsync<ValidationException>()
@@ -91,12 +91,12 @@ public class TimesheetServiceTests
     [Fact]
     public async Task SubmitAsync_ForFutureWeek_ShouldThrowValidationException()
     {
-        var employee = TestDataBuilder.User();
-        SetupEmployee(employee);
+        var resource = TestDataBuilder.User();
+        SetupEmployee(resource);
         var futureMonday = CurrentMonday().AddDays(7);
 
         var act = () => _sut.SubmitAsync(
-            employee.Id,
+            resource.Id,
             Request(futureMonday, Guid.NewGuid(), 8));
 
         await act.Should().ThrowAsync<ValidationException>()
@@ -106,21 +106,21 @@ public class TimesheetServiceTests
     [Fact]
     public async Task SubmitAsync_WhenProjectHoursExceedAllocationCapacity_ShouldThrowValidationException()
     {
-        var employee = TestDataBuilder.User();
+        var resource = TestDataBuilder.User();
         var manager = TestDataBuilder.User(ResourceMindAI.Domain.Enums.Role.Manager);
         var project = TestDataBuilder.Project(manager);
         var week = PreviousMonday();
         var allocation = TestDataBuilder.Allocation(
-            employee,
+            resource,
             project,
             utilisation: 50,
             fromDate: week,
             toDate: week.AddDays(6));
-        SetupEmployee(employee);
-        _timesheets.Setup(x => x.GetAllocationsForWeekAsync(employee.Id, week, week.AddDays(6)))
+        SetupEmployee(resource);
+        _timesheets.Setup(x => x.GetAllocationsForWeekAsync(resource.Id, week, week.AddDays(6)))
             .ReturnsAsync([allocation]);
 
-        var act = () => _sut.SubmitAsync(employee.Id, Request(week, project.Id, 21));
+        var act = () => _sut.SubmitAsync(resource.Id, Request(week, project.Id, 21));
 
         await act.Should().ThrowAsync<ValidationException>()
             .WithMessage("*cannot exceed 20*");
@@ -129,11 +129,11 @@ public class TimesheetServiceTests
     [Fact]
     public async Task SubmitAsync_WhenTotalHoursExceedConfiguredMaximum_ShouldThrowValidationException()
     {
-        var employee = TestDataBuilder.User();
+        var resource = TestDataBuilder.User();
         var week = PreviousMonday();
-        SetupEmployee(employee);
+        SetupEmployee(resource);
 
-        var request = new SubmitEmployeeTimesheetDto
+        var request = new SubmitResourceTimesheetDto
         {
             WeekStartDate = week,
             Entries =
@@ -143,7 +143,7 @@ public class TimesheetServiceTests
             ]
         };
 
-        var act = () => _sut.SubmitAsync(employee.Id, request);
+        var act = () => _sut.SubmitAsync(resource.Id, request);
 
         await act.Should().ThrowAsync<ValidationException>()
             .WithMessage("*weekly maximum of 40*");
@@ -154,22 +154,22 @@ public class TimesheetServiceTests
     [Fact]
     public async Task GetHistoryAsync_WithSubmittedAndUnsubmittedAllocatedWeeks_ShouldReturnSubmittedAndMissed()
     {
-        var employee = TestDataBuilder.User();
+        var resource = TestDataBuilder.User();
         var manager = TestDataBuilder.User(ResourceMindAI.Domain.Enums.Role.Manager);
         var project = TestDataBuilder.Project(manager);
         var submittedWeek = CurrentMonday().AddDays(-14);
         var missedWeek = CurrentMonday().AddDays(-7);
         var allocation = TestDataBuilder.Allocation(
-            employee,
+            resource,
             project,
             fromDate: submittedWeek,
             toDate: missedWeek.AddDays(6));
-        var timesheet = TestDataBuilder.Timesheet(employee, project, submittedWeek);
-        SetupEmployee(employee);
-        _timesheets.Setup(x => x.GetTimesheetsAsync(employee.Id)).ReturnsAsync([timesheet]);
-        _timesheets.Setup(x => x.GetAllocationsAsync(employee.Id)).ReturnsAsync([allocation]);
+        var timesheet = TestDataBuilder.Timesheet(resource, project, submittedWeek);
+        SetupEmployee(resource);
+        _timesheets.Setup(x => x.GetTimesheetsAsync(resource.Id)).ReturnsAsync([timesheet]);
+        _timesheets.Setup(x => x.GetAllocationsAsync(resource.Id)).ReturnsAsync([allocation]);
 
-        var result = await _sut.GetHistoryAsync(employee.Id);
+        var result = await _sut.GetHistoryAsync(resource.Id);
 
         result.Should().Contain(item => item.WeekStartDate == submittedWeek && item.Status == "Submitted");
         result.Should().Contain(item => item.WeekStartDate == missedWeek && item.Status == "Missed");
@@ -178,11 +178,11 @@ public class TimesheetServiceTests
     [Fact]
     public async Task GetWeekDetailAsync_WhenSubmitted_ShouldReturnProjectTags()
     {
-        var employee = TestDataBuilder.User();
+        var resource = TestDataBuilder.User();
         var manager = TestDataBuilder.User(ResourceMindAI.Domain.Enums.Role.Manager);
         var project = TestDataBuilder.Project(manager);
         var week = PreviousMonday();
-        var timesheet = TestDataBuilder.Timesheet(employee, project, week);
+        var timesheet = TestDataBuilder.Timesheet(resource, project, week);
         timesheet.ActivityTags.Add(new ActivityTag
         {
             Id = Guid.NewGuid(),
@@ -190,38 +190,38 @@ public class TimesheetServiceTests
             Timesheet = timesheet,
             TagName = ActivityTagCatalog.Allowed.First()
         });
-        SetupEmployee(employee);
-        _timesheets.Setup(x => x.GetTimesheetsAsync(employee.Id)).ReturnsAsync([timesheet]);
+        SetupEmployee(resource);
+        _timesheets.Setup(x => x.GetTimesheetsAsync(resource.Id)).ReturnsAsync([timesheet]);
 
-        var result = await _sut.GetWeekDetailAsync(employee.Id, week);
+        var result = await _sut.GetWeekDetailAsync(resource.Id, week);
 
         result.Status.Should().Be("Submitted");
         result.Entries.Should().ContainSingle();
         result.Entries[0].ActivityTags.Should().ContainSingle();
     }
 
-    private void SetupEmployee(User employee)
+    private void SetupEmployee(User resource)
     {
-        _timesheets.Setup(x => x.GetEmployeeUserAsync(employee.Id)).ReturnsAsync(employee);
-        _timesheets.Setup(x => x.HasTimesheetForWeekAsync(employee.Id, It.IsAny<DateTime>()))
+        _timesheets.Setup(x => x.GetResourceUserAsync(resource.Id)).ReturnsAsync(resource);
+        _timesheets.Setup(x => x.HasTimesheetForWeekAsync(resource.Id, It.IsAny<DateTime>()))
             .ReturnsAsync(false);
     }
 
-    private static SubmitEmployeeTimesheetDto Request(
+    private static SubmitResourceTimesheetDto Request(
         DateTime week,
         Guid projectId,
         decimal hours)
     {
-        return new SubmitEmployeeTimesheetDto
+        return new SubmitResourceTimesheetDto
         {
             WeekStartDate = week,
             Entries = [Entry(projectId, hours)]
         };
     }
 
-    private static SubmitEmployeeTimesheetEntryDto Entry(Guid projectId, decimal hours)
+    private static SubmitResourceTimesheetEntryDto Entry(Guid projectId, decimal hours)
     {
-        return new SubmitEmployeeTimesheetEntryDto
+        return new SubmitResourceTimesheetEntryDto
         {
             ProjectId = projectId,
             Hours = hours,

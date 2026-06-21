@@ -68,13 +68,13 @@
             *ngFor="let member of team.members"
             class="rounded-lg border border-border bg-card p-5">
             <div class="flex items-start gap-3">
-              <app-avatar [name]="member.employee.fullName"></app-avatar>
+              <app-avatar [name]="member.resource.fullName"></app-avatar>
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <div class="font-medium">{{ member.employee.fullName }}</div>
+                    <div class="font-medium">{{ member.resource.fullName }}</div>
                     <div class="text-sm text-muted-foreground">
-                      {{ member.employee.designation || '-' }}
+                      {{ member.resource.designation || '-' }}
                     </div>
                   </div>
                   <div class="text-right">
@@ -89,7 +89,7 @@
                 </div>
                 <div class="text-sm mt-1">
                   <span class="text-muted-foreground">Department:</span>
-                  <span class="ml-1">{{ member.employee.department || '-' }}</span>
+                  <span class="ml-1">{{ member.resource.department || '-' }}</span>
                 </div>
 
                 <p class="text-sm text-muted-foreground mt-3">{{ member.reason }}</p>
@@ -117,13 +117,13 @@
               *ngFor="let match of team.unavailableMatches"
               class="rounded-lg border border-amber-500/30 bg-amber-500/5 p-5">
               <div class="flex items-start gap-3">
-                <app-avatar [name]="match.employee.fullName"></app-avatar>
+                <app-avatar [name]="match.resource.fullName"></app-avatar>
                 <div class="min-w-0 flex-1">
                   <div class="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <div class="font-medium">{{ match.employee.fullName }}</div>
+                      <div class="font-medium">{{ match.resource.fullName }}</div>
                       <div class="text-sm text-muted-foreground">
-                        {{ match.employee.designation || '-' }}
+                        {{ match.resource.designation || '-' }}
                       </div>
                     </div>
                     <app-status-badge status="Allocated"></app-status-badge>

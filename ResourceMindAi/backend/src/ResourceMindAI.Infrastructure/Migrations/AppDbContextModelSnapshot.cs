@@ -319,7 +319,7 @@ namespace ResourceMindAI.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("EmployeeUserId")
+                    b.Property<Guid>("ResourceUserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("FirstReminderSentAtUtc")
@@ -357,7 +357,7 @@ namespace ResourceMindAI.Infrastructure.Migrations
 
                     b.HasIndex("RestoredByManagerUserId");
 
-                    b.HasIndex("EmployeeUserId", "WeekStartDate")
+                    b.HasIndex("ResourceUserId", "WeekStartDate")
                         .IsUnique();
 
                     b.ToTable("TimesheetSubmissionIssues");
@@ -544,9 +544,9 @@ namespace ResourceMindAI.Infrastructure.Migrations
 
             modelBuilder.Entity("ResourceMindAI.Domain.Entities.TimesheetSubmissionIssue", b =>
                 {
-                    b.HasOne("ResourceMindAI.Domain.Entities.User", "EmployeeUser")
+                    b.HasOne("ResourceMindAI.Domain.Entities.User", "ResourceUser")
                         .WithMany()
-                        .HasForeignKey("EmployeeUserId")
+                        .HasForeignKey("ResourceUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -560,7 +560,7 @@ namespace ResourceMindAI.Infrastructure.Migrations
                         .HasForeignKey("RestoredByManagerUserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("EmployeeUser");
+                    b.Navigation("ResourceUser");
 
                     b.Navigation("ManagerUser");
 

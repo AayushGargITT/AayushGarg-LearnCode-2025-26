@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { GridModule } from '@progress/kendo-angular-grid';
-import { EmployeeAllocation } from '../../../core/models/employee-self.model';
-import { EmployeeService } from '../../../core/services/employee.service';
+import { ResourceAllocation } from '../../../core/models/resource-self.model';
+import { ResourceService } from '../../../core/services/resource.service';
 import { AppLayoutComponent } from '../../../shared/components/app-layout/app-layout.component';
 import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -10,7 +10,7 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 import { PageStateService } from '../../../shared/services/page-state.service';
 
 @Component({
-  selector: 'app-employee-allocations',
+  selector: 'app-resource-allocations',
   standalone: true,
   imports: [
     CommonModule,
@@ -23,11 +23,11 @@ import { PageStateService } from '../../../shared/services/page-state.service';
   templateUrl: './allocations.component.html',
   providers: [PageStateService]
 })
-export class EmployeeAllocationsComponent {
-  private readonly employeeService = inject(EmployeeService);
+export class ResourceAllocationsComponent {
+  private readonly resourceService = inject(ResourceService);
   readonly pageState = inject(PageStateService);
 
-  readonly allocations = signal<EmployeeAllocation[]>([]);
+  readonly allocations = signal<ResourceAllocation[]>([]);
   readonly totalCurrentUtilisation = signal(0);
 
   constructor() {
@@ -36,7 +36,7 @@ export class EmployeeAllocationsComponent {
 
   loadAllocations(): void {
     this.pageState.startLoading();
-    this.employeeService.getAllocations().subscribe({
+    this.resourceService.getAllocations().subscribe({
       next: response => {
         this.allocations.set(response.allocations);
         this.totalCurrentUtilisation.set(response.totalCurrentUtilisationPercent);

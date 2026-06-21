@@ -32,7 +32,7 @@ export class ManagerResourcesComponent {
   private readonly managerService = inject(ManagerService);
   readonly pageState = inject(PageStateService);
 
-  readonly dashboard = signal<ManagerResourceDashboard>({ onBench: [], activeEmployees: [] });
+  readonly dashboard = signal<ManagerResourceDashboard>({ onBench: [], activeResources: [] });
   readonly selectedResource = signal<ManagerResource | null>(null);
 
   constructor() {

@@ -14,7 +14,7 @@ public class SchedulerRepository : ISchedulerRepository
         _dbContext = dbContext;
     }
 
-    public async Task<IReadOnlyList<User>> GetActiveEmployeesAsync(
+    public async Task<IReadOnlyList<User>> GetActiveResourcesAsync(
         DateTime evaluationDate,
         CancellationToken cancellationToken)
     {

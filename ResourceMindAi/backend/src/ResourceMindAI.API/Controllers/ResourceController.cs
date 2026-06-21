@@ -2,24 +2,24 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ResourceMindAI.Application.Abstractions.Services;
-using ResourceMindAI.Application.DTOs.Employee;
+using ResourceMindAI.Application.DTOs.Resource;
 
 namespace ResourceMindAI.API.Controllers;
 
 [ApiController]
 [Authorize(Roles = "Resource")]
 [Route("api/v1/resource")]
-public class EmployeeController : ControllerBase
+public class ResourceController : ControllerBase
 {
     private readonly ITimesheetService _timesheetService;
 
-    public EmployeeController(ITimesheetService timesheetService)
+    public ResourceController(ITimesheetService timesheetService)
     {
         _timesheetService = timesheetService;
     }
 
     [HttpGet("allocations")]
-    public async Task<ActionResult<EmployeeAllocationsDto>> GetAllocations()
+    public async Task<ActionResult<ResourceAllocationsDto>> GetAllocations()
     {
         return Ok(await _timesheetService.GetAllocationsAsync(GetCurrentUserId()));
     }
@@ -32,20 +32,20 @@ public class EmployeeController : ControllerBase
     }
 
     [HttpPost("timesheets")]
-    public async Task<IActionResult> SubmitTimesheet(SubmitEmployeeTimesheetDto request)
+    public async Task<IActionResult> SubmitTimesheet(SubmitResourceTimesheetDto request)
     {
         await _timesheetService.SubmitAsync(GetCurrentUserId(), request);
         return NoContent();
     }
 
     [HttpGet("timesheets")]
-    public async Task<ActionResult<IReadOnlyList<EmployeeTimesheetSummaryDto>>> GetTimesheets()
+    public async Task<ActionResult<IReadOnlyList<ResourceTimesheetSummaryDto>>> GetTimesheets()
     {
         return Ok(await _timesheetService.GetHistoryAsync(GetCurrentUserId()));
     }
 
     [HttpGet("timesheets/{weekStartDate:datetime}")]
-    public async Task<ActionResult<EmployeeTimesheetDetailDto>> GetTimesheetDetail(
+    public async Task<ActionResult<ResourceTimesheetDetailDto>> GetTimesheetDetail(
         DateTime weekStartDate)
     {
         return Ok(await _timesheetService.GetWeekDetailAsync(

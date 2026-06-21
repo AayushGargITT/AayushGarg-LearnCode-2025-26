@@ -14,7 +14,7 @@ public class TimesheetRepository : ITimesheetRepository
         _dbContext = dbContext;
     }
 
-    public Task<User?> GetEmployeeUserAsync(Guid userId)
+    public Task<User?> GetResourceUserAsync(Guid userId)
     {
         return _dbContext.Users
             .AsNoTracking()
@@ -24,18 +24,18 @@ public class TimesheetRepository : ITimesheetRepository
                 && user.Role == Role.Resource);
     }
 
-    public async Task<IReadOnlyList<Allocation>> GetAllocationsAsync(Guid employeeId)
+    public async Task<IReadOnlyList<Allocation>> GetAllocationsAsync(Guid resourceId)
     {
         return await _dbContext.Allocations
             .AsNoTracking()
             .Include(allocation => allocation.Project)
-            .Where(allocation => allocation.UserId == employeeId)
+            .Where(allocation => allocation.UserId == resourceId)
             .OrderByDescending(allocation => allocation.FromDate)
             .ToListAsync();
     }
 
     public async Task<IReadOnlyList<Allocation>> GetAllocationsForWeekAsync(
-        Guid employeeId,
+        Guid resourceId,
         DateTime weekStart,
         DateTime weekEnd)
     {
@@ -43,27 +43,27 @@ public class TimesheetRepository : ITimesheetRepository
             .AsNoTracking()
             .Include(allocation => allocation.Project)
             .Where(allocation =>
-                allocation.UserId == employeeId
+                allocation.UserId == resourceId
                 && allocation.FromDate <= weekEnd
                 && allocation.ToDate >= weekStart)
             .ToListAsync();
     }
 
-    public async Task<IReadOnlyList<Timesheet>> GetTimesheetsAsync(Guid employeeId)
+    public async Task<IReadOnlyList<Timesheet>> GetTimesheetsAsync(Guid resourceId)
     {
         return await _dbContext.Timesheets
             .AsNoTracking()
             .Include(timesheet => timesheet.Project)
             .Include(timesheet => timesheet.ActivityTags)
-            .Where(timesheet => timesheet.UserId == employeeId)
+            .Where(timesheet => timesheet.UserId == resourceId)
             .OrderByDescending(timesheet => timesheet.WeekStartDate)
             .ToListAsync();
     }
 
-    public Task<bool> HasTimesheetForWeekAsync(Guid employeeId, DateTime weekStart)
+    public Task<bool> HasTimesheetForWeekAsync(Guid resourceId, DateTime weekStart)
     {
         return _dbContext.Timesheets.AnyAsync(timesheet =>
-            timesheet.UserId == employeeId
+            timesheet.UserId == resourceId
             && timesheet.WeekStartDate == weekStart);
     }
 

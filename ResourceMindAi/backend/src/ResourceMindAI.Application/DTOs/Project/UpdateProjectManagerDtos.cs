@@ -10,7 +10,7 @@ public sealed class UpdateProjectManagerDto
 
 public sealed class ProjectManagerConflictDto
 {
-    public string EmployeeName { get; init; } = null!;
+    public string ResourceName { get; init; } = null!;
     public IReadOnlyList<string> ProjectNames { get; init; } = Array.Empty<string>();
 }
 
@@ -23,6 +23,6 @@ public sealed class ProjectManagerUpdateValidationDto
 public sealed class ProjectManagerUpdateResultDto
 {
     public ProjectDto Project { get; init; } = null!;
-    public IReadOnlyList<string> UpdatedEmployees { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> UpdatedResources { get; init; } = Array.Empty<string>();
     public string Message { get; init; } = null!;
 }

@@ -11,7 +11,7 @@
     </div>
 
     <kendo-grid [data]="frozenSubmissions()" [resizable]="true">
-      <kendo-grid-column field="employeeName" title="Resource"></kendo-grid-column>
+      <kendo-grid-column field="resourceName" title="Resource"></kendo-grid-column>
       <kendo-grid-column title="Week Starting" [width]="170">
         <ng-template kendoGridCellTemplate let-dataItem>
           {{ formatWeekStart(dataItem.weekStartDate) }}
@@ -28,7 +28,7 @@
             kendoButton
             themeColor="primary"
             fillMode="flat"
-            [disabled]="pageState.activeActionId() === dataItem.employeeUserId"
+            [disabled]="pageState.activeActionId() === dataItem.resourceUserId"
             (click)="requestRestore(dataItem)">
             Restore Access
           </button>
@@ -45,8 +45,8 @@
       <kendo-grid-column title="Resource">
         <ng-template kendoGridCellTemplate let-dataItem>
           <div class="flex items-center gap-3">
-            <app-avatar [name]="dataItem.employeeName" [size]="28"></app-avatar>
-            <div class="font-medium">{{ dataItem.employeeName }}</div>
+            <app-avatar [name]="dataItem.resourceName" [size]="28"></app-avatar>
+            <div class="font-medium">{{ dataItem.resourceName }}</div>
           </div>
         </ng-template>
       </kendo-grid-column>
@@ -87,7 +87,7 @@
       <div class="flex flex-wrap justify-between gap-4">
         <div>
           <div class="text-xs text-muted-foreground">Resource</div>
-          <div class="font-medium">{{ selectedTimesheet()!.employeeName }}</div>
+          <div class="font-medium">{{ selectedTimesheet()!.resourceName }}</div>
         </div>
         <div>
           <div class="text-xs text-muted-foreground">Week Starting</div>
@@ -124,9 +124,9 @@
   <app-confirm-dialog
     *ngIf="restoreCandidate()"
     title="Restore Timesheet Access"
-    [message]="'Restore submission access for ' + restoreCandidate()!.employeeName + ' for the week of ' + formatWeekStart(restoreCandidate()!.weekStartDate) + '?'"
+    [message]="'Restore submission access for ' + restoreCandidate()!.resourceName + ' for the week of ' + formatWeekStart(restoreCandidate()!.weekStartDate) + '?'"
     confirmText="Restore Access"
-    [isBusy]="pageState.activeActionId() === restoreCandidate()!.employeeUserId"
+    [isBusy]="pageState.activeActionId() === restoreCandidate()!.resourceUserId"
     (cancelled)="cancelRestore()"
     (confirmed)="confirmRestore()">
   </app-confirm-dialog>

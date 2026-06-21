@@ -52,7 +52,7 @@ export class ManagerTimesheetsComponent {
 
     const selectedWeek = this.toDateKey(selected.weekStartDate);
     return this.rows().filter(timesheet =>
-      timesheet.employeeId === selected.employeeId
+      timesheet.resourceId === selected.resourceId
       && this.toDateKey(timesheet.weekStartDate) === selectedWeek);
   });
   readonly selectedWeekTotal = computed(() =>
@@ -105,9 +105,9 @@ export class ManagerTimesheetsComponent {
       return;
     }
 
-    this.pageState.startAction(issue.employeeUserId);
+    this.pageState.startAction(issue.resourceUserId);
     this.managerService.restoreTimesheetSubmissionAccess(
-      issue.employeeUserId,
+      issue.resourceUserId,
       issue.weekStartDate
     ).subscribe({
       next: () => {

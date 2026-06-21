@@ -5,17 +5,17 @@ namespace ResourceMindAI.Application.Abstractions.Services;
 public interface ITimesheetSubmissionNotificationService
 {
     Task SendFirstReminderAsync(
-        User employee,
+        User Resource,
         DateTime weekStartDate,
         CancellationToken cancellationToken);
 
     Task SendSecondReminderAsync(
-        User employee,
+        User Resource,
         DateTime weekStartDate,
         CancellationToken cancellationToken);
 
     Task SendFrozenEscalationAsync(
-        User employee,
+        User Resource,
         User? manager,
         DateTime weekStartDate,
         CancellationToken cancellationToken);

@@ -6,11 +6,11 @@ import { DateInputsModule } from '@progress/kendo-angular-dateinputs';
 import { DropDownsModule } from '@progress/kendo-angular-dropdowns';
 import { InputsModule } from '@progress/kendo-angular-inputs';
 import {
-  EMPLOYEE_ACTIVITY_TAGS,
-  SubmitEmployeeTimesheetEntry,
+  RESOURCE_ACTIVITY_TAGS,
+  SubmitResourceTimesheetEntry,
   TimesheetWeek
-} from '../../../core/models/employee-self.model';
-import { EmployeeService } from '../../../core/services/employee.service';
+} from '../../../core/models/resource-self.model';
+import { ResourceService } from '../../../core/services/resource.service';
 import { AppLayoutComponent } from '../../../shared/components/app-layout/app-layout.component';
 import { PageFeedbackComponent } from '../../../shared/components/page-feedback/page-feedback.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
@@ -18,7 +18,7 @@ import { PageStateService } from '../../../shared/services/page-state.service';
 import { toDateOnlyString } from '../../../shared/utils/date-only.util';
 
 @Component({
-  selector: 'app-employee-timesheet-submit',
+  selector: 'app-resource-timesheet-submit',
   standalone: true,
   imports: [
     CommonModule,
@@ -35,12 +35,12 @@ import { toDateOnlyString } from '../../../shared/utils/date-only.util';
   styleUrl: './timesheet-submit.component.css',
   providers: [PageStateService]
 })
-export class EmployeeTimesheetSubmitComponent {
-  private readonly employeeService = inject(EmployeeService);
+export class ResourceTimesheetSubmitComponent {
+  private readonly resourceService = inject(ResourceService);
   private readonly formBuilder = inject(FormBuilder);
   readonly pageState = inject(PageStateService);
 
-  readonly activityTags = [...EMPLOYEE_ACTIVITY_TAGS];
+  readonly activityTags = [...RESOURCE_ACTIVITY_TAGS];
   readonly week = signal<TimesheetWeek | null>(null);
 
   readonly form = this.formBuilder.group({
@@ -66,7 +66,7 @@ export class EmployeeTimesheetSubmitComponent {
       this.pageState.clearFeedback();
     }
     this.pageState.startLoading();
-    this.employeeService.getTimesheetWeek(toDateOnlyString(selectedDate)).subscribe({
+    this.resourceService.getTimesheetWeek(toDateOnlyString(selectedDate)).subscribe({
       next: week => {
         this.week.set(week);
         this.rebuildEntries(week);
@@ -92,7 +92,7 @@ export class EmployeeTimesheetSubmitComponent {
       return;
     }
 
-    const entries = (this.entries.getRawValue() as SubmitEmployeeTimesheetEntry[])
+    const entries = (this.entries.getRawValue() as SubmitResourceTimesheetEntry[])
       .filter(entry => Number(entry.hours) > 0);
     if (entries.length === 0) {
       this.pageState.setError('Enter hours for at least one allocated project.');
@@ -106,7 +106,7 @@ export class EmployeeTimesheetSubmitComponent {
 
     this.pageState.clearFeedback();
     this.pageState.startSubmitting();
-    this.employeeService.submitTimesheet({
+    this.resourceService.submitTimesheet({
       weekStartDate: toDateOnlyString(weekStartDate),
       entries
     }).subscribe({

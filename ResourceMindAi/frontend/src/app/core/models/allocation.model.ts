@@ -1,8 +1,8 @@
 export interface Allocation {
   id: string;
-  employeeId: string;
-  employeeName: string;
-  employeeDesignation: string;
+  resourceId: string;
+  resourceName: string;
+  resourceDesignation: string;
   projectId: string;
   projectName: string;
   projectManager: string;

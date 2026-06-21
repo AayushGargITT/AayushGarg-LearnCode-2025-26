@@ -1,7 +1,7 @@
 using ResourceMindAI.Application.Abstractions.Repositories;
 using ResourceMindAI.Application.Abstractions.Services;
 using ResourceMindAI.Application.Constants;
-using ResourceMindAI.Application.DTOs.Employee;
+using ResourceMindAI.Application.DTOs.Resource;
 using ResourceMindAI.Domain.Entities;
 using ResourceMindAI.Domain.Enums;
 using ResourceMindAI.Domain.Exceptions;
@@ -26,10 +26,10 @@ public class TimesheetService : ITimesheetService
         _systemConfigRepository = systemConfigRepository;
     }
 
-    public async Task<EmployeeAllocationsDto> GetAllocationsAsync(Guid userId)
+    public async Task<ResourceAllocationsDto> GetAllocationsAsync(Guid userId)
     {
-        var employee = await GetEmployeeAsync(userId);
-        var allocations = await _timesheetRepository.GetAllocationsAsync(employee.Id);
+        var resource = await GetResourceAsync(userId);
+        var allocations = await _timesheetRepository.GetAllocationsAsync(resource.Id);
         var today = DateTime.UtcNow.Date;
 
         var items = allocations.Select(allocation =>
@@ -41,7 +41,7 @@ public class TimesheetService : ITimesheetService
                 ? "Active"
                 : allocation.FromDate.Date > today ? "Upcoming" : "Ended";
 
-            return new EmployeeAllocationDto(
+            return new ResourceAllocationDto(
                 allocation.Id,
                 allocation.ProjectId,
                 allocation.Project.Name,
@@ -58,18 +58,18 @@ public class TimesheetService : ITimesheetService
                 && allocation.ToDate.Date >= today)
             .Sum(allocation => allocation.UtilisationPercent);
 
-        return new EmployeeAllocationsDto(totalCurrentUtilisation, items);
+        return new ResourceAllocationsDto(totalCurrentUtilisation, items);
     }
 
     public async Task<TimesheetWeekDto> GetWeekAsync(Guid userId, DateTime? weekStartDate)
     {
-        var employee = await GetEmployeeAsync(userId);
+        var resource = await GetResourceAsync(userId);
         var weekStart = ResolveWeekStart(weekStartDate);
         ValidateWeekStart(weekStart);
 
         var maxWeeklyHours = await GetMaxWeeklyHoursAsync();
         var allocations = await _timesheetRepository.GetAllocationsForWeekAsync(
-            employee.Id,
+            resource.Id,
             weekStart,
             weekStart.AddDays(6));
 
@@ -90,19 +90,19 @@ public class TimesheetService : ITimesheetService
         return new TimesheetWeekDto(weekStart, maxWeeklyHours, items);
     }
 
-    public async Task SubmitAsync(Guid userId, SubmitEmployeeTimesheetDto request)
+    public async Task SubmitAsync(Guid userId, SubmitResourceTimesheetDto request)
     {
-        var employee = await GetEmployeeAsync(userId);
+        var resource = await GetResourceAsync(userId);
         var weekStart = ResolveWeekStart(request.WeekStartDate);
         ValidateWeekStart(weekStart);
 
-        if (await _submissionIssueRepository.IsFrozenAsync(employee.Id, weekStart))
+        if (await _submissionIssueRepository.IsFrozenAsync(resource.Id, weekStart))
         {
             throw new ValidationException(
                 "Timesheet submission for this week is frozen. Please contact your manager to restore access.");
         }
 
-        if (await _timesheetRepository.HasTimesheetForWeekAsync(employee.Id, weekStart))
+        if (await _timesheetRepository.HasTimesheetForWeekAsync(resource.Id, weekStart))
         {
             throw new ConflictException("A timesheet has already been submitted for this week.");
         }
@@ -126,7 +126,7 @@ public class TimesheetService : ITimesheetService
         }
 
         var allocations = await _timesheetRepository.GetAllocationsForWeekAsync(
-            employee.Id,
+            resource.Id,
             weekStart,
             weekStart.AddDays(6));
         var allocationByProject = allocations
@@ -170,7 +170,7 @@ public class TimesheetService : ITimesheetService
             timesheets.Add(new Timesheet
             {
                 Id = timesheetId,
-                UserId = employee.Id,
+                UserId = resource.Id,
                 ProjectId = entry.ProjectId,
                 WeekStartDate = weekStart,
                 HoursLogged = entry.Hours,
@@ -188,21 +188,21 @@ public class TimesheetService : ITimesheetService
         await _timesheetRepository.AddRangeAsync(timesheets);
     }
 
-    public async Task<IReadOnlyList<EmployeeTimesheetSummaryDto>> GetHistoryAsync(Guid userId)
+    public async Task<IReadOnlyList<ResourceTimesheetSummaryDto>> GetHistoryAsync(Guid userId)
     {
-        var employee = await GetEmployeeAsync(userId);
-        var timesheets = await _timesheetRepository.GetTimesheetsAsync(employee.Id);
-        var allocations = await _timesheetRepository.GetAllocationsAsync(employee.Id);
+        var resource = await GetResourceAsync(userId);
+        var timesheets = await _timesheetRepository.GetTimesheetsAsync(resource.Id);
+        var allocations = await _timesheetRepository.GetAllocationsAsync(resource.Id);
         var submittedByWeek = timesheets
             .GroupBy(timesheet => timesheet.WeekStartDate.Date)
             .ToDictionary(
                 group => group.Key,
-                group => new EmployeeTimesheetSummaryDto(
+                group => new ResourceTimesheetSummaryDto(
                     group.Key,
                     group.Sum(timesheet => timesheet.HoursLogged),
                     "Submitted"));
 
-        var result = new Dictionary<DateTime, EmployeeTimesheetSummaryDto>(submittedByWeek);
+        var result = new Dictionary<DateTime, ResourceTimesheetSummaryDto>(submittedByWeek);
         if (allocations.Count > 0)
         {
             var firstWeek = StartOfWeek(allocations.Min(allocation => allocation.FromDate));
@@ -215,7 +215,7 @@ public class TimesheetService : ITimesheetService
                     && allocation.ToDate.Date >= week);
                 if (hasAllocation && !result.ContainsKey(week))
                 {
-                    result[week] = new EmployeeTimesheetSummaryDto(week, 0m, "Missed");
+                    result[week] = new ResourceTimesheetSummaryDto(week, 0m, "Missed");
                 }
             }
         }
@@ -225,26 +225,26 @@ public class TimesheetService : ITimesheetService
             .ToList();
     }
 
-    public async Task<EmployeeTimesheetDetailDto> GetWeekDetailAsync(
+    public async Task<ResourceTimesheetDetailDto> GetWeekDetailAsync(
         Guid userId,
         DateTime weekStartDate)
     {
-        var employee = await GetEmployeeAsync(userId);
+        var resource = await GetResourceAsync(userId);
         var weekStart = StartOfWeek(weekStartDate);
-        var timesheets = (await _timesheetRepository.GetTimesheetsAsync(employee.Id))
+        var timesheets = (await _timesheetRepository.GetTimesheetsAsync(resource.Id))
             .Where(timesheet => timesheet.WeekStartDate.Date == weekStart)
             .ToList();
 
         if (timesheets.Count > 0)
         {
-            var entries = timesheets.Select(timesheet => new EmployeeTimesheetEntryDto(
+            var entries = timesheets.Select(timesheet => new ResourceTimesheetEntryDto(
                 timesheet.ProjectId,
                 timesheet.Project.Name,
                 timesheet.HoursLogged,
                 timesheet.ActivityTags.Select(tag => tag.TagName).OrderBy(tag => tag).ToList()))
                 .ToList();
 
-            return new EmployeeTimesheetDetailDto(
+            return new ResourceTimesheetDetailDto(
                 weekStart,
                 timesheets.Sum(timesheet => timesheet.HoursLogged),
                 "Submitted",
@@ -252,7 +252,7 @@ public class TimesheetService : ITimesheetService
         }
 
         var allocations = await _timesheetRepository.GetAllocationsForWeekAsync(
-            employee.Id,
+            resource.Id,
             weekStart,
             weekStart.AddDays(6));
         var currentWeek = StartOfWeek(DateTime.UtcNow.Date);
@@ -261,16 +261,16 @@ public class TimesheetService : ITimesheetService
             throw new EntityNotFoundException("Timesheet week was not found.");
         }
 
-        return new EmployeeTimesheetDetailDto(
+        return new ResourceTimesheetDetailDto(
             weekStart,
             0m,
             "Missed",
-            Array.Empty<EmployeeTimesheetEntryDto>());
+            Array.Empty<ResourceTimesheetEntryDto>());
     }
 
-    private async Task<User> GetEmployeeAsync(Guid userId)
+    private async Task<User> GetResourceAsync(Guid userId)
     {
-        return await _timesheetRepository.GetEmployeeUserAsync(userId)
+        return await _timesheetRepository.GetResourceUserAsync(userId)
             ?? throw new EntityNotFoundException(
                 "An active resource user was not found for the logged-in user.");
     }

@@ -23,7 +23,7 @@ public sealed class TeamBuilderAiRequestDto
 
 public sealed class TeamBuilderCandidateDto
 {
-    public Guid EmployeeId { get; init; }
+    public Guid ResourceId { get; init; }
     public string Name { get; init; } = null!;
     public string Department { get; init; } = null!;
     public string Designation { get; init; } = null!;
@@ -46,7 +46,7 @@ public sealed class TeamBuilderAiResponseDto
 
 public sealed class TeamBuilderAiMemberDto
 {
-    public Guid EmployeeId { get; init; }
+    public Guid ResourceId { get; init; }
     public string SuggestedRole { get; init; } = null!;
     public string Reason { get; init; } = null!;
     public IReadOnlyList<string> MatchedSkills { get; init; } = [];
@@ -54,7 +54,7 @@ public sealed class TeamBuilderAiMemberDto
 
 public sealed class TeamBuilderAiUnavailableMemberDto
 {
-    public Guid EmployeeId { get; init; }
+    public Guid ResourceId { get; init; }
     public string MatchedRole { get; init; } = null!;
     public string Reason { get; init; } = null!;
     public IReadOnlyList<string> MatchedSkills { get; init; } = [];
@@ -71,7 +71,7 @@ public sealed class TeamBuilderResponseDto
 
 public sealed class TeamBuilderMemberDto
 {
-    public ManagerResourceDto Employee { get; init; } = null!;
+    public ManagerResourceDto Resource { get; init; } = null!;
     public string SuggestedRole { get; init; } = null!;
     public string Reason { get; init; } = null!;
     public IReadOnlyList<string> MatchedSkills { get; init; } = [];
@@ -79,7 +79,7 @@ public sealed class TeamBuilderMemberDto
 
 public sealed class TeamBuilderUnavailableMemberDto
 {
-    public ManagerResourceDto Employee { get; init; } = null!;
+    public ManagerResourceDto Resource { get; init; } = null!;
     public string MatchedRole { get; init; } = null!;
     public string Reason { get; init; } = null!;
     public IReadOnlyList<string> MatchedSkills { get; init; } = [];

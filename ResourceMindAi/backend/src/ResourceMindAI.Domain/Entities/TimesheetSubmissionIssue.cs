@@ -5,7 +5,7 @@ namespace ResourceMindAI.Domain.Entities;
 public sealed class TimesheetSubmissionIssue
 {
     public Guid Id { get; set; }
-    public Guid EmployeeUserId { get; set; }
+    public Guid ResourceUserId { get; set; }
     public Guid? ManagerUserId { get; set; }
     public DateTime WeekStartDate { get; set; }
     public TimesheetSubmissionIssueStatus Status { get; set; }
@@ -17,7 +17,7 @@ public sealed class TimesheetSubmissionIssue
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
 
-    public User EmployeeUser { get; set; } = null!;
+    public User ResourceUser { get; set; } = null!;
     public User? ManagerUser { get; set; }
     public User? RestoredByManagerUser { get; set; }
 }

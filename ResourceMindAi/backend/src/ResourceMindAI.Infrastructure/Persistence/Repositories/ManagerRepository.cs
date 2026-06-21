@@ -17,9 +17,9 @@ public class ManagerRepository : IManagerRepository
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<ResourceProfile>> GetTeamEmployeesAsync(Guid managerId)
+    public async Task<IReadOnlyList<ResourceProfile>> GetTeamResourcesAsync(Guid managerId)
     {
-        _logger.LogDebug("Querying team employees for manager {ManagerId}", managerId);
+        _logger.LogDebug("Querying team resources for manager {ManagerId}", managerId);
 
         return await ResourceProfileGraph()
             .Where(x => x.ManagerId == managerId && x.User.IsActive && x.User.Role == Role.Resource)
@@ -27,11 +27,11 @@ public class ManagerRepository : IManagerRepository
             .ToListAsync();
     }
 
-    public async Task<ResourceProfile?> GetTeamEmployeeAsync(Guid managerId, Guid employeeId)
+    public async Task<ResourceProfile?> GetTeamResourceAsync(Guid managerId, Guid resourceId)
     {
         return await ResourceProfileGraph()
             .FirstOrDefaultAsync(x =>
-                x.Id == employeeId
+                x.Id == resourceId
                 && x.ManagerId == managerId
                 && x.User.IsActive
                 && x.User.Role == Role.Resource);
@@ -102,14 +102,14 @@ public class ManagerRepository : IManagerRepository
     }
 
     public async Task<decimal> GetOverlappingAllocationPercentAsync(
-        Guid employeeId,
+        Guid resourceId,
         DateTime fromDate,
         DateTime toDate,
         Guid? excludedAllocationId = null)
     {
         return await _dbContext.Allocations
             .Where(x =>
-                x.UserId == employeeId
+                x.UserId == resourceId
                 && x.IsActive
                 && x.FromDate <= toDate
                 && x.ToDate >= fromDate

@@ -14,7 +14,7 @@
     <section class="resource-summary">
       <div class="summary-card">
         <span class="summary-card__label">Team resources</span>
-        <strong>{{ dashboard().onBench.length + dashboard().activeEmployees.length }}</strong>
+        <strong>{{ dashboard().onBench.length + dashboard().activeResources.length }}</strong>
         <span>Visible resources assigned to you</span>
       </div>
       <div class="summary-card summary-card--bench">
@@ -24,7 +24,7 @@
       </div>
       <div class="summary-card summary-card--active">
         <span class="summary-card__label">Allocated</span>
-        <strong>{{ dashboard().activeEmployees.length }}</strong>
+        <strong>{{ dashboard().activeResources.length }}</strong>
         <span>Currently contributing to projects</span>
       </div>
     </section>
@@ -63,12 +63,12 @@
             <p>Utilisation</p>
             <h3>Active Resources</h3>
           </div>
-          <span class="count-pill count-pill--active">{{ dashboard().activeEmployees.length }}</span>
+          <span class="count-pill count-pill--active">{{ dashboard().activeResources.length }}</span>
         </header>
 
-        <div *ngIf="dashboard().activeEmployees.length === 0" class="empty-card">No active resources found.</div>
+        <div *ngIf="dashboard().activeResources.length === 0" class="empty-card">No active resources found.</div>
 
-        <button *ngFor="let emp of dashboard().activeEmployees" class="resource-row" type="button" (click)="openDetails(emp)">
+        <button *ngFor="let emp of dashboard().activeResources" class="resource-row" type="button" (click)="openDetails(emp)">
           <app-avatar [name]="emp.fullName"></app-avatar>
           <span class="resource-row__content">
             <span class="resource-row__top">

@@ -57,8 +57,8 @@ public class GemmaClientTests
         apiKeyValues.Should().ContainSingle("test-gemma-key");
         capturedBody.Should().Contain("\"model\":\"gemma3:12b-it-q8_0\"");
         capturedBody.Should().Contain("\"stream\":false");
-        capturedBody.Should().NotContain("\"format\"");
-        capturedBody.Should().NotContain("\"options\"");
+        capturedBody.Should().Contain("\"format\":\"json\"");
+        capturedBody.Should().Contain("\"options\"");
         result.RequiredSkills.Should().BeEquivalentTo("c#", "backend");
         result.AvailabilityRequirement.Should().Be(50);
     }

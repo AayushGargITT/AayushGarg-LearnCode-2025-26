@@ -49,14 +49,14 @@ export class ManagerAllocateComponent {
   readonly pageState = inject(PageStateService);
 
   readonly projects = signal<ManagerProject[]>([]);
-  readonly employees = signal<ManagerResource[]>([]);
+  readonly resources = signal<ManagerResource[]>([]);
   readonly matches = signal<ResourceMatchResponse | null>(null);
   readonly selectedMatch = signal<ResourceMatch | null>(null);
   readonly isFinding = signal(false);
   readonly isSubmitting = signal(false);
 
   readonly activeAllocations = computed<ManagerAllocation[]>(() =>
-    this.employees().flatMap(employee => employee.activeAllocations));
+    this.resources().flatMap(resource => resource.activeAllocations));
 
   readonly aiForm = this.formBuilder.nonNullable.group({
     projectId: ['', Validators.required],
@@ -65,7 +65,7 @@ export class ManagerAllocateComponent {
 
   readonly allocationForm = this.formBuilder.nonNullable.group({
     projectId: ['', Validators.required],
-    employeeId: ['', Validators.required],
+    resourceId: ['', Validators.required],
     utilisationPercent: [50, [Validators.required, Validators.min(1), Validators.max(100)]],
     fromDate: [new Date(), Validators.required],
     toDate: [new Date(), Validators.required]
@@ -149,7 +149,7 @@ export class ManagerAllocateComponent {
 
     this.submitAllocation({
       projectId,
-      employeeId: match.employee.id,
+      resourceId: match.resource.id,
       utilisationPercent,
       fromDate: intent?.fromDate ?? new Date(),
       toDate: intent?.toDate ?? null
@@ -227,7 +227,7 @@ export class ManagerAllocateComponent {
   private loadResources(): void {
     this.managerService.getResourceDashboard().subscribe({
       next: dashboard => {
-        this.employees.set([...dashboard.onBench, ...dashboard.activeEmployees]);
+        this.resources.set([...dashboard.onBench, ...dashboard.activeResources]);
         this.pageState.stopLoading();
       },
       error: err => {

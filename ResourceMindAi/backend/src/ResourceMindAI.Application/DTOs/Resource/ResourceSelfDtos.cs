@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ResourceMindAI.Application.DTOs.Employee;
+namespace ResourceMindAI.Application.DTOs.Resource;
 
-public sealed record EmployeeAllocationDto(
+public sealed record ResourceAllocationDto(
     Guid Id,
     Guid ProjectId,
     string ProjectName,
@@ -11,9 +11,9 @@ public sealed record EmployeeAllocationDto(
     DateTime ToDate,
     string Status);
 
-public sealed record EmployeeAllocationsDto(
+public sealed record ResourceAllocationsDto(
     decimal TotalCurrentUtilisationPercent,
-    IReadOnlyList<EmployeeAllocationDto> Allocations);
+    IReadOnlyList<ResourceAllocationDto> Allocations);
 
 public sealed record TimesheetWeekAllocationDto(
     Guid ProjectId,
@@ -26,17 +26,17 @@ public sealed record TimesheetWeekDto(
     decimal MaxWeeklyHours,
     IReadOnlyList<TimesheetWeekAllocationDto> Allocations);
 
-public sealed class SubmitEmployeeTimesheetDto
+public sealed class SubmitResourceTimesheetDto
 {
     public DateTime? WeekStartDate { get; init; }
 
     [Required]
     [MinLength(1)]
-    public IReadOnlyList<SubmitEmployeeTimesheetEntryDto> Entries { get; init; }
-        = Array.Empty<SubmitEmployeeTimesheetEntryDto>();
+    public IReadOnlyList<SubmitResourceTimesheetEntryDto> Entries { get; init; }
+        = Array.Empty<SubmitResourceTimesheetEntryDto>();
 }
 
-public sealed class SubmitEmployeeTimesheetEntryDto
+public sealed class SubmitResourceTimesheetEntryDto
 {
     public Guid ProjectId { get; init; }
 
@@ -48,19 +48,19 @@ public sealed class SubmitEmployeeTimesheetEntryDto
     public IReadOnlyList<string> ActivityTags { get; init; } = Array.Empty<string>();
 }
 
-public sealed record EmployeeTimesheetSummaryDto(
+public sealed record ResourceTimesheetSummaryDto(
     DateTime WeekStartDate,
     decimal TotalHours,
     string Status);
 
-public sealed record EmployeeTimesheetEntryDto(
+public sealed record ResourceTimesheetEntryDto(
     Guid ProjectId,
     string ProjectName,
     decimal Hours,
     IReadOnlyList<string> ActivityTags);
 
-public sealed record EmployeeTimesheetDetailDto(
+public sealed record ResourceTimesheetDetailDto(
     DateTime WeekStartDate,
     decimal TotalHours,
     string Status,
-    IReadOnlyList<EmployeeTimesheetEntryDto> Entries);
+    IReadOnlyList<ResourceTimesheetEntryDto> Entries);

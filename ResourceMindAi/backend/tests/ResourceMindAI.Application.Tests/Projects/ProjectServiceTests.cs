@@ -33,7 +33,7 @@ public class ProjectServiceTests
         var conflictingAllocation = TestDataBuilder.Allocation(employee, otherProject);
         _projects.Setup(x => x.GetForManagerUpdateAsync(project.Id)).ReturnsAsync(project);
         _users.Setup(x => x.GetByIdAsync(newManager.Id)).ReturnsAsync(newManager);
-        _projects.Setup(x => x.GetActiveAllocationsForEmployeesUnderManagerAsync(
+        _projects.Setup(x => x.GetActiveAllocationsForResourcesUnderManagerAsync(
                 It.IsAny<IReadOnlyCollection<Guid>>(),
                 currentManager.Id))
             .ReturnsAsync([conflictingAllocation]);
@@ -59,7 +59,7 @@ public class ProjectServiceTests
         TestDataBuilder.Allocation(employee, project);
         _projects.Setup(x => x.GetForManagerUpdateAsync(project.Id)).ReturnsAsync(project);
         _users.Setup(x => x.GetByIdAsync(newManager.Id)).ReturnsAsync(newManager);
-        _projects.Setup(x => x.GetActiveAllocationsForEmployeesUnderManagerAsync(
+        _projects.Setup(x => x.GetActiveAllocationsForResourcesUnderManagerAsync(
                 It.IsAny<IReadOnlyCollection<Guid>>(),
                 currentManager.Id))
             .ReturnsAsync([]);
@@ -72,7 +72,7 @@ public class ProjectServiceTests
         project.ManagerId.Should().Be(newManager.Id);
         employee.ResourceProfile.Should().NotBeNull();
         employee.ResourceProfile!.ManagerId.Should().Be(newManager.Id);
-        result.UpdatedEmployees.Should().ContainSingle(employee.FullName);
+        result.UpdatedResources.Should().ContainSingle(employee.FullName);
         _projects.Verify(x => x.SaveManagerUpdateAsync(
             project,
             It.Is<IReadOnlyCollection<ResourceProfile>>(profiles =>

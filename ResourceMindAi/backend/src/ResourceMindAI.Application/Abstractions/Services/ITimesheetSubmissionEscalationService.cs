@@ -7,7 +7,7 @@ public interface ITimesheetSubmissionEscalationService
 
     Task RestoreAccessAsync(
         Guid managerUserId,
-        Guid employeeUserId,
+        Guid ResourceUserId,
         DateTime weekStartDate,
         CancellationToken cancellationToken = default);
 

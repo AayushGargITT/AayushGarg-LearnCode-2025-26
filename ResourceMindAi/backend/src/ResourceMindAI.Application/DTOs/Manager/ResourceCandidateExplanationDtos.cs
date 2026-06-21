@@ -9,7 +9,7 @@ public sealed class ResourceCandidateExplanationRequestDto
 
 public sealed class ResourceCandidateDto
 {
-    public Guid EmployeeId { get; init; }
+    public Guid ResourceId { get; init; }
     public string Name { get; init; } = null!;
     public string Designation { get; init; } = null!;
     public IReadOnlyList<string> Skills { get; init; } = [];
@@ -26,7 +26,7 @@ public sealed class ResourceCandidateExplanationResponseDto
 
 public sealed class ResourceCandidateExplanationDto
 {
-    public Guid EmployeeId { get; init; }
+    public Guid ResourceId { get; init; }
     public int AiRank { get; init; }
     public string AiReason { get; init; } = null!;
     public IReadOnlyList<string> Strengths { get; init; } = [];
